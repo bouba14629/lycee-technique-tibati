@@ -22,3 +22,13 @@
 - [x] Recréer uniquement le compte fondateur `proviseur` pour la nouvelle configuration.
 - [x] Vérifier que l’instance redémarre vide et que la connexion du fondateur fonctionne.
 - [x] Sauvegarder un checkpoint après la réinitialisation complète.
+
+- [x] Localiser toutes les occurrences de « Made with Manus » dans les modèles, styles et scripts d’impression.
+- [x] Supprimer cette mention des documents imprimés et des exports PDF sans altérer leur contenu.
+- [x] Vérifier les tests, la compilation et le rendu d’impression après correction.
+- [x] Sauvegarder un checkpoint et publier la correction.
+
+- [x] Localiser toutes les occurrences de « Made with Manus » dans les modèles, styles et scripts d’impression.
+- [x] Supprimer cette mention des documents imprimés et des exports PDF sans altérer leur contenu.
+- [x] Vérifier les tests, la compilation et le rendu d’impression après correction.
+- [x] Sauvegarder un checkpoint et publier la correction.

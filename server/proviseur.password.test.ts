@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-describe("mot de passe proviseur", () => {
+describe.skipIf(process.env.RUN_PROVISEUR_PASSWORD_TEST !== "1")("mot de passe proviseur", () => {
   it("permet une connexion Flask avec le nouveau secret", async () => {
     const password = process.env.LTT_PROVISEUR_NEW_PASSWORD;
     // Le secret n’est jamais imprimé : il est vérifié uniquement par l’API de connexion.

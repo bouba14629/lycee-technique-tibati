@@ -17,9 +17,18 @@
 	  .app-back-button { align-items:center; background:#fff; border:1px solid rgba(11,37,69,.18); border-radius:10px; color:#0B2545; cursor:pointer; display:inline-flex; font-weight:700; gap:7px; min-height:38px; padding:0 12px; transition:background .16s ease, transform .16s ease; }
 	  .app-back-button:hover { background:#F1F6FA; }
 	  .app-back-button:active { transform:scale(.97); }
-	  .app-back-button:focus-visible { outline:3px solid rgba(197,155,41,.45); outline-offset:2px; }
-	  @media (max-width: 767px) { .app-back-button .app-back-label { display:none; } .app-back-button { min-width:38px; justify-content:center; padding:0; } }
-	</style>
+		  .app-back-button:focus-visible { outline:3px solid rgba(197,155,41,.45); outline-offset:2px; }
+		  @media (max-width: 767px) { .app-back-button .app-back-label { display:none; } .app-back-button { min-width:38px; justify-content:center; padding:0; } }
+		  @media print {
+		    [data-ltt-print-excluded="external-branding"],
+		    [data-manus-badge],
+		    [data-made-with-manus],
+		    #manus-branding,
+		    .manus-branding,
+		    .made-with-manus,
+		    a[href*="manus.im"] { display:none !important; }
+		  }
+		</style>
 	{% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -213,6 +222,36 @@
 <script src="{{ url_for('static', filename='vendor/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/chartjs/chart.js') }}"></script>
 <script>
+function markExternalPrintBranding(root) {
+  const container = root && root.querySelectorAll ? root : document.body;
+  if (!container) return;
+
+  container.querySelectorAll('a, button, [role="button"], div, span').forEach(function(element) {
+    const label = (element.getAttribute('aria-label') || element.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    const href = element instanceof HTMLAnchorElement ? element.href.toLowerCase() : '';
+    const isManusBadge = label === 'made with manus'
+      || (label.includes('made with manus') && label.length <= 80)
+      || href.includes('manus.im');
+
+    if (!isManusBadge) return;
+    const badge = element.closest('a, button, [role="button"]') || element;
+    badge.setAttribute('data-ltt-print-excluded', 'external-branding');
+  });
+}
+
+markExternalPrintBranding(document.body);
+window.addEventListener('beforeprint', function() { markExternalPrintBranding(document.body); });
+new MutationObserver(function(mutations) {
+  mutations.forEach(function(mutation) {
+    mutation.addedNodes.forEach(function(node) {
+      if (node.nodeType === Node.ELEMENT_NODE) markExternalPrintBranding(node);
+    });
+  });
+}).observe(document.body, { childList: true, subtree: true });
+
 document.querySelectorAll('#sidebar .sidebar-link').forEach(function(link) {
   link.addEventListener('click', function() {
     document.getElementById('sidebar').classList.remove('open');

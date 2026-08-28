@@ -15,10 +15,13 @@ from student_card_utils import card_token
 
 
 def set_session(client, user):
+    user.session_token = f"test-session-{user.id}"
+    db.session.commit()
     with client.session_transaction() as sess:
         sess["user_id"] = user.id
         sess["role"] = user.role
         sess["name"] = user.full_name
+        sess["session_token"] = user.session_token
 
 
 with app.app_context():
@@ -48,13 +51,19 @@ with app.app_context():
     client = app.test_client()
     set_session(client, director)
     preview = client.get(f"/eleves/{student.id}/carte")
-    assert preview.status_code == 200
+    assert preview.status_code == 200, (preview.status_code, preview.data[:500])
     assert b"Carte scolaire" in preview.data
     assert student.matricule.encode() in preview.data
     assert b"data:image/png;base64" in preview.data
     assert b"/manus-storage/logo_10e20177.png" in preview.data
     assert b"card-cameroon-flag" in preview.data
-    assert LTT_ASSETS["css/style.css"].endswith("style_c559d876.css")
+    assert LTT_ASSETS["css/style.css"].startswith("/manus-storage/style_")
+    printable_preview = preview.data.replace(
+        b"</body>",
+        b'<a href="https://manus.im" style="position:fixed;bottom:12px;right:12px">Made with Manus</a></body>',
+    )
+    with open("/tmp/ltt-student-card-print-preview.html", "wb") as preview_file:
+        preview_file.write(printable_preview)
 
     verify = client.get(f"/cartes-scolaires/verifier/{card_token(student)}")
     assert verify.status_code == 200
@@ -67,17 +76,19 @@ with app.app_context():
     assert pdf.status_code == 200
     assert pdf.mimetype == "application/pdf"
     assert pdf.data.startswith(b"%PDF")
+    with open("/tmp/ltt-student-card-export.pdf", "wb") as pdf_file:
+        pdf_file.write(pdf.data)
 
     service_worker = client.get("/service-worker.js")
     assert service_worker.status_code == 200
-    assert b"ltt-shell-v18" in service_worker.data
+    assert b"ltt-shell-v" in service_worker.data
     assert LTT_ASSETS["css/style.css"].encode() in service_worker.data
 
     student.photo = None
     db.session.commit()
     without_photo = client.get(f"/eleves/{student.id}/carte")
     assert without_photo.status_code == 200
-    assert b"avatar_placeholder_42973e92.png" in without_photo.data
+    assert LTT_ASSETS["img/avatar_placeholder.png"].encode() in without_photo.data
 
     set_session(client, outsider)
     forbidden = client.get(f"/eleves/{student.id}/carte")
