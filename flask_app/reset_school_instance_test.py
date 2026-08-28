@@ -11,6 +11,7 @@ from reset_school_instance import reset_school_instance
 def main():
     app.config.update(TESTING=True)
     os.environ["LTT_RESET_CONFIRM"] = "RESET_LTT"
+    os.environ["LTT_PROVISEUR_NEW_PASSWORD"] = "NouveauTest#2026"
     with app.app_context():
         db.drop_all()
         db.create_all()
@@ -31,7 +32,7 @@ def main():
         assert founder.role == "directeur"
         assert founder.active is True and founder.must_change_password is True
         assert founder.plain_password is None
-        assert founder.check_password("Lyttib")
+        assert founder.check_password("NouveauTest#2026")
         assert Section.query.count() == Department.query.count() == SchoolClass.query.count() == 0
     print("RESET_SCHOOL_INSTANCE_TEST_OK")
 

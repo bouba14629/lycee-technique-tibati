@@ -16,3 +16,9 @@
 - [x] Sauvegarder un checkpoint final avant livraison.
 
 - [x] Réinitialiser uniquement le mot de passe du compte Flask `proviseur` sans supprimer ni modifier les autres données.
+
+- [x] Vérifier la portée exacte de la réinitialisation complète confirmée.
+- [x] Supprimer toutes les données scolaires et tous les comptes applicatifs de la base Flask active.
+- [x] Recréer uniquement le compte fondateur `proviseur` pour la nouvelle configuration.
+- [x] Vérifier que l’instance redémarre vide et que la connexion du fondateur fonctionne.
+- [x] Sauvegarder un checkpoint après la réinitialisation complète.

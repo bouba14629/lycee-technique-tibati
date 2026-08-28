@@ -16,13 +16,15 @@ from models import db, User
 
 RESET_CONFIRMATION = "RESET_LTT"
 INITIAL_USERNAME = "proviseur"
-INITIAL_PASSWORD = "Lyttib"
 INITIAL_NAME = "Proviseur du Lycée Technique de Tibati"
 
 
 def reset_school_instance():
     if os.getenv("LTT_RESET_CONFIRM") != RESET_CONFIRMATION:
         raise RuntimeError("Réinitialisation annulée : LTT_RESET_CONFIRM=RESET_LTT est requis.")
+    initial_password = os.getenv("LTT_PROVISEUR_NEW_PASSWORD") or os.getenv("LTT_INITIAL_ADMIN_PASSWORD", "")
+    if len(initial_password) < 12:
+        raise RuntimeError("Un mot de passe proviseur sécurisé d’au moins 12 caractères est requis.")
 
     with app.app_context():
         db.session.remove()
@@ -36,7 +38,7 @@ def reset_school_instance():
             active=True,
             must_change_password=True,
         )
-        founder.set_password(INITIAL_PASSWORD)
+        founder.set_password(initial_password)
         # Aucun mot de passe n’est conservé en clair dans la base.
         founder.plain_password = None
         db.session.add(founder)
