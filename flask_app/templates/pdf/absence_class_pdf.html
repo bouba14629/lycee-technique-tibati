@@ -1,0 +1,4 @@
+<html><head><meta charset="UTF-8"><style>@page { size:A4; margin:1cm; } body { font-family:Helvetica,sans-serif; font-size:9pt; color:#172b45; } h1 { font-size:14pt; text-align:center; } table { width:100%; border-collapse:collapse; } th,td { border:.5pt solid #9aa6b4; padding:4pt; } th { background:#eef1f5; } .hours { font-weight:bold; color:#0B2545; }</style></head><body>
+<h1>LISTE DES ABSENCES — {{ school_class.name }}</h1><p>Heures cumulées par élève.</p>
+<table><tr><th>Matricule</th><th>Élève</th><th>Nb absences</th><th>Heures cumulées</th><th>Dernières dates</th></tr>{% for row in rows %}<tr><td>{{ row.student.matricule }}</td><td>{{ row.student.full_name }}</td><td>{{ row.count }}</td><td class="hours">{{ row.hours }} h</td><td>{% for record in row.records[:3] %}{{ record.date.strftime('%d/%m/%Y') }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}</table>
+</body></html>

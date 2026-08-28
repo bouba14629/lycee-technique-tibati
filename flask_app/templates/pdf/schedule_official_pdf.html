@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @font-face { font-family: 'Playfair'; src: url('{{ font_bold }}'); }
+  @font-face { font-family: 'Inter'; src: url('{{ font_regular }}'); }
+  @page { size: A4 landscape; margin: 0.55cm; }
+  body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 9.5pt; }
+  .school { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; font-weight: bold; }
+  .subtitle { font-size: 6.8pt; color: #6b7688; }
+  .title-table { width: 100%; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; margin: 6pt 0 8pt; }
+  .title-table td { border: 0; border-top: 0; border-bottom: 0; }
+  .title { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; text-align:center; text-decoration:none; border:0; }
+  .meta-table { width: 100%; margin-bottom: 8pt; font-size: 10pt; }
+  .meta-table td { padding: 2pt 7pt; }
+  .red { color: #c0392b; font-weight: bold; }
+  table.grid { width: 100%; border-collapse: collapse; border: 1pt solid #0B2545; }
+  table.grid th { background-color: #F8F5EC; color: #0B2545; font-size: 8.2pt; text-align: center;
+                  padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; }
+  table.grid td { padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; text-align:center; vertical-align: middle; font-size: 9pt; height: 46pt; word-wrap: break-word; }
+  .day-cell { background: #F8F5EC; font-weight: bold; font-size: 8.8pt; }
+  .day-en { font-style: italic; color: #888; font-size: 7.2pt; }
+  .subj { font-weight: bold; font-size: 9pt; line-height: 1.18; }
+  .teach { font-style: italic; color: #666; font-size: 7.4pt; line-height: 1.15; }
+  .recess { width: 7%; font-size: 8.4pt; line-height: 1.9; vertical-align: middle; text-align: center; }
+  table.grid th.recess { background: #0B2545 !important; color: #fff !important; border: 0.5pt solid #0B2545; }
+  .period-th { width: 8.8%; }
+  .footer-table { width: 100%; margin-top: 16pt; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; }
+  .footer-table tr, .footer-table td { border: 0; border-top: 0; border-bottom: 0; text-align: center; font-size: 7.5pt; color: #6b7688; padding-top: 18pt; }
+</style>
+</head>
+<body>
+{% set section_label = school_class.department.section.name|upper|replace('SECTION ', '') if mode == 'classe' else (teacher.department.section.name|upper|replace('SECTION ', '') if teacher.department and teacher.department.section else '') %}
+{% set censeur_label = 'INDUSTRIEL' if section_label == 'INDUSTRIELLE' else section_label %}
+
+<table style="width:100%;">
+  <tr>
+    <td style="width:26%; font-size:6.8pt; vertical-align:top; text-align:center;">
+      RÉPUBLIQUE DU CAMEROUN<br>Paix-Travail-Patrie<br>
+      RÉGION DE L'ADAMAOUA<br>DÉLÉGATION RÉGIONALE DES ENS. SECONDAIRES<br>DÉLÉGATION DÉPARTEMENTALE DU DJEREM
+    </td>
+    <td style="width:48%; text-align:center; vertical-align:top;">
+      <img src="{{ logo_path }}" width="100"/><br>
+      <span class="school">LYCÉE TECHNIQUE DE TIBATI</span><br>
+      <span class="subtitle" style="font-style:italic;">GOVERNMENT TECHNICAL HIGH SCHOOL TIBATI</span><br>
+      <span class="subtitle">BP 105 TIBATI — Mle : 2CE1TEFD110320092 — lttibati@gmail.com</span>
+    </td>
+    <td style="width:26%; font-size:6.8pt; text-align:center; vertical-align:top;">
+      REPUBLIC OF CAMEROON<br>Peace-Work-Fatherland<br>
+      ADAMAWA REGION<br>REGIONAL DELEGATION OF SEC. EDUCATION<br>DJEREM DIVISIONAL DELEGATION
+    </td>
+  </tr>
+</table>
+
+<table class="title-table" style="border:0; border-top:0; border-bottom:0;"><tr><td style="border:0; border-top:0; border-bottom:0;">
+  <div class="title">{{ 'EMPLOI DE TEMPS PAR CLASSE' if mode == 'classe' else 'EMPLOI DE TEMPS INDIVIDUEL' }}</div>
+</td></tr></table>
+
+{% if mode == 'classe' %}
+<table class="meta-table">
+  <tr>
+    <td style="width:30%; text-align:left; padding-right:24pt;"><span class="red">{{ section_label }}</span></td>
+    <td style="width:40%; text-align:center; padding-left:24pt; padding-right:24pt;"><strong>CLASSE :</strong> <span class="red">{{ school_class.name }}</span></td>
+    <td style="width:30%; text-align:right; padding-left:24pt;"><strong>ANNÉE SCOLAIRE :</strong> <span class="red">{{ school_year }}</span></td>
+  </tr>
+</table>
+{% else %}
+<table class="meta-table">
+  <tr>
+    <td><strong>PROFESSEUR :</strong> <span class="red">{{ teacher.user.full_name.upper() }}</span></td>
+    <td><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department }}</span></td>
+    <td><strong>H. DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>
+    <td><strong>CRÉNEAUX :</strong> <span class="red">{{ planned_slots if planned_slots is defined else hours_faites }}</span></td>
+    <td><strong>H. FAITES :</strong> <span class="red">{{ hours_faites }}</span></td>
+  </tr>
+  <tr>
+    <td colspan="3"><strong>CLASSES TENUES :</strong> <span class="red">{{ classes_tenues }}</span></td>
+    <td colspan="2"><strong>GRADE :</strong> <span class="red">{{ teacher.grade }}</span></td>
+  </tr>
+</table>
+{% endif %}
+
+<table class="grid">
+  <tr>
+    <th width="6%"></th>
+    {% for idx in [0,1,2] %}<th class="period-th" width="8.8%">{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}
+    <th class="recess" width="7%" rowspan="{{ days|length + 1 }}">RÉ<br>C.<br>R.<br>É.<br>A.<br>T.<br>I.<br>O.<br>N.</th>
+    {% for idx in [3,4,5] %}<th class="period-th" width="8.8%">{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}
+    <th class="recess" width="7%" rowspan="{{ days|length + 1 }}">D.<br>É.<br>J.<br>E.<br>U.<br>N.<br>E.<br>R.</th>
+    {% for idx in [6,7,8] %}<th class="period-th" width="8.8%">{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}
+  </tr>
+  {% for day in days %}
+  <tr>
+    <td width="6%" class="day-cell">{{ day.upper() }}<br><span class="day-en">{{ day_en[day] }}</span></td>
+    {% for idx in [0,1,2] %}
+    <td width="8.8%">{% if grid[day][idx] %}<span class="subj">{{ grid[day][idx].course.subject.name }}</span><br><span class="teach">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}</td>
+    {% endfor %}
+    {% for idx in [3,4,5] %}
+    <td width="8.8%">{% if grid[day][idx] %}<span class="subj">{{ grid[day][idx].course.subject.name }}</span><br><span class="teach">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}</td>
+    {% endfor %}
+    {% for idx in [6,7,8] %}
+    <td width="8.8%">{% if grid[day][idx] %}<span class="subj">{{ grid[day][idx].course.subject.name }}</span><br><span class="teach">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}</td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+
+<table class="footer-table" style="margin-top:8pt; border:0; border-top:0; border-bottom:0;">
+  <tr>
+    <td style="width:50%; text-align:left; padding-left:0; border:0; border-top:0; border-bottom:0;">LE CENSEUR {{ censeur_label }}</td>
+    <td style="width:50%; text-align:right; border:0; border-top:0; border-bottom:0;">
+      <div style="font-size:7.5pt; color:#6b7688;">TIBATI, le</div>
+      LE PROVISEUR
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

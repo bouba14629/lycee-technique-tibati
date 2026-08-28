@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Bulletin en préparation{% endblock %}
+{% block page_title %}Bulletin de notes{% endblock %}
+{% block content %}
+<div class="card-ltt text-center" style="max-width:640px; margin:36px auto;">
+  <div style="font-size:40px; color:var(--gold-500);">◷</div>
+  <h2 style="font-size:20px; color:var(--navy-900);">Bulletin privé</h2>
+  <p class="text-muted mb-0">Le bulletin de <strong>{{ student.full_name }}</strong> pour <strong>{{ term }}</strong> est remis officiellement par le Censeur. Il n’est pas diffusé dans les espaces Élève et Parent. La consultation des notes ne donne aucun droit d’impression ou de téléchargement.</p>
+  <a href="{{ notes_url }}" class="btn-ltt-navy mt-3"><i class="bi bi-journal-check"></i> Consulter les notes déjà saisies</a>
+</div>
+{% endblock %}

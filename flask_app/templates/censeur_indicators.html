@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Synthèse des indicateurs pédagogiques{% endblock %}
+{% block page_title %}Synthèse — Indicateurs pédagogiques{% endblock %}
+{% block page_subtitle %}Couverture des heures, des programmes et des travaux pratiques — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-end gap-2">
+  {% if current_user.role == 'censeur' %}
+  <button class="btn-ltt-outline" data-bs-toggle="modal" data-bs-target="#newIndTypeModal"><i class="bi bi-plus-circle"></i> Nouveau type d'indicateur</button>
+  <button class="btn-ltt-gold" data-bs-toggle="modal" data-bs-target="#addIndModal"><i class="bi bi-plus-lg"></i> Ajouter / Modifier des indicateurs</button>
+  {% endif %}
+  <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu / Imprimer</button>
+  <form method="GET" action="{{ url_for('censeur_indicators_export') }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="department_id" value="{{ department_id or '' }}">{% for item_id in class_ids %}<input type="hidden" name="class_ids" value="{{ item_id }}">{% endfor %}{% for item_id in subject_ids %}<input type="hidden" name="subject_ids" value="{{ item_id }}">{% endfor %}<button class="btn-ltt-gold"><i class="bi bi-file-earmark-excel-fill"></i> Excel</button></form>
+</div>
+
+{% if current_user.role == 'censeur' %}
+<div class="modal fade" id="newIndTypeModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+  <div class="modal-header"><h5 class="modal-title">Nouveau type d'indicateur pédagogique</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <form method="POST" action="{{ url_for('censeur_indicator_type_new') }}" class="form-ltt">
+      <label>Libellé de l'indicateur</label>
+      <input type="text" name="label" class="form-control mb-2" placeholder="ex : Sorties pédagogiques" required>
+      <div class="row g-2">
+        <div class="col-6"><label>Libellé colonne « prévu »</label><input type="text" name="unit_planned" class="form-control mb-2" value="Prévu"></div>
+        <div class="col-6"><label>Libellé colonne « fait »</label><input type="text" name="unit_done" class="form-control mb-2" value="Fait"></div>
+      </div>
+      <div class="text-muted mb-2" style="font-size:11px;"><i class="bi bi-info-circle"></i> Visible uniquement par les enseignants de votre section. Apparaîtra automatiquement dans leur formulaire de saisie des indicateurs.</div>
+      <button class="btn-ltt-navy w-100 justify-content-center">Créer</button>
+    </form>
+    {% if custom_types %}
+    <hr>
+    <div style="font-size:12px;"><strong class="text-muted">Indicateurs déjà créés :</strong>
+      {% for ct in custom_types %}
+      <div class="d-flex justify-content-between align-items-center py-1">
+        <span>{{ ct.label }} <span class="text-muted">({{ ct.unit_planned }}/{{ ct.unit_done }})</span></span>
+        <a href="{{ url_for('censeur_indicator_type_delete', type_id=ct.id) }}" class="text-danger" onclick="return confirm('Supprimer cet indicateur ? Les valeurs déjà saisies par les enseignants seront perdues.')"><i class="bi bi-trash"></i></a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div></div></div>
+{% endif %}
+
+{% macro ind_fields(ind) %}
+<div class="row g-2 mb-2">
+  <div class="col-6"><label style="font-size:11px;">Heures dues</label><input type="number" name="hours_due" class="form-control form-control-sm" value="{{ ind.hours_due if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">Heures faites</label><input type="number" name="hours_done" class="form-control form-control-sm" value="{{ ind.hours_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">Leçons prévues</label><input type="number" name="lessons_planned" class="form-control form-control-sm" value="{{ ind.lessons_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">Leçons faites</label><input type="number" name="lessons_done" class="form-control form-control-sm" value="{{ ind.lessons_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">Leçons digital. prévues</label><input type="number" name="digital_lessons_planned" class="form-control form-control-sm" value="{{ ind.digital_lessons_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">Leçons digital. faites</label><input type="number" name="digital_lessons_done" class="form-control form-control-sm" value="{{ ind.digital_lessons_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">TP prévus</label><input type="number" name="tp_planned" class="form-control form-control-sm" value="{{ ind.tp_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">TP réalisés</label><input type="number" name="tp_done" class="form-control form-control-sm" value="{{ ind.tp_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">TP digital. prévus</label><input type="number" name="digital_tp_planned" class="form-control form-control-sm" value="{{ ind.digital_tp_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">TP digital. réalisés</label><input type="number" name="digital_tp_done" class="form-control form-control-sm" value="{{ ind.digital_tp_done if ind else 0 }}"></div>
+</div>
+{% endmacro %}
+
+{% if current_user.role == 'censeur' %}
+<div class="modal fade" id="addIndModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+  <div class="modal-header"><h5 class="modal-title">Ajouter / modifier des indicateurs</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <form method="POST" id="genericIndForm" class="form-ltt" onsubmit="return document.getElementById('genericCourseSelect').value !== '';">
+      <input type="hidden" name="term" value="{{ term }}">
+      <label>Classe / Matière / Enseignant</label>
+      <select id="genericCourseSelect" class="form-select mb-2" onchange="document.getElementById('genericIndForm').action='/censeur/indicateurs/'+this.value+'/modifier'">
+        <option value="">— Choisir —</option>
+        {% for row in rows %}<option value="{{ row.course.id }}">{{ row.course.school_class.code or 'Sans code' }} · {{ row.course.school_class.name }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
+        {% for c in missing %}<option value="{{ c.id }}">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
+      </select>
+      {{ ind_fields(none) }}
+      <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+    </form>
+  </div>
+</div></div></div>
+{% endif %}
+
+<div class="card-ltt">
+  <form method="GET" class="mb-3 no-print">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <select name="term" class="form-select" style="max-width:220px;" onchange="this.form.submit()">
+        {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+      </select>
+      <select name="sequence" class="form-select" style="max-width:150px;">
+        <option value="">Toutes les séquences</option>
+        {% for seq in valid_sequences %}<option value="{{ seq }}" {{ 'selected' if sequence==seq }}>Séquence {{ seq }}</option>{% endfor %}
+      </select>
+      <select name="department_id" class="form-select" style="max-width:220px;" onchange="Array.from(this.form.elements.class_ids.options).forEach(o=>o.selected=false); Array.from(this.form.elements.subject_ids.options).forEach(o=>o.selected=false); this.form.elements.assessment_id.value=''; this.form.submit()">
+        <option value="">Tous les départements</option>
+        {% for item in available_departments %}<option value="{{ item.id }}" {{ 'selected' if department_id==item.id }}>{{ item.name }}{% if item.code %} · {{ item.code }}{% endif %}</option>{% endfor %}
+      </select>
+      <select name="class_ids" class="form-select" style="min-width:190px; max-width:250px;" multiple size="4" aria-label="Sélection multiple de classes">
+        {% for item in scoped_classes %}<option value="{{ item.id }}" {{ 'selected' if item.id in class_ids }}>{{ item.code or 'Sans code' }} · {{ item.name }}</option>{% endfor %}
+      </select>
+      <select name="subject_ids" class="form-select" style="min-width:210px; max-width:280px;" multiple size="4" aria-label="Sélection multiple de matières">
+        {% for item in available_subjects %}<option value="{{ item.id }}" {{ 'selected' if item.id in subject_ids }}>{{ item.name }}</option>{% endfor %}
+      </select>
+      <select name="assessment_id" class="form-select" style="max-width:260px;">
+        <option value="">Toutes les évaluations</option>
+        {% for item in available_assessments %}<option value="{{ item.id }}" {{ 'selected' if assessment_id==item.id }}>S{{ item.sequence }} · {{ item.course.school_class.code or 'Sans code' }} · {{ item.course.school_class.name }} · {{ item.course.subject.name }} — {{ item.title }}</option>{% endfor %}
+      </select>
+      <select name="view" class="form-select" style="max-width:220px;" onchange="this.form.submit()">
+        <option value="cours" {{ 'selected' if view=='cours' }}>Vue par classe / matière</option>
+        <option value="departement" {{ 'selected' if view=='departement' }}>Vue par département</option>
+      </select>
+      <button class="btn-ltt-navy" type="submit"><i class="bi bi-funnel-fill"></i> Filtrer</button>
+      <small class="text-muted" style="font-size:11px;">Classes et matières : sélection multiple possible.</small>
+    </div>
+    {% if missing %}
+    <span class="badge-ltt badge-warning"><i class="bi bi-exclamation-triangle-fill"></i> {{ missing|length }} classe(s)/matière(s) sans indicateurs renseignés</span>
+    {% endif %}
+  </form>
+
+  <section class="mb-3">
+    <div class="section-title"><h2>Résultats des évaluations</h2><span class="text-muted" style="font-size:12px;">{{ term }}{{ ' · Séquence ' ~ sequence if sequence else '' }}</span></div>
+    <div class="row g-2 mb-3">
+      <div class="col-6 col-lg-3"><div class="metric-card"><span>Évaluations</span><strong>{{ evaluation_totals.planned }}</strong></div></div>
+      <div class="col-6 col-lg-3"><div class="metric-card"><span>Taux de saisie</span><strong>{{ evaluation_totals.submission_rate }}%</strong></div></div>
+      <div class="col-6 col-lg-3"><div class="metric-card"><span>Moyenne évaluations</span><strong>{{ evaluation_totals.average if evaluation_totals.average is not none else '—' }}<small>{{ '/20' if evaluation_totals.average is not none }}</small></strong></div></div>
+      <div class="col-6 col-lg-3"><div class="metric-card"><span>Notes saisies</span><strong>{{ evaluation_totals.submitted }}/{{ evaluation_totals.expected }}</strong></div></div>
+    </div>
+    <div class="table-responsive"><table class="table-ltt" style="font-size:12px;"><thead><tr><th>Évaluation</th><th>Classe / matière</th><th>Échéance</th><th>Notes</th><th>Moyenne</th><th>Réussite</th><th>État</th></tr></thead><tbody>{% for row in evaluation_rows %}<tr><td><strong>S{{ row.assessment.sequence }}</strong><div class="text-muted">{{ row.assessment.title }}</div></td><td><strong>{{ row.assessment.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.assessment.course.school_class.name }} · {{ row.assessment.course.subject.name }}</div></td><td>{{ row.assessment.scheduled_date.strftime('%d/%m/%Y') }}</td><td>{{ row.submitted }}/{{ row.expected }}</td><td>{{ row.average if row.average is not none else '—' }}{{ '/20' if row.average is not none }}</td><td>{{ row.success_rate if row.success_rate is not none else '—' }}{{ '%' if row.success_rate is not none }}</td><td><span class="badge-ltt {{ 'badge-success' if row.assessment.status=='Saisie complète' else 'badge-warning' if row.assessment.status=='Saisie en cours' else 'badge-danger' }}">{{ row.assessment.status }}</span></td></tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucune évaluation ne correspond aux filtres sélectionnés.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+
+  {% if view == 'departement' %}
+  <div style="overflow-x:auto;">
+  <table class="table-ltt" style="font-size:11.5px; white-space:nowrap;">
+    <thead>
+      <tr>
+        <th rowspan="2">Département</th>
+        <th colspan="3" class="text-center">Couverture des heures</th>
+        <th colspan="3" class="text-center">Couverture des programmes</th>
+        <th colspan="3" class="text-center">Leçons digitalisées</th>
+        <th colspan="3" class="text-center">Travaux pratiques</th>
+        <th colspan="3" class="text-center">TP digitalisés</th>
+      </tr>
+      <tr>
+        <th>Dues</th><th>Faites</th><th>%</th>
+        <th>Prévues</th><th>Faites</th><th>%</th>
+        <th>Prévues</th><th>Faites</th><th>%</th>
+        <th>Prévus</th><th>Réalisés</th><th>%</th>
+        <th>Prévus</th><th>Réalisés</th><th>%</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for e in by_dept %}
+      <tr>
+        <td class="fw-semibold">{{ e.department.name if e.department else '—' }}</td>
+        <td>{{ e.hours_due }}</td><td>{{ e.hours_done }}</td><td>{{ e.pct_hours if e.pct_hours is not none else '—' }}%</td>
+        <td>{{ e.lessons_planned }}</td><td>{{ e.lessons_done }}</td><td>{{ e.pct_lessons if e.pct_lessons is not none else '—' }}%</td>
+        <td>{{ e.digital_lessons_planned }}</td><td>{{ e.digital_lessons_done }}</td><td>{{ e.pct_digital_lessons if e.pct_digital_lessons is not none else '—' }}%</td>
+        <td>{{ e.tp_planned }}</td><td>{{ e.tp_done }}</td><td>{{ e.pct_tp if e.pct_tp is not none else '—' }}%</td>
+        <td>{{ e.digital_tp_planned }}</td><td>{{ e.digital_tp_done }}</td><td>{{ e.pct_digital_tp if e.pct_digital_tp is not none else '—' }}%</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="16" class="text-muted text-center py-4">Aucun indicateur renseigné pour ce trimestre.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div style="overflow-x:auto;">
+  <table class="table-ltt" style="font-size:11.5px; white-space:nowrap;">
+    <thead>
+      <tr>
+        <th rowspan="2">Enseignant</th>
+        <th rowspan="2">Code / Classe</th>
+        <th rowspan="2">Matière</th>
+        <th colspan="3" class="text-center">Couverture des heures</th>
+        <th colspan="3" class="text-center">Couverture des programmes</th>
+        <th colspan="3" class="text-center">Leçons digitalisées</th>
+        <th colspan="3" class="text-center">Travaux pratiques</th>
+        <th colspan="3" class="text-center">TP digitalisés</th>
+        {% for ct in custom_types %}<th colspan="3" class="text-center">{{ ct.label }}</th>{% endfor %}
+        {% if current_user.role == 'censeur' %}<th rowspan="2" class="no-print"></th>{% endif %}
+      </tr>
+      <tr>
+        <th>Dues</th><th>Faites</th><th>%</th>
+        <th>Prévues</th><th>Faites</th><th>%</th>
+        <th>Prévues</th><th>Faites</th><th>%</th>
+        <th>Prévus</th><th>Réalisés</th><th>%</th>
+        <th>Prévus</th><th>Réalisés</th><th>%</th>
+        {% for ct in custom_types %}<th>{{ ct.unit_planned }}</th><th>{{ ct.unit_done }}</th><th>%</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td class="fw-semibold">{{ row.teacher.user.full_name }} <span class="text-muted">({{ row.teacher.department.code if row.teacher.department }})</span></td>
+        <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.course.school_class.name }}</div></td>
+        <td>{{ row.course.subject.name }}</td>
+        <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ row.pct_hours if row.pct_hours is not none else '—' }}%</td>
+        <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ row.pct_lessons if row.pct_lessons is not none else '—' }}%</td>
+        <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ row.pct_digital_lessons if row.pct_digital_lessons is not none else '—' }}%</td>
+        <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ row.pct_tp if row.pct_tp is not none else '—' }}%</td>
+        <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ row.pct_digital_tp if row.pct_digital_tp is not none else '—' }}%</td>
+        {% for ct in custom_types %}
+          {% set cv = row.custom.get(ct.id) %}
+          <td>{{ cv.planned if cv else '—' }}</td><td>{{ cv.done if cv else '—' }}</td><td>{{ cv.pct if cv and cv.pct is not none else '—' }}%</td>
+        {% endfor %}
+        {% if current_user.role == 'censeur' %}
+        <td class="no-print"><a href="#" data-bs-toggle="modal" data-bs-target="#editInd{{ row.course.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a></td>
+        <div class="modal fade" id="editInd{{ row.course.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+          <div class="modal-header"><h5 class="modal-title">Modifier — {{ row.teacher.user.full_name }} ({{ row.course.school_class.code or 'Sans code' }} · {{ row.course.school_class.name }} — {{ row.course.subject.name }})</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <form method="POST" action="{{ url_for('censeur_indicator_edit', course_id=row.course.id) }}" class="form-ltt">
+              <input type="hidden" name="term" value="{{ term }}">
+              {{ ind_fields(row.ind) }}
+              <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+            </form>
+          </div>
+        </div></div></div>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="{{ 18 + custom_types|length * 3 }}" class="text-muted text-center py-4">Aucun indicateur renseigné pour ce trimestre.</td></tr>
+    {% endfor %}
+    </tbody>
+    {% if rows %}
+    <tfoot>
+      <tr class="fw-bold" style="background:var(--cream);">
+        <td colspan="3">TOTAL</td>
+        <td>{{ totals.hours_due }}</td><td>{{ totals.hours_done }}</td><td>{{ totals.pct_hours if totals.pct_hours is not none else '—' }}%</td>
+        <td>{{ totals.lessons_planned }}</td><td>{{ totals.lessons_done }}</td><td>{{ totals.pct_lessons if totals.pct_lessons is not none else '—' }}%</td>
+        <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—' }}%</td>
+        <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ totals.pct_tp if totals.pct_tp is not none else '—' }}%</td>
+        <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ totals.pct_digital_tp if totals.pct_digital_tp is not none else '—' }}%</td>
+        {% for ct in custom_types %}<td colspan="3"></td>{% endfor %}
+        {% if current_user.role == 'censeur' %}<td class="no-print"></td>{% endif %}
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+  </div>
+
+  {% if missing %}
+  <div class="mt-3" style="font-size:12px;">
+    <strong class="text-muted">En attente de saisie :</strong>
+    {% for c in missing %}
+    {% if current_user.role == 'censeur' %}
+    <a href="#" data-bs-toggle="modal" data-bs-target="#addFor{{ c.id }}Modal" class="badge-ltt badge-warning me-1" style="cursor:pointer;">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) <i class="bi bi-plus-circle"></i></a>
+    <div class="modal fade" id="addFor{{ c.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+      <div class="modal-header"><h5 class="modal-title">Ajouter — {{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} / {{ c.subject.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('censeur_indicator_edit', course_id=c.id) }}" class="form-ltt">
+          <input type="hidden" name="term" value="{{ term }}">
+          {{ ind_fields(none) }}
+          <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+        </form>
+      </div>
+    </div></div></div>
+    {% else %}
+    <span class="badge-ltt badge-warning me-1">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }})</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

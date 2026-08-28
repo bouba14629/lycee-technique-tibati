@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% from "_macros.html" import gauges, alerts_panel, activity_feed, school_calendar with context %}
+{% block title %}Tableau de bord Proviseur{% endblock %}
+{% block page_title %}Vue d'ensemble de l'établissement{% endblock %}
+{% block page_subtitle %}Bienvenue, {{ current_user.full_name }} — Année scolaire {{ school_year }}{% endblock %}
+
+{% block content %}
+{% if is_founder_setup %}
+<section class="setup-panel">
+  <div class="setup-panel-heading">
+    <div class="setup-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
+    <div>
+      <div class="eyebrow">Démarrage de l’établissement</div>
+      <h2>Bienvenue, Proviseur. Configurez votre plateforme étape par étape.</h2>
+      <p>Les données de démonstration ont été retirées : vous gardez la maîtrise des filières, classes, équipes et inscriptions.</p>
+    </div>
+    <div class="setup-progress"><strong>{{ setup_progress }}%</strong><span>configuration</span></div>
+  </div>
+  <div class="setup-progress-bar"><span style="width: {{ setup_progress }}%"></span></div>
+  <div class="setup-grid">
+    {% for step in setup_steps %}
+    <a class="setup-step {{ 'is-done' if step.value > 0 }}" href="{{ url_for(step.endpoint) }}">
+      <span class="setup-step-icon"><i class="bi {{ step.icon }}"></i></span>
+      <span><strong>{{ step.label }}</strong><small>{{ step.value }} élément{{ 's' if step.value > 1 else '' }} configuré{{ 's' if step.value > 1 else '' }}</small></span>
+      <i class="bi bi-arrow-right-short setup-step-arrow"></i>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% for level, icon, title, text, endpoint in alerts %}
+{% if level == 'danger' %}
+<div class="alert alert-danger d-flex align-items-center justify-content-between gap-3 mb-3" role="alert"><div><i class="bi bi-exclamation-octagon-fill me-2"></i><strong>Alerte critique — {{ title }}</strong><span class="ms-1">{{ text }}</span></div>{% if endpoint %}<a href="{{ url_for(endpoint) }}" class="btn btn-sm btn-outline-danger">Traiter</a>{% endif %}</div>
+{% endif %}
+{% endfor %}
+
+{{ gauges(rates, "Taux globaux — établissement") }}
+
+<div class="kpi-grid">
+  <a href="{{ url_for('students_list') }}" class="kpi-card kpi-blue"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves inscrits</div></a>
+  <a href="{{ url_for('dir_users', role='enseignant') }}" class="kpi-card kpi-green"><div class="kpi-icon"><i class="bi bi-person-workspace"></i></div><div class="kpi-value">{{ stats.teachers }}</div><div class="kpi-label">Enseignants</div></a>
+  <a href="{{ url_for('dir_users', role='parent') }}" class="kpi-card kpi-orange"><div class="kpi-icon"><i class="bi bi-people-fill"></i></div><div class="kpi-value">{{ stats.parents }}</div><div class="kpi-label">Parents référencés</div></a>
+  <a href="{{ url_for('dir_structure') }}" class="kpi-card kpi-purple"><div class="kpi-icon"><i class="bi bi-diagram-3-fill"></i></div><div class="kpi-value">{{ stats.classes }}</div><div class="kpi-label">Classes actives</div></a>
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card kpi-cyan"><div class="kpi-icon"><i class="bi bi-door-open-fill"></i></div><div class="kpi-value">{{ stats.rooms }}</div><div class="kpi-label">Salles, ateliers &amp; labos</div></a>
+  <div class="kpi-card kpi-red"><div class="kpi-icon"><i class="bi bi-shield-exclamation"></i></div><div class="kpi-value">{{ stats.sanctions }}</div><div class="kpi-label">Sanctions cumulées</div></div>
+</div>
+
+<section class="principal-summary" aria-labelledby="principal-summary-title">
+  <div class="principal-summary-heading"><div><span class="chart-kicker">Synthèse de pilotage</span><h2 id="principal-summary-title">Effectifs et capacité de l’établissement</h2></div><a href="{{ url_for('dir_structure') }}" class="btn-ltt-outline">Gérer les classes <i class="bi bi-arrow-right"></i></a></div>
+  <div class="principal-summary-grid">
+    <article><span>Classes configurées</span><strong>{{ stats.classes }}</strong><small>{{ stats.sections }} section{{ 's' if stats.sections > 1 else '' }} · {{ chart_summary['values'][0] }} filière{{ 's' if chart_summary['values'][0] > 1 else '' }}</small></article>
+    <article><span>Élèves inscrits</span><strong>{{ stats.students }}</strong><small>{% if school_summary.capacity %}{{ school_summary.available_seats }} place{{ 's' if school_summary.available_seats > 1 else '' }} disponible{{ 's' if school_summary.available_seats > 1 else '' }}{% else %}Créez vos premières classes{% endif %}</small></article>
+    <article><span>Équipe enseignante</span><strong>{{ stats.teachers }}</strong><small>{% if school_summary.student_teacher_ratio is not none %}{{ school_summary.student_teacher_ratio }} élève{{ 's' if school_summary.student_teacher_ratio > 1 else '' }} par enseignant{% else %}Ajoutez votre équipe éducative{% endif %}</small></article>
+    <article><span>Capacité déclarée</span><strong>{{ school_summary.capacity }}</strong><small>{% if school_summary.classes_per_teacher is not none %}{{ school_summary.classes_per_teacher }} classe{{ 's' if school_summary.classes_per_teacher > 1 else '' }} par enseignant{% else %}Sera calculée après paramétrage{% endif %}</small></article>
+  </div>
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-ltt chart-card">
+      <div class="chart-title-row"><div><span class="chart-kicker">Performance</span><h2>Réussite par filière</h2></div><span class="chart-pill"><i class="bi bi-bar-chart-line-fill"></i> Comparatif</span></div>
+      <canvas id="successChart" height="150"></canvas>
+    </div>
+    <div class="card-ltt chart-card">
+      <div class="chart-title-row"><div><span class="chart-kicker">Tendance</span><h2>Évolution des résultats</h2></div><span class="chart-pill"><i class="bi bi-graph-up-arrow"></i> Moyenne /20</span></div>
+      <canvas id="evolutionChart" height="150"></canvas>
+    </div>
+    <div class="card-ltt chart-card">
+      <div class="chart-title-row"><div><span class="chart-kicker">Effectifs</span><h2>Répartition par section</h2></div><span class="chart-pill"><i class="bi bi-people-fill"></i> Vue globale</span></div>
+      <canvas id="sectionChart" height="140"></canvas>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {{ alerts_panel(alerts) }}
+    {{ activity_feed(activities) }}
+    {{ school_calendar(calendar_events) }}
+  </div>
+</div>
+
+<div class="row g-3 mt-0">
+  <div class="col-lg-5">
+    <div class="card-ltt chart-card chart-card-compact">
+      <div class="chart-title-row"><div><span class="chart-kicker">Configuration</span><h2>Capacité de la plateforme</h2></div></div>
+      <canvas id="platformChart" height="175"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card-ltt dashboard-insight">
+      <div class="insight-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+      <div><span class="chart-kicker">À surveiller</span><h2>{{ stats.maintenance_open }} maintenance{{ 's' if stats.maintenance_open > 1 else '' }} ouverte{{ 's' if stats.maintenance_open > 1 else '' }}</h2><p>Gardez les salles et ateliers opérationnels afin d’assurer la continuité des apprentissages pratiques.</p></div>
+      <a href="{{ url_for('rooms_list') }}" class="btn-ltt-outline">Ouvrir le suivi <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-0">
+  <div class="col-lg-7">
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-tools me-1" style="color:var(--gold-500);"></i> Maintenance en cours</h2><a href="{{ url_for('rooms_list') }}" class="muted">Voir tout <i class="bi bi-arrow-right"></i></a></div>
+      <p class="mb-0">{{ stats.maintenance_open }} demande(s) de maintenance ouverte(s) ou en cours sur les salles et ateliers.</p>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-megaphone-fill me-1" style="color:var(--gold-500);"></i> Dernières annonces</h2></div>
+      {% for a in announcements %}
+      <div class="timeline-item"><div class="timeline-dot"></div><div><div class="fw-semibold" style="font-size:13.5px;">{{ a.title }}</div><div class="text-muted" style="font-size:12px;">{{ a.date.strftime('%d/%m/%Y') }} — {{ a.author.full_name if a.author }}</div></div></div>
+      {% else %}<p class="text-muted mb-0">Aucune annonce pour le moment.</p>{% endfor %}
+      <a href="{{ url_for('announcements') }}" class="btn-ltt-outline w-100 justify-content-center mt-3"><i class="bi bi-plus-lg"></i> Publier une annonce</a>
+    </div>
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-lightning-charge-fill me-1" style="color:var(--gold-500);"></i> Actions rapides</h2></div>
+      <div class="d-grid gap-2"><a href="{{ url_for('dir_user_new') }}" class="btn-ltt-navy"><i class="bi bi-person-plus-fill"></i> Créer un compte enseignant / staff</a><a href="{{ url_for('student_enroll') }}" class="btn-ltt-navy"><i class="bi bi-clipboard2-plus-fill"></i> Inscrire un élève</a><a href="{{ url_for('dir_schedule_validate') }}" class="btn-ltt-navy"><i class="bi bi-calendar2-check-fill"></i> Consulter les emplois du temps</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const tooltipTheme = { backgroundColor: '#081a30', padding: 12, displayColors: false };
+new Chart(document.getElementById('sectionChart'), { type: 'bar', data: { labels: [{% for name, n in by_section %}"{{ name }}",{% endfor %}], datasets: [{ label: "Élèves", data: [{% for name, n in by_section %}{{ n }},{% endfor %}], backgroundColor: ['#0B2545', '#1a4d8a', '#2c6ca8'], borderRadius: 8, maxBarThickness: 60 }] }, options: { plugins: { legend: { display: false }, tooltip: tooltipTheme }, scales: { y: { beginAtZero: true, grid: { color: '#f1ead9' } }, x: { grid: { display: false } } } } });
+new Chart(document.getElementById('successChart'), { type: 'bar', data: { labels: [{% for code, pct in success_by_dept %}"{{ code }}",{% endfor %}], datasets: [{ label: "Taux de réussite (%)", data: [{% for code, pct in success_by_dept %}{{ pct }},{% endfor %}], backgroundColor: '#1a4d8a', borderRadius: 6, maxBarThickness: 46 }] }, options: { plugins: { legend: { display: false }, tooltip: tooltipTheme }, scales: { y: { beginAtZero: true, max: 100, grid: { color: '#f1ead9' } }, x: { grid: { display: false } } } } });
+new Chart(document.getElementById('evolutionChart'), { type: 'line', data: { labels: {{ evolution['labels']|tojson }}, datasets: [{ label: "Moyenne /20", data: {{ evolution['values']|tojson }}, borderColor: '#0B2545', backgroundColor: 'rgba(11,37,69,.08)', tension: .3, fill: true, pointBackgroundColor: '#0B2545', pointRadius: 5 }] }, options: { plugins: { legend: { display: false }, tooltip: tooltipTheme }, scales: { y: { beginAtZero: true, max: 20, grid: { color: '#f1ead9' } }, x: { grid: { display: false } } } } });
+new Chart(document.getElementById('platformChart'), { type: 'doughnut', data: { labels: {{ chart_summary['labels']|tojson }}, datasets: [{ data: {{ chart_summary['values']|tojson }}, backgroundColor: ['#0B2545', '#1a4d8a', '#2c6ca8', '#C9A227'], borderWidth: 0, spacing: 3 }] }, options: { cutout: '66%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { family: 'Inter', size: 11 } } }, tooltip: tooltipTheme } } });
+</script>
+{% endblock %}

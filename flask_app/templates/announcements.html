@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Annonces{% endblock %}
+{% block page_title %}Annonces &amp; communications{% endblock %}
+{% block content %}
+<div class="row g-3">
+  {% if current_user.role in ['directeur','censeur'] %}
+  <div class="col-lg-4 order-lg-2">
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-plus-circle-fill me-1" style="color:var(--gold-500);"></i> Publier une annonce</h2></div>
+      <form method="POST" class="form-ltt">
+        <div class="mb-3"><label>Titre</label><input type="text" name="title" class="form-control" required></div>
+        <div class="mb-3"><label>Message</label><textarea name="body" rows="5" class="form-control" required></textarea></div>
+        <div class="mb-3">
+          <label>Destinataires</label>
+          <select name="target_role" class="form-select">
+            <option value="tous">Tous</option>
+            <option value="enseignant">Enseignants</option>
+            <option value="eleve">Élèves</option>
+            <option value="parent">Parents</option>
+          </select>
+        </div>
+        <button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-megaphone-fill"></i> Publier</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-lg-{{ '8 order-lg-1' if current_user.role in ['directeur','censeur'] else '12' }}">
+    {% for a in items %}
+    <div class="card-ltt">
+      <div class="d-flex justify-content-between align-items-start">
+        <h3 style="font-size:16px; color:var(--navy-900);">{{ a.title }}</h3>
+        <span class="badge-ltt badge-gold">{{ ROLE_LABELS.get(a.target_role, 'Tous') if a.target_role != 'tous' else 'Tous' }}</span>
+      </div>
+      <p class="mb-2" style="font-size:13.5px; line-height:1.6;">{{ a.body }}</p>
+      <div class="text-muted" style="font-size:12px;">Publié par {{ a.author.full_name if a.author }} · {{ a.date.strftime('%d/%m/%Y %H:%M') }}</div>
+    </div>
+    {% else %}
+    <div class="card-ltt text-center text-muted py-4">Aucune annonce disponible.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

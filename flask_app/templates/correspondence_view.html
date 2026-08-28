@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.subject }}{% endblock %}
+{% block page_title %}Carnet de correspondance{% endblock %}
+{% block page_subtitle %}{{ entry.student.full_name }} · {{ entry.student.school_class.name if entry.student.school_class else 'Classe à renseigner' }}{% endblock %}
+{% block content %}
+<div class="card-ltt correspondence-detail {{ 'is-priority' if entry.priority == 'Critique' else '' }}">
+  <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap"><div><div class="d-flex gap-2 align-items-center flex-wrap"><span class="badge-ltt {{ 'badge-danger' if entry.priority == 'Critique' else 'badge-warning' if entry.priority == 'Importante' else 'badge-navy' }}">{{ entry.priority }}</span><span class="badge-ltt badge-gold">{{ entry.category }}</span></div><h2 class="mt-3">{{ entry.subject }}</h2><p class="text-muted mb-0" style="font-size:12.5px;">Publié le {{ entry.created_at.strftime('%d/%m/%Y à %H:%M') }} par {{ entry.author.full_name }}</p></div><a href="{{ url_for('correspondence_inbox') }}" class="btn-ltt-outline"><i class="bi bi-arrow-left"></i> Retour au carnet</a></div>
+  <hr><div class="correspondence-body">{{ entry.body|replace('\n', '<br>')|safe }}</div>
+  {% if receipt %}<div class="correspondence-receipt {{ 'is-acknowledged' if receipt.acknowledged_at else '' }}"><i class="bi {{ 'bi-check2-circle' if receipt.acknowledged_at else 'bi-eye' }}"></i><div><strong>{{ 'Accusé de réception enregistré' if receipt.acknowledged_at else 'Message consulté' if receipt.read_at else 'Message en attente de lecture' }}</strong><span>{% if receipt.acknowledged_at %}Le {{ receipt.acknowledged_at.strftime('%d/%m/%Y à %H:%M') }}{% elif receipt.read_at %}Vous pouvez confirmer votre prise de connaissance ci-dessous.{% else %}Ce message apparaîtra dans votre carnet.{% endif %}</span></div></div>{% endif %}
+  {% if can_acknowledge %}<form method="POST" action="{{ url_for('correspondence_acknowledge', entry_id=entry.id) }}" class="mt-3"><button class="btn-ltt-gold"><i class="bi bi-check2-circle"></i> Accuser réception</button></form>{% endif %}
+</div>
+{% endblock %}

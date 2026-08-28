@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+{% block page_subtitle %}Gérez vos informations et votre mot de passe{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-ltt text-center">
+      <div class="avatar mx-auto mb-3" style="width:70px;height:70px;font-size:22px;">{{ user.initials }}</div>
+      <div class="fw-semibold" style="font-size:16px;">{{ user.full_name }}</div>
+      <span class="badge-ltt badge-navy mt-2">{{ user.role_label }}</span>
+      <div class="text-muted mt-2" style="font-size:12.5px;">Identifiant : {{ user.username }}</div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card-ltt">
+      <form method="POST" class="form-ltt">
+        <div class="row g-3">
+          <div class="col-md-6"><label>Email</label><input type="email" name="email" class="form-control" value="{{ user.email or '' }}"></div>
+          <div class="col-md-6"><label>Téléphone</label><input type="text" name="phone" class="form-control" value="{{ user.phone or '' }}"></div>
+          <div class="col-12"><hr></div>
+          <div class="col-md-6">
+            <label>Nouveau mot de passe</label>
+            <div class="position-relative">
+              <input type="password" name="new_password" id="newPasswordInput" class="form-control pe-5">
+              <button type="button" onclick="togglePassword('newPasswordInput', this)"
+                      class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                      aria-label="Afficher le mot de passe">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+              </button>
+            </div>
+            <div class="text-muted mt-1" style="font-size:11px;">Champ vide — laissez ainsi pour ne pas changer votre mot de passe actuel.</div>
+          </div>
+        </div>
+        <button class="btn-ltt-navy mt-4"><i class="bi bi-check2"></i> Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

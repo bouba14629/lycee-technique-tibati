@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>
+@page { size:A4 landscape; margin:8mm; }
+body { font-family:DejaVu Sans, sans-serif; color:#11243d; font-size:7pt; }
+.head { text-align:center; border-bottom:1.2pt solid #0b2545; padding-bottom:3mm; margin-bottom:3mm; }
+.head h1 { font-family:DejaVu Serif, serif; font-size:16pt; margin:0; color:#0b2545; }
+.head p { margin:1mm 0 0; }
+table { width:100%; border-collapse:collapse; }
+th { background:#0b2545; color:#fff; font-size:6.5pt; padding:1.5mm 1mm; }
+td { border:.4pt solid #b9c3cf; padding:1.3mm 1mm; vertical-align:top; }
+tr:nth-child(even) { background:#f4f7fa; }
+.center { text-align:center; } .avg { color:#0b2545; font-weight:bold; }
+</style></head><body>
+<div class="head"><h1>LYCÉE TECHNIQUE DE TIBATI</h1><p><b>REGISTRE DES TABLEAUX D’HONNEUR</b> — {{ term }} — Année scolaire {{ school_year }}{% if selected_class %} — Classe : {{ selected_class.name }}{% endif %}</p><p>Élèves dont la moyenne trimestrielle est comprise entre 12/20 et 20/20</p></div>
+<table><thead><tr><th>N°</th><th>Nom et prénom</th><th>Date de naissance</th><th>Lieu de naissance</th><th>Matricule</th><th>Classe</th><th>Moyenne /20</th><th>Rang</th><th>Effectif</th></tr></thead><tbody>{% for item in rows %}<tr><td class="center">{{ loop.index }}</td><td>{{ item.student.full_name }}</td><td>{{ item.student.dob.strftime('%d/%m/%Y') if item.student.dob else '—' }}</td><td>{{ item.student.birth_place or '—' }}</td><td>{{ item.student.matricule }}</td><td>{{ item.school_class.name }}</td><td class="center avg">{{ '%.2f'|format(item.average) }}</td><td class="center">{{ item.rank_label }}</td><td class="center">{{ item.class_size }}</td></tr>{% else %}<tr><td colspan="9" class="center">Aucun élève admissible pour ce trimestre.</td></tr>{% endfor %}</tbody></table>
+</body></html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><style>
+@page { size: A4 landscape; margin: 7mm; }
+body { font-family: DejaVu Serif, serif; color:#111; font-size:10pt; }
+.frame { border:1.2pt solid #10284b; padding:6pt 11pt; }
+.ornament { width:100%; border-collapse:collapse; color:#0b2545; font-size:16pt; line-height:1; }
+.ornament td { width:50%; } .ornament .right { text-align:right; }
+.head { width:100%; border-collapse:collapse; margin-top:1pt; }
+.head td { width:33%; text-align:center; vertical-align:top; font-family:DejaVu Sans, sans-serif; font-size:5.2pt; line-height:1.2; }
+.head .logo { width:40pt; height:40pt; }
+.school { text-align:center; border-top:.8pt solid #0b2545; border-bottom:1.2pt solid #0b2545; padding:3pt 0; margin:3pt 0 7pt; }
+.school-name { font-size:24pt; line-height:1.04; color:#0866ae; font-weight:bold; letter-spacing:.5pt; }
+.school-sub { font-family:DejaVu Sans, sans-serif; font-size:6.7pt; font-weight:bold; }
+.meta { font-family:DejaVu Sans, sans-serif; font-size:6.4pt; color:#34445a; margin-top:1pt; }
+.award { width:50%; margin:0 auto 9pt; background:#0879c9; color:#f2d05d; text-align:center; padding:7pt 5pt; font-size:19pt; line-height:1.1; font-weight:bold; border-radius:8pt; }
+.award .en { font-size:14pt; font-style:italic; }
+.content { width:77%; margin:0 auto; }
+.intro { margin:0 0 7pt; line-height:1.2; }
+.english { font-size:8pt; font-style:italic; }
+.recipient, .highlight, .result { color:#008dbd; font-weight:bold; font-style:italic; text-decoration:underline; }
+.recipient { font-size:13pt; } .highlight { font-size:11.5pt; } .result { font-size:12pt; }
+.results { width:100%; border-collapse:collapse; margin-top:5pt; }
+.results td { width:50%; vertical-align:top; }
+.footer { width:100%; border-collapse:collapse; margin-top:5pt; font-size:8.7pt; }
+.footer td { width:50%; vertical-align:top; } .sign-right { text-align:center; font-weight:bold; } .sign-left { font-weight:bold; }
+.homeroom { font-family:DejaVu Sans, sans-serif; color:#34445a; font-size:7pt; margin-top:2pt; }
+.seal { text-align:center; color:#c8a441; font-size:11pt; margin-top:0; }
+</style></head><body>
+{% for item in recipients %}
+<div class="frame">
+  <table class="ornament"><tr><td>❦ ❦ ❦</td><td class="right">❦ ❦ ❦</td></tr></table>
+  <table class="head"><tr><td><b>RÉPUBLIQUE DU CAMEROUN</b><br>Paix–Travail–Patrie<br><br>RÉGION DE L’ADAMAOUA<br>DÉLÉGATION RÉGIONALE DES ENSEIGNEMENTS SECONDAIRES<br>DÉLÉGATION DÉPARTEMENTALE DU DJEREM</td><td><img class="logo" src="{{ logo_path }}"><br><i>Discipline – Travail – Réussite</i></td><td><b>REPUBLIC OF CAMEROON</b><br>Peace–Work–Fatherland<br><br>ADAMAWA REGION<br>REGIONAL DELEGATION OF SECONDARY EDUCATION<br>DJEREM DIVISIONAL DELEGATION</td></tr></table>
+  <div class="school"><div class="school-name">LYCÉE TECHNIQUE DE TIBATI</div><div class="school-sub">GOVERNMENT TECHNICAL HIGH SCHOOL TIBATI</div><div class="meta">BP : 105 TIBATI &nbsp;—&nbsp; Mle : 2CE1TEFD110320092 &nbsp;—&nbsp; E-mail : lttibati@gmail.com</div></div>
+  <div class="award">TABLEAU D’HONNEUR<br><span class="en">AWARD OF HONOUR</span></div>
+  <div class="content">
+    <p class="intro">Le conseil de classe, lors de sa session de fin du <b>{{ term }}</b> {{ school_year }}<br><span class="english">The class council held at the end of the term of the academic year</span></p>
+    <p class="intro">Décerne un <b>Tableau d’Honneur</b> à {% if item.student.sex in ['F', 'Féminin'] %}Mlle{% else %}M.{% endif %} <span class="recipient">{{ item.student.full_name|upper }}</span><br><span class="english">Grants an Award of Honour to</span></p>
+    <p class="intro">élève de la classe de : <span class="highlight">{{ school_class.name|upper }}</span>, {{ congratulations }}<br><span class="english">A student of form {{ school_class.name }} for academics and satisfactory conduct</span></p>
+    <table class="results"><tr><td><b>Moyenne obtenue :</b> <span class="result">{{ '%.2f'|format(item.average) }}</span>/20<br><span class="english">Average</span></td><td><b>Rang :</b> <span class="result">{{ item.rank_label }}</span>/{{ item.class_size }}<br><span class="english">Position</span></td></tr></table>
+    <table class="footer"><tr><td class="sign-left">Fait à Tibati, le {{ now.strftime('%d/%m/%Y') }}<div class="homeroom">Professeur principal : {{ school_class.homeroom_teacher.user.full_name if school_class.homeroom_teacher else '—' }}</div></td><td class="sign-right">Pour le conseil de classe<br><br>Le Proviseur<div class="seal">◉</div></td></tr></table>
+  </div>
+</div>
+{% if not loop.last %}<div style="page-break-after:always;"></div>{% endif %}
+{% endfor %}
+</body></html>

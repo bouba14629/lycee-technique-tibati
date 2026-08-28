@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B2545">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<title>{% block title %}Tableau de bord{% endblock %} · Lycée Technique de Tibati</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/bootstrap.min.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='vendor/icons/bootstrap-icons.min.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+	<style>
+	  .app-back-button { align-items:center; background:#fff; border:1px solid rgba(11,37,69,.18); border-radius:10px; color:#0B2545; cursor:pointer; display:inline-flex; font-weight:700; gap:7px; min-height:38px; padding:0 12px; transition:background .16s ease, transform .16s ease; }
+	  .app-back-button:hover { background:#F1F6FA; }
+	  .app-back-button:active { transform:scale(.97); }
+	  .app-back-button:focus-visible { outline:3px solid rgba(197,155,41,.45); outline-offset:2px; }
+	  @media (max-width: 767px) { .app-back-button .app-back-label { display:none; } .app-back-button { min-width:38px; justify-content:center; padding:0; } }
+	</style>
+	{% block extra_css %}{% endblock %}
+</head>
+<body>
+<!-- ltt-navigation-build: schedule-menu-v2 -->
+<a class="skip-link" href="#main-content">Aller directement au contenu</a>
+<div class="app-shell">
+  <aside class="sidebar no-print" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Blason LTT">
+      <div>
+        <div class="name">Lycée Technique<br>de Tibati</div>
+        <div class="tag">Plateforme numérique</div>
+      </div>
+    </div>
+
+    {% if current_user %}
+    <div class="sidebar-role">
+      <i class="bi bi-shield-check"></i> Espace {{ current_user.role_label }}
+    </div>
+    {% endif %}
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Général</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dashboard' }}" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Tableau de bord</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='announcements' }}" href="{{ url_for('announcements') }}"><i class="bi bi-megaphone-fill"></i> Annonces</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['messages_inbox','messages_new','message_view'] }}" href="{{ url_for('messages_inbox') }}"><i class="bi bi-chat-dots-fill"></i> Messagerie</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['correspondence_inbox','correspondence_new','correspondence_view'] }}" href="{{ url_for('correspondence_inbox') }}"><i class="bi bi-journal-text"></i> Carnet numérique</a>
+      {% if current_user and current_user.role in ['directeur','censeur'] %}<a class="sidebar-link {{ 'active' if request.endpoint=='evaluation_plan' }}" href="{{ url_for('evaluation_plan') }}"><i class="bi bi-clipboard2-check-fill"></i> Évaluations</a>{% endif %}
+      {% if current_user and current_user.role in ['directeur','censeur','surveillant_general','conseiller_orientation'] %}
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['late_arrivals','late_arrival_new'] }}" href="{{ url_for('late_arrivals') }}"><i class="bi bi-clock-history"></i> Retards</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'directeur' %}
+      <div class="sidebar-section-title">Pilotage</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users') }}"><i class="bi bi-people-fill"></i> Utilisateurs</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-diagram-3-fill"></i> Sections &amp; filières</a>
+      <button type="button" class="sidebar-link {{ 'active' if request.endpoint=='dir_schedule_validate' }} w-100 border-0 text-start" style="background:transparent; color:inherit; font:inherit;" data-director-schedule-toggle aria-expanded="{{ 'true' if request.endpoint=='dir_schedule_validate' else 'false' }}" aria-controls="directorScheduleMenu">
+        <span><i class="bi bi-calendar2-check-fill"></i> Emplois du temps</span><i class="bi bi-chevron-down ms-auto" aria-hidden="true"></i>
+      </button>
+      <div id="directorScheduleMenu" {{ 'hidden' if request.endpoint!='dir_schedule_validate' }}>
+        <a class="sidebar-link {{ 'active' if request.endpoint=='dir_schedule_validate' and request.args.get('view', 'classe')=='classe' }}" style="padding-left:36px; font-size:12px;" href="{{ url_for('dir_schedule_validate', view='classe') }}"><i class="bi bi-mortarboard"></i> Par classe</a>
+        <a class="sidebar-link {{ 'active' if request.endpoint=='dir_schedule_validate' and request.args.get('view')=='individuel' }}" style="padding-left:36px; font-size:12px;" href="{{ url_for('dir_schedule_validate', view='individuel') }}"><i class="bi bi-person-workspace"></i> Emploi individuel</a>
+      </div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_calendar' }}" href="{{ url_for('dir_calendar') }}"><i class="bi bi-calendar3"></i> Calendrier scolaire</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_settings' }}" href="{{ url_for('dir_settings') }}"><i class="bi bi-gear-fill"></i> Paramètres généraux</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail','student_enroll'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_bulletins' }}" href="{{ url_for('censeur_bulletins') }}"><i class="bi bi-file-earmark-medical-fill"></i> Bulletins</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_honor_roll_register','censeur_honor_roll_register_export'] }}" href="{{ url_for('censeur_honor_roll_register') }}"><i class="bi bi-award-fill"></i> Tableaux d’honneur</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles &amp; équipements</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'censeur' %}
+      <div class="sidebar-section-title">Organisation pédagogique</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_conseil' }}" href="{{ url_for('censeur_conseil') }}"><i class="bi bi-clipboard2-data-fill"></i> Conseils de classe</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail','student_enroll'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_bulletins' }}" href="{{ url_for('censeur_bulletins') }}"><i class="bi bi-file-earmark-medical-fill"></i> Bulletins</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_honor_roll_register','censeur_honor_roll_register_export'] }}" href="{{ url_for('censeur_honor_roll_register') }}"><i class="bi bi-award-fill"></i> Tableaux d’honneur</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='enseignant') }}"><i class="bi bi-person-workspace"></i> Enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles &amp; équipements</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'censeur_crm' %}
+      <div class="sidebar-section-title">Organisation pédagogique</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement pour l'emploi du temps et les matières — la construction relève des Censeurs de section et du Censeur Enseignements Généraux. Fiche statistique et indicateurs pédagogiques : vue complète de l'établissement.</div>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'surveillant_general' %}
+      <div class="sidebar-section-title">Discipline &amp; absences</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_absences' }}" href="{{ url_for('censeur_absences') }}"><i class="bi bi-exclamation-octagon-fill"></i> Absences à justifier</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='surveillant_sanctions' }}" href="{{ url_for('surveillant_sanctions') }}"><i class="bi bi-shield-exclamation"></i> Élèves sanctionnés</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves (sanctions/récompenses)</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'conseiller_orientation' %}
+      <div class="sidebar-section-title">Consultation</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves &amp; bulletins</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='parent') }}"><i class="bi bi-people-fill"></i> Parents</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='enseignant') }}"><i class="bi bi-person-workspace"></i> Enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_absences' }}" href="{{ url_for('censeur_absences') }}"><i class="bi bi-exclamation-octagon-fill"></i> Discipline &amp; absences</a>
+      {% endif %}
+
+      {% if current_user and current_user.role in ['chef_travaux','chef_crm'] %}
+      <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers & équipements' }}</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles, ateliers &amp; labos</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'enseignant' %}
+      <div class="sidebar-section-title">Pédagogie</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_courses' }}" href="{{ url_for('teacher_courses') }}"><i class="bi bi-journal-bookmark-fill"></i> Mes classes</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_schedule' }}" href="{{ url_for('teacher_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Mon emploi du temps</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_availability' }}" href="{{ url_for('teacher_availability') }}"><i class="bi bi-clock-fill"></i> Disponibilités</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_activities' }}" href="{{ url_for('teacher_activities') }}"><i class="bi bi-list-check"></i> Mes activités</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_assessments' }}" href="{{ url_for('teacher_assessments') }}"><i class="bi bi-clipboard2-check-fill"></i> Mes évaluations</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_indicators' }}" href="{{ url_for('teacher_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'eleve' %}
+      <div class="sidebar-section-title">Ma scolarité</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='student_grades' }}" href="{{ url_for('student_grades') }}"><i class="bi bi-journal-check"></i> Mes notes</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='student_bulletin_self' }}" href="{{ url_for('student_bulletin_self') }}"><i class="bi bi-file-earmark-medical-fill"></i> Mon bulletin</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='student_schedule' }}" href="{{ url_for('student_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emploi du temps</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='student_absences_self' }}" href="{{ url_for('student_absences_self') }}"><i class="bi bi-exclamation-triangle-fill"></i> Absences &amp; retards</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'parent' %}
+      <div class="sidebar-section-title">Suivi familial</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['parent_children','parent_child_detail'] }}" href="{{ url_for('parent_children') }}"><i class="bi bi-people-fill"></i> Mes enfants</a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <i class="bi bi-c-circle"></i> {{ now.year }} Lycée Technique de Tibati<br>Application de gestion intégrée
+    </div>
+  </aside>
+
+  <div class="main-col">
+	<header class="topbar no-print">
+	  <div class="d-flex align-items-center gap-3">
+	    <button class="icon-btn d-md-none" type="button" aria-label="Ouvrir le menu" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="bi bi-list"></i></button>
+	    {% if current_user and request.endpoint != 'dashboard' %}
+	    <button class="app-back-button" type="button" data-app-back aria-label="Retour à la rubrique précédente" title="Retour">
+	      <i class="bi bi-arrow-left" aria-hidden="true"></i><span class="app-back-label">Retour</span>
+	    </button>
+	    {% endif %}
+	    <div class="topbar-year d-none d-xl-grid"><span>Année scolaire</span><strong>{{ school_year }}</strong></div>
+        <div>
+          <h1>{% block page_title %}Tableau de bord{% endblock %}</h1>
+          <div class="subtitle">{% block page_subtitle %}{{ now.strftime('%A %d %B %Y') }}{% endblock %}</div>
+        </div>
+      </div>
+      {% if current_user and current_user.role in ['directeur','censeur','surveillant_general','conseiller_orientation','enseignant'] %}
+      <form class="topbar-search d-none d-md-block" method="GET" action="{{ url_for('students_list') }}">
+        <label for="topbar-student-search" class="visually-hidden">Rechercher un élève</label>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="topbar-student-search" type="text" name="q" placeholder="Rechercher un élève (nom, matricule)…">
+        <button type="submit" class="topbar-search-submit">Rechercher</button>
+      </form>
+      {% endif %}
+      <div class="topbar-actions">
+        {% if current_user and current_user.last_login_at %}<div class="d-none d-xl-flex flex-column text-end me-1" style="font-size:10.5px; line-height:1.25; color:var(--muted);"><span>Dernière connexion</span><strong style="color:var(--navy-800); font-size:11.5px;">{{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}</strong></div>{% endif %}
+        <button type="button" class="icon-btn d-none" data-pwa-install aria-label="Installer l’application" title="Installer l’application"><i class="bi bi-download" aria-hidden="true"></i><span class="icon-btn-label">Installer</span></button>
+        <a class="icon-btn" href="{{ url_for('announcements') }}" title="Annonces" aria-label="Annonces"><i class="bi bi-megaphone" aria-hidden="true"></i><span class="icon-btn-label">Annonces</span></a>
+        <a class="icon-btn" href="{{ url_for('messages_inbox') }}" title="Messagerie">
+          <i class="bi bi-envelope" aria-hidden="true"></i><span class="icon-btn-label">Messages</span>
+          {% if unread_msgs %}<span class="icon-badge">{{ unread_msgs }}</span>{% endif %}
+        </a>
+        <div class="dropdown">
+          <a class="d-flex align-items-center gap-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" style="color:inherit;">
+            <div class="avatar">{{ current_user.initials if current_user else '?' }}</div>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li><span class="dropdown-item-text small text-muted">{{ current_user.full_name if current_user }}</span></li>
+            {% if current_user and current_user.last_login_at %}<li><span class="dropdown-item-text small text-muted">Dernière connexion : {{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}</span></li>{% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('profil') }}"><i class="bi bi-person-gear me-2"></i>Mon profil</a></li>
+            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="main-content" tabindex="-1">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category=='danger' else category }} alert-dismissible fade show" role="alert" style="border-radius:12px;">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.js') }}"></script>
+<script>
+document.querySelectorAll('#sidebar .sidebar-link').forEach(function(link) {
+  link.addEventListener('click', function() {
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+document.querySelectorAll('[data-director-schedule-toggle]').forEach(function(button) {
+  button.addEventListener('click', function() {
+    const menu = document.getElementById(button.getAttribute('aria-controls'));
+    if (!menu) return;
+    const opening = menu.hasAttribute('hidden');
+    if (opening) menu.removeAttribute('hidden');
+    else menu.setAttribute('hidden', '');
+    button.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  });
+});
+
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) { icon.classList.remove('bi-eye'); icon.classList.add('bi-eye-slash'); }
+    btn.classList.add('is-visible');
+    btn.setAttribute('aria-label', 'Masquer le mot de passe');
+  } else {
+    input.type = 'password';
+    if (icon) { icon.classList.remove('bi-eye-slash'); icon.classList.add('bi-eye'); }
+    btn.classList.remove('is-visible');
+    btn.setAttribute('aria-label', 'Afficher le mot de passe');
+  }
+}
+
+function returnToPreviousRubrique() {
+  const fallbackUrl = "{{ url_for('dashboard') }}";
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  window.location.assign(fallbackUrl);
+}
+
+document.querySelectorAll('[data-app-back]').forEach(function(button) {
+  button.addEventListener('click', returnToPreviousRubrique);
+  button.addEventListener('contextmenu', function(event) {
+    event.preventDefault();
+    returnToPreviousRubrique();
+  });
+});
+
+function renderGauge(canvasId, value, color) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [value, Math.max(0, 100 - value)],
+        backgroundColor: [color, '#EFE9D8'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '75%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      animation: { duration: 600 },
+    }
+  });
+}
+</script>
+<script src="/pwa-install.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

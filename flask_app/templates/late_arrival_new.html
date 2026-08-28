@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Enregistrer un retard{% endblock %}
+{% block page_title %}Enregistrer un retard{% endblock %}
+{% block page_subtitle %}La famille sera notifiée dans son espace numérique{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:760px;"><form method="POST" class="form-ltt"><div class="row g-3"><div class="col-md-7"><label>Élève</label><select name="student_id" class="form-select" required><option value="">— Choisir un élève —</option>{% for student in students %}<option value="{{ student.id }}">{{ student.full_name }} · {{ student.matricule }} · {{ student.school_class.name if student.school_class else '—' }}</option>{% endfor %}</select></div><div class="col-md-3"><label>Date</label><input type="date" name="date" class="form-control" value="{{ today }}" required></div><div class="col-md-2"><label>Heure</label><input type="time" name="arrival_time" class="form-control" required></div><div class="col-12"><label>Motif constaté ou précisions</label><textarea name="reason" class="form-control" rows="4" placeholder="Ex. Arrivée après la première sonnerie."></textarea></div></div><div class="d-flex gap-2 mt-4"><button class="btn-ltt-navy"><i class="bi bi-save"></i> Enregistrer</button><a href="{{ url_for('late_arrivals') }}" class="btn-ltt-outline">Annuler</a></div></form></div>
+{% endblock %}

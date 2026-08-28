@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { configureFlaskGateway } from "../lttFlaskProxy";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -31,6 +32,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  // Flask est le point d’entrée par défaut ; React reste disponible avec
+  // LTT_FLASK_ENABLED=0.
+  const flaskGatewayEnabled = await configureFlaskGateway(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -44,10 +48,11 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
+  // La passerelle Flask a déjà traité les routes applicatives lorsque le mode
+  // par défaut est actif. Le mode React est opt-in via LTT_FLASK_ENABLED=0.
+  if (!flaskGatewayEnabled && process.env.NODE_ENV === "development") {
     await setupVite(app, server);
-  } else {
+  } else if (!flaskGatewayEnabled) {
     serveStatic(app);
   }
 

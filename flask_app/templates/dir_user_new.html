@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Nouveau compte{% endblock %}
+{% block page_title %}Créer un compte{% endblock %}
+{% block page_subtitle %}Personnel de l'établissement — définissez le niveau d'accréditation ; le mot de passe est généré automatiquement{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:640px;">
+  <form method="POST" class="form-ltt">
+    <div class="row g-3">
+      <div class="col-md-2"><label>Civilité</label><select name="civility" class="form-select" required><option value="" selected disabled>Choisir</option><option value="Mme.">Mme.</option><option value="M.">M.</option></select></div>
+      <div class="col-md-6"><label>Nom complet</label><input type="text" name="full_name" class="form-control" required></div>
+      <div class="col-md-4">
+        <label>Niveau d'accréditation (rôle)</label>
+        <select name="role" class="form-select" id="roleSelect" onchange="document.getElementById('teacherFields').style.display = this.value=='enseignant' ? 'flex' : 'none'; document.getElementById('sectionFields').style.display = ['censeur','surveillant_general','chef_travaux'].includes(this.value) ? 'block' : 'none';">
+          <option value="enseignant">Enseignant</option>
+          <option value="censeur">Censeur</option>
+          <option value="censeur_crm">Censeur CRM</option>
+          <option value="surveillant_general">Surveillant Général</option>
+          <option value="conseiller_orientation">Conseiller d'Orientation</option>
+          <option value="chef_travaux">Chef des Travaux</option>
+          <option value="chef_crm">Chef de Centre CRM</option>
+          <option value="directeur">Proviseur</option>
+        </select>
+      </div>
+      <div class="col-md-6"><label>Email</label><input type="email" name="email" class="form-control"></div>
+      <div class="col-md-6"><label>Téléphone</label><input type="text" name="phone" class="form-control"></div>
+      <div class="col-12" id="sectionFields" style="display:none;">
+        <label>Section (portée du compte)</label>
+        <select name="section_id" class="form-select">
+          <option value="">— Portée transversale (ex. Censeur Enseignements Généraux) —</option>
+          {% for s in sections %}<option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>{% endfor %}
+        </select>
+        <div class="text-muted mt-1" style="font-size:11px;">Laissez sur "portée transversale" pour un Censeur Enseignements Généraux (matières communes aux deux sections).</div>
+      </div>
+      <div class="col-md-6"><label>Mot de passe</label><div class="auto-password-note"><strong>Généré automatiquement</strong><span>Il sera créé à partir du nom et du rôle, avec une partie aléatoire sécurisée. Le responsable devra le remplacer à sa première connexion.</span></div></div>
+      <div class="col-md-4">
+        <label>Grade</label>
+        <input type="text" name="grade" class="form-control" list="teacher-grade-suggestions" placeholder="Saisir le grade">
+        <datalist id="teacher-grade-suggestions">
+          <option value="Instituteur">{% for g in ['PLEG', 'PLET', 'PCEG', 'PCET', 'IGE', 'IPR', 'CPE'] %}<option value="{{ g }}">{% endfor %}
+        </datalist>
+        <div class="text-muted mt-1" style="font-size:11px;">Saisie libre : les suggestions restent facultatives.</div>
+      </div>
+      <div class="col-12 row g-3" id="teacherFields">
+        <div class="col-md-6">
+          <label>Filière / Département</label>
+          <select name="department_id" class="form-select">
+            <option value="">Enseignement général</option>
+            {% for d in departments %}<option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4"><label>Spécialité</label><input type="text" name="specialty" class="form-control" placeholder="ex : Mathématiques"></div>
+        <div class="col-md-2"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="18"></div>
+      </div>
+    </div>
+    <button class="btn-ltt-navy mt-4"><i class="bi bi-check2"></i> Créer le compte</button>
+    <a href="{{ url_for('dir_users') }}" class="btn-ltt-outline mt-4">Annuler</a>
+  </form>
+</div>
+{% endblock %}

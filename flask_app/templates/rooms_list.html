@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Salles &amp; équipements{% endblock %}
+{% block page_title %}Salles, ateliers &amp; équipements{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-ltt">
+      <div class="section-title">
+        <h2><i class="bi bi-door-open-fill me-1" style="color:var(--gold-500);"></i> Inventaire</h2>
+        <a href="{{ url_for('rooms_occupation') }}" class="btn-ltt-outline py-1 px-3 me-2" style="font-size:12px;"><i class="bi bi-calendar2-week-fill"></i> Occupation</a>
+        {% if current_user.role in ['chef_travaux','chef_crm','directeur'] %}
+        <button class="btn-ltt-gold py-1 px-3" data-bs-toggle="modal" data-bs-target="#roomModal" style="font-size:12px;"><i class="bi bi-plus-lg"></i> Ajouter</button>
+        {% endif %}
+      </div>
+      <table class="table-ltt">
+        <thead><tr><th>Nom</th><th>Type</th><th>Capacité</th><th>Équipements</th>{% if current_user.role in ['chef_travaux','chef_crm','directeur'] %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+        {% for r in rooms %}
+          <tr>
+            <td class="fw-semibold">{{ r.name }}</td>
+            <td><span class="badge-ltt badge-navy">{{ r.type }}</span></td>
+            <td>{{ r.capacity }}</td>
+            <td>
+              {% for e in r.equipments %}
+              <span class="badge-ltt {{ 'badge-success' if e.status=='Opérationnel' else 'badge-danger' }}" title="{{ e.status }}" {% if room_in_scope(r) and current_user.role in ['chef_travaux','chef_crm','directeur'] %}data-bs-toggle="modal" data-bs-target="#equipEdit{{ e.id }}Modal" style="cursor:pointer;"{% endif %}>{{ e.name }} ×{{ e.quantity }}</span>
+              {% if room_in_scope(r) and current_user.role in ['chef_travaux','chef_crm','directeur'] %}
+              <div class="modal fade" id="equipEdit{{ e.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+                <div class="modal-header"><h5 class="modal-title">{{ e.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                  <form method="POST" action="{{ url_for('equipment_edit', equipment_id=e.id) }}" class="form-ltt mb-2">
+                    <input type="text" name="name" class="form-control mb-2" value="{{ e.name }}">
+                    <div class="d-flex gap-2 mb-2">
+                      <input type="number" name="quantity" class="form-control" value="{{ e.quantity }}">
+                      <select name="status" class="form-select"><option {{ 'selected' if e.status=='Opérationnel' }}>Opérationnel</option><option {{ 'selected' if e.status=='En panne' }}>En panne</option><option {{ 'selected' if e.status=='En maintenance' }}>En maintenance</option></select>
+                    </div>
+                    <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+                  </form>
+                  <a href="{{ url_for('equipment_delete', equipment_id=e.id) }}" class="btn-ltt-outline w-100 justify-content-center text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer cet équipement ?')"><i class="bi bi-trash"></i> Supprimer</a>
+                </div>
+              </div></div></div>
+              {% endif %}
+              {% endfor %}
+              {% if room_in_scope(r) and current_user.role in ['chef_travaux','chef_crm','directeur'] %}<a href="#" class="text-muted" data-bs-toggle="modal" data-bs-target="#equip{{ r.id }}Modal" style="font-size:11px;"><i class="bi bi-plus-circle"></i></a>{% endif %}
+            </td>
+            {% if current_user.role in ['chef_travaux','chef_crm','directeur'] %}
+            <td class="text-end">
+              {% if room_in_scope(r) %}
+              <a href="#" data-bs-toggle="modal" data-bs-target="#roomEdit{{ r.id }}Modal" class="text-muted me-2"><i class="bi bi-pencil-square"></i></a>
+              <a href="{{ url_for('room_delete', room_id=r.id) }}" class="text-danger" onclick="return confirm('Supprimer la salle {{ r.name }} ?')"><i class="bi bi-trash"></i></a>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% if room_in_scope(r) and current_user.role in ['chef_travaux','chef_crm','directeur'] %}
+          <div class="modal fade" id="roomEdit{{ r.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header"><h5 class="modal-title">Modifier {{ r.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <form method="POST" action="{{ url_for('room_edit', room_id=r.id) }}" class="form-ltt">
+                <input type="text" name="name" class="form-control mb-2" value="{{ r.name }}">
+                <select name="type" class="form-select mb-2"><option {{ 'selected' if r.type=='Salle' }}>Salle</option><option {{ 'selected' if r.type=='Atelier' }}>Atelier</option><option {{ 'selected' if r.type=='Laboratoire' }}>Laboratoire</option></select>
+                <div class="d-flex gap-2 mb-2">
+                  <input type="number" name="capacity" class="form-control" value="{{ r.capacity }}">
+                  <input type="text" name="location" class="form-control" value="{{ r.location or '' }}">
+                </div>
+                <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+              </form>
+            </div>
+          </div></div></div>
+          {% endif %}
+          <div class="modal fade" id="equip{{ r.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header"><h5 class="modal-title">Équipement — {{ r.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <form method="POST" action="{{ url_for('equipment_new', room_id=r.id) }}" class="form-ltt">
+                <input type="text" name="name" class="form-control mb-2" placeholder="Nom de l'équipement" required>
+                <div class="d-flex gap-2">
+                  <input type="number" name="quantity" class="form-control" value="1">
+                  <select name="status" class="form-select"><option>Opérationnel</option><option>En panne</option><option>En maintenance</option></select>
+                </div>
+                <button class="btn-ltt-navy w-100 justify-content-center mt-2">Ajouter</button>
+              </form>
+            </div>
+          </div></div></div>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-calendar2-plus-fill me-1" style="color:var(--gold-500);"></i> Réserver une salle</h2></div>
+      <form method="POST" action="{{ url_for('reservation_new') }}" class="form-ltt">
+        <select name="room_id" class="form-select mb-2" required>{% for r in rooms %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select>
+        <input type="text" name="purpose" class="form-control mb-2" placeholder="Motif (ex : Examen, réunion)" required>
+        <div class="d-flex gap-2 mb-2">
+          <input type="date" name="date" class="form-control" required>
+          <input type="time" name="start_time" class="form-control" required>
+          <input type="time" name="end_time" class="form-control" required>
+        </div>
+        <select name="repeat_weeks" class="form-select mb-2"><option value="1">Réservation unique</option><option value="4">Chaque semaine — 4 occurrences</option><option value="8">Chaque semaine — 8 occurrences</option><option value="12">Chaque semaine — 12 occurrences</option></select>
+        <div class="text-muted mb-2" style="font-size:10.5px;">Les réservations récurrentes sont créées seulement si aucun cours ni aucune réservation ne chevauche le créneau.</div>
+        <button class="btn-ltt-navy w-100 justify-content-center">Réserver</button>
+      </form>
+      <hr>
+      {% for r in reservations %}
+        <div class="timeline-item"><div class="timeline-dot"></div><div><span class="fw-semibold" style="font-size:12.5px;">{{ r.room.name }}</span> — {{ r.purpose }}<div class="text-muted" style="font-size:11.5px;">{{ r.date.strftime('%d/%m/%Y') }} · {{ r.start_time }}-{{ r.end_time }}</div></div></div>
+      {% endfor %}
+    </div>
+
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-tools me-1" style="color:var(--gold-500);"></i> Signaler une maintenance</h2></div>
+      <form method="POST" action="{{ url_for('maintenance_new') }}" class="form-ltt">
+        <select name="room_id" class="form-select mb-2" required>{% for r in rooms %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select>
+        <textarea name="description" class="form-control mb-2" rows="2" placeholder="Description du problème" required></textarea>
+        <button class="btn-ltt-outline w-100 justify-content-center">Signaler</button>
+      </form>
+      <hr>
+      {% for m in maintenance %}
+      <div class="d-flex justify-content-between align-items-center py-1">
+        <div style="font-size:12.5px;">{{ m.room.name if m.room }} — {{ m.description[:40] }}</div>
+        {% if current_user.role in ['chef_travaux','chef_crm'] and room_in_scope(m.room) %}
+        <form method="POST" action="{{ url_for('maintenance_status', req_id=m.id) }}">
+          <select name="status" class="form-select form-select-sm" style="font-size:11px;" onchange="this.form.submit()">
+            {% for st in ['Ouverte','En cours','Résolue'] %}<option {{ 'selected' if m.status==st }}>{{ st }}</option>{% endfor %}
+          </select>
+        </form>
+        {% else %}<span class="badge-ltt {{ 'badge-success' if m.status=='Résolue' else 'badge-warning' }}">{{ m.status }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="roomModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+  <div class="modal-header"><h5 class="modal-title">Nouvelle salle / atelier</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <form method="POST" action="{{ url_for('room_new') }}" class="form-ltt">
+      <input type="text" name="name" class="form-control mb-2" placeholder="Nom" required>
+      <select name="type" class="form-select mb-2"><option>Salle</option><option>Atelier</option><option>Laboratoire</option></select>
+      {% if current_user.role in ['chef_travaux', 'directeur'] %}
+      <select name="department_id" class="form-select mb-2">
+        <option value="">Salle commune / sans filière</option>
+        {% for d in scoped_departments %}<option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
+      </select>
+      {% endif %}
+      <div class="d-flex gap-2 mb-2">
+        <input type="number" name="capacity" class="form-control" value="40" placeholder="Capacité">
+        <input type="text" name="location" class="form-control" placeholder="Localisation">
+      </div>
+      <button class="btn-ltt-navy w-100 justify-content-center">Ajouter</button>
+    </form>
+  </div>
+</div></div></div>
+{% endblock %}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+@page { size: A4; margin: 10mm; }
+body { font-family: DejaVu Sans, sans-serif; color: #12335b; font-size: 12pt; }
+table { border-collapse: collapse; }
+.id-card { width: 320px; height: 202px; border-top: 3pt solid #ce1126; border-bottom: 3pt solid #ce1126; border-left: 3pt solid #007a3d; border-right: 3pt solid #fcd116; background: #f8fbff; margin: 0 auto 34px; }
+.id-card td { vertical-align: top; }
+.topline { font-size: 9pt; text-align: center; color: #1b4776; }
+.school-title { text-align: center; font-weight: bold; font-size: 21pt; color: #123d6b; padding: 2mm 0 1mm; }
+.type-label { margin: 0 auto 2mm; border: .6pt solid #2b6099; text-align: center; width: 48mm; padding: .8mm; font-size: 11pt; }
+.portrait { width: 21mm; height: 25mm; border: .6pt solid #1a4a79; background: #fff; }
+.portrait img { width: 21mm; height: 25mm; object-fit: contain; }
+.data { padding-left: 2.5mm; line-height: 1.55; font-size: 12pt; }
+.data b { color: #102f55; }
+.validity { text-align: center; font-size: 10pt; padding-top: 1mm; }
+.contact { text-align: center; font-size: 10pt; font-weight: bold; color: #214d7d; }
+.qr { width: 22mm; height: 22mm; }
+.signature { text-align: center; font-size: 11pt; padding-top: 4mm; }
+.signature b { display: block; font-size: 15pt; padding: 1.5mm 0; }.signature em { color: #a33535; }
+.verify { text-align: center; font-size: 10pt; padding-top: 1mm; }
+</style></head><body>
+<table class="id-card"><tr><td style="padding:3.2mm;">
+  <table width="100%"><tr><td width="38%" class="topline">RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie</td><td width="24%" style="text-align:center;">{% if logo_path %}<img src="{{ logo_path }}" style="width:14mm;height:15mm;">{% endif %}</td><td width="38%" class="topline">REGION DE L'ADAMAOUA<br>DJEREM DIVISION</td></tr></table>
+  <div class="school-title">LYCÉE TECHNIQUE DE TIBATI</div>
+  <div class="type-label">Carte d’identité scolaire · Student ID Card</div>
+  <table width="100%"><tr><td width="25%"><div class="portrait">{% if photo_path %}<img src="{{ photo_path }}">{% endif %}</div></td><td class="data"><b>NOMS :</b> {{ student.last_name|upper }}<br><b>PRÉNOMS :</b> {{ student.first_name|upper }}<br><b>NÉ(E) LE :</b> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}<br><b>À :</b> {{ student.birth_place or '—' }}<br><b>MATRICULE :</b> {{ student.matricule }}<br><b>CLASSE :</b> {{ student.school_class.name if student.school_class else '—' }}</td></tr></table>
+  <div class="validity">Année scolaire {{ school_year }} · Valide jusqu’en {{ validity }}</div>
+</td></tr></table>
+<table class="id-card"><tr><td style="padding:3.2mm;">
+  <div class="school-title">LYCÉE TECHNIQUE DE TIBATI</div>
+  <div class="contact">Mle : 2CE1TEFD110320092 · BP : 105 TIBATI · E-mail : lttibati@gmail.com</div>
+  <table width="100%" style="margin-top:3mm;"><tr><td width="35%" style="text-align:center;"><img class="qr" src="{{ qr_path }}"></td><td class="signature">Fait à Tibati, le {{ now.strftime('%d/%m/%Y') }}<br><b>Le Proviseur</b><em>Signature et cachet</em></td></tr></table>
+  <div class="verify">Scanner le QR code pour vérifier la validité de cette carte.</div>
+</td></tr></table>
+</body></html>

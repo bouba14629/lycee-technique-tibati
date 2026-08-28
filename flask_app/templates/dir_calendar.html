@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Calendrier scolaire{% endblock %}
+{% block page_title %}Calendrier scolaire{% endblock %}
+{% block page_subtitle %}Rentrée, trimestres, conseils de classe, vacances… affiché sur les tableaux de bord{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:700px;">
+  <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Ajouter un événement</h3>
+  <form method="POST" action="{{ url_for('dir_calendar_new') }}" class="form-ltt row g-2 mb-4">
+    <div class="col-md-6"><label>Libellé</label><input type="text" name="label" class="form-control" placeholder="ex : Vacances de Noël" required></div>
+    <div class="col-md-4"><label>Date(s)</label><input type="text" name="date_text" class="form-control" placeholder="ex : 20/12/2025 – 05/01/2026" required></div>
+    <div class="col-md-2 d-flex align-items-end"><button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-plus-lg"></i> Ajouter</button></div>
+  </form>
+
+  <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Événements actuels</h3>
+  <table class="table-ltt">
+    <thead><tr><th>Libellé</th><th>Date(s)</th><th></th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr>
+        <td class="fw-semibold">{{ e.label }}</td>
+        <td>{{ e.date_text }}</td>
+        <td class="text-end">
+          <a href="#" data-bs-toggle="modal" data-bs-target="#editEvt{{ e.id }}Modal" class="text-muted me-2"><i class="bi bi-pencil-square"></i></a>
+          <a href="{{ url_for('dir_calendar_delete', event_id=e.id) }}" class="text-danger" onclick="return confirm('Supprimer « {{ e.label }} » ?')"><i class="bi bi-trash"></i></a>
+        </td>
+      </tr>
+      <div class="modal fade" id="editEvt{{ e.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+        <div class="modal-header"><h5 class="modal-title">Modifier l'événement</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <form method="POST" action="{{ url_for('dir_calendar_edit', event_id=e.id) }}" class="form-ltt">
+            <label>Libellé</label><input type="text" name="label" class="form-control mb-2" value="{{ e.label }}">
+            <label>Date(s)</label><input type="text" name="date_text" class="form-control mb-2" value="{{ e.date_text }}">
+            <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+          </form>
+        </div>
+      </div></div></div>
+    {% else %}
+      <tr><td colspan="3" class="text-muted text-center py-3">Aucun événement pour le moment.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B2545">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<title>Connexion · Lycée Technique de Tibati</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/icons/bootstrap-icons.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-shell">
+  <div class="login-wrap">
+  <div class="login-card">
+    <div class="login-side">
+      <div>
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" width="56" alt="Blason LTT">
+          <div>
+            <div class="brand-font fw-bold fs-5">Lycée Technique de Tibati</div>
+            <div class="tag" style="color:var(--gold-300); font-size:11px; letter-spacing:.6px; text-transform:uppercase;">Plateforme numérique de gestion</div>
+          </div>
+        </div>
+        <h2 class="brand-font mb-3" style="font-size:26px; line-height:1.3;">Excellence académique &amp; technique au cœur du Cameroun</h2>
+        <p style="color:rgba(248,245,236,.78); font-size:14px; line-height:1.6;">
+          Une plateforme unique pour l'administration, les enseignants, les élèves et les parents —
+          suivi pédagogique, emplois du temps, bulletins et communication, réunis en un seul espace sécurisé.
+        </p>
+      </div>
+      <div>
+        <div class="stat-pill"><i class="bi bi-mortarboard-fill"></i> Espace Élèves — bulletins, emploi du temps</div>
+        <div class="stat-pill"><i class="bi bi-people-fill"></i> Espace Parents — suivi de la scolarité</div>
+        <div class="stat-pill"><i class="bi bi-person-workspace"></i> Espace Enseignants — saisie des notes</div>
+      </div>
+      {% if public_announcements %}
+      <section class="login-public-announcements" aria-labelledby="public-announcements-title">
+        <div class="login-public-announcements-title" id="public-announcements-title"><i class="bi bi-megaphone-fill" aria-hidden="true"></i> Communiqués de l’établissement</div>
+        {% for announcement in public_announcements %}
+        <article class="login-public-announcement">
+          <div><strong>{{ announcement.title }}</strong><time datetime="{{ announcement.date.isoformat() }}">{{ announcement.date.strftime('%d/%m/%Y') }}</time></div>
+          <p>{{ announcement.body }}</p>
+        </article>
+        {% endfor %}
+      </section>
+      {% endif %}
+      {% if upcoming_events %}
+      <div class="login-news">
+        <div class="login-news-title"><i class="bi bi-megaphone-fill"></i> Actualités &amp; calendrier</div>
+        {% for e in upcoming_events %}
+        <div class="login-news-item"><span>{{ e.label }}</span><strong>{{ e.date_text }}</strong></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="login-form-side">
+      <div class="mb-4">
+        <h3 class="brand-font" style="color:var(--navy-900); font-size:24px;">Connexion</h3>
+        <p class="text-muted" style="font-size:13.5px;">Accédez à votre espace personnel.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category=='danger' else 'warning' if category=='session_closed' else category }} py-2" style="border-radius:10px; font-size:13.5px;">{% if category=='session_closed' %}<strong>Connexion interrompue.</strong> {% endif %}{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" class="form-ltt">
+        <div class="mb-3">
+          <label>Identifiant</label>
+          <input type="text" name="username" class="form-control" required autofocus>
+        </div>
+        <div class="mb-2">
+          <label>Mot de passe</label>
+          <div class="position-relative">
+            <input type="password" name="password" id="passwordInput" class="form-control pe-5" required>
+            <button type="button" onclick="togglePassword('passwordInput', this)"
+                    class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                    aria-label="Afficher le mot de passe">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="mb-3 text-end">
+          <a href="#" onclick="document.getElementById('forgotMsg').classList.toggle('d-none'); return false;" style="font-size:12px; color:var(--navy-800);">Mot de passe oublié ?</a>
+        </div>
+        <div id="forgotMsg" class="alert alert-warning d-none py-2 mb-3" style="border-radius:10px; font-size:12.5px;">
+          <i class="bi bi-info-circle-fill me-1"></i> Veuillez contacter l'administrateur de l'établissement (le Proviseur) pour réinitialiser votre mot de passe.
+        </div>
+        <button type="submit" class="btn-ltt-navy w-100 justify-content-center py-2 mt-2">
+          <i class="bi bi-box-arrow-in-right"></i> Se connecter
+        </button>
+        <button type="button" class="btn-ltt-outline w-100 justify-content-center py-2 mt-2 d-none" data-pwa-install><i class="bi bi-download"></i> Installer l’application</button>
+      </form>
+    </div>
+  </div>
+  <div class="login-orbit-side">
+    <div class="login-hero-orbit">
+      <img class="login-hero-orbit-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Blason LTT">
+      <div class="orbit-slot" style="--angle: 0deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/maconnerie.jpg') }}" alt="Atelier de maçonnerie"></div></div>
+      <div class="orbit-slot" style="--angle: 51.43deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/electricite.jpg') }}" alt="Atelier d'électricité"></div></div>
+      <div class="orbit-slot" style="--angle: 102.86deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/menuiserie.jpg') }}" alt="Atelier de menuiserie"></div></div>
+      <div class="orbit-slot" style="--angle: 154.29deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/couture.jpg') }}" alt="Atelier de couture"></div></div>
+      <div class="orbit-slot" style="--angle: 205.71deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/informatique.jpg') }}" alt="Salle informatique"></div></div>
+      <div class="orbit-slot" style="--angle: 257.14deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/cuisine.jpg') }}" alt="Préparation culinaire"></div></div>
+      <div class="orbit-slot" style="--angle: 308.57deg;"><div class="orbit-photo"><img src="{{ url_for('static', filename='img/hero/mecanique.jpg') }}" alt="Mécanique automobile"></div></div>
+    </div>
+  </div>
+  </div>
+  <div class="login-footer">
+    <div><i class="bi bi-geo-alt-fill"></i> BP 105, Tibati, Adamaoua — Cameroun</div>
+    <div><i class="bi bi-patch-check-fill"></i> Matricule : 2CE1TEFD110320092</div>
+    <div><i class="bi bi-envelope-fill"></i> lttibati@gmail.com</div>
+    <div class="login-footer-copy">© {{ now.year }} Lycée Technique de Tibati — Plateforme numérique de gestion</div>
+  </div>
+</div>
+<script>
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.classList.add('is-visible');
+    btn.setAttribute('aria-label', 'Masquer le mot de passe');
+  } else {
+    input.type = 'password';
+    btn.classList.remove('is-visible');
+    btn.setAttribute('aria-label', 'Afficher le mot de passe');
+  }
+}
+</script>
+<script src="/pwa-install.js"></script>
+</body>
+</html>

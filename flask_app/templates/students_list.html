@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sortable_th %}
+{% block title %}Élèves{% endblock %}
+{% block page_title %}Dossiers des élèves{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
+    <input type="text" name="q" class="form-control" style="max-width:260px;" placeholder="Rechercher (nom, matricule)" value="{{ search }}">
+    <select name="class_id" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+      <option value="">Toutes les classes</option>
+      {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if class_id==c.id }}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <button class="btn-ltt-outline"><i class="bi bi-search"></i> Rechercher</button>
+    <button type="button" class="btn-ltt-outline no-print" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer la liste</button>
+    <a href="{{ url_for('students_export', class_id=class_id, q=search) }}" class="btn-ltt-outline no-print"><i class="bi bi-file-earmark-excel-fill"></i> Excel</a>
+    <a href="{{ url_for('students_export_pdf', class_id=class_id, q=search) }}" class="btn-ltt-outline no-print"><i class="bi bi-file-earmark-pdf-fill"></i> PDF avec photos</a>
+    {% if current_user.role in ['directeur','censeur'] %}
+    <a href="{{ url_for('student_enroll') }}" class="btn-ltt-gold ms-auto"><i class="bi bi-clipboard2-plus-fill"></i> Nouvelle inscription</a>
+    {% endif %}
+  </form>
+  <table class="table-ltt">
+    <thead><tr>
+      {{ sortable_th('Matricule', 'matricule', sort, sort_dir) }}
+      {{ sortable_th('Nom', 'last_name', sort, sort_dir) }}
+      {{ sortable_th('Date de naissance', 'dob', sort, sort_dir) }}
+      {{ sortable_th('Lieu de naissance', 'birth_place', sort, sort_dir) }}
+      <th>Classe</th><th>Statut</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for s in students %}
+      <tr>
+        <td><code>{{ s.matricule }}</code></td>
+        <td class="fw-semibold">{{ s.full_name }}</td>
+        <td class="text-muted">{{ s.dob.strftime('%d/%m/%Y') if s.dob else '—' }}</td>
+        <td class="text-muted">{{ s.birth_place or '—' }}</td>
+        <td><span class="badge-ltt badge-navy">{{ s.school_class.name if s.school_class }}</span></td>
+        <td><span class="badge-ltt badge-success">{{ s.status }}</span></td>
+        <td class="text-end"><a href="{{ url_for('student_detail', student_id=s.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-folder2-open"></i> Dossier</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="text-muted text-center py-4">Aucun élève trouvé.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

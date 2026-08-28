@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Rapport d’import{% endblock %}
+{% block page_title %}Rapport d’import{% endblock %}
+{% block page_subtitle %}Contrôle des lignes traitées et des anomalies détectées{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:900px;">
+  {% if report %}
+  <div class="chart-title-row"><div><span class="chart-kicker">Import {{ report.kind }} · {{ report.generated_at }}</span><h2>{{ report.created }} ligne(s) importée(s)</h2></div><span class="chart-pill">{{ report.skipped }} ignorée(s)</span></div>
+  <div class="d-flex gap-2 flex-wrap mt-3"><a href="{{ url_for('import_report_excel') }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Télécharger Excel</a><a href="{{ url_for('import_report_pdf') }}" class="btn-ltt-navy"><i class="bi bi-file-earmark-pdf-fill"></i> Télécharger PDF</a></div>
+  {% if report.errors %}<div class="alert alert-warning mt-3"><strong>Lignes à corriger</strong><ul class="mb-0 mt-2">{% for error in report.errors %}<li>{{ error }}</li>{% endfor %}{% if report.has_more %}<li>Autres erreurs non affichées : corrigez le fichier puis relancez l’import.</li>{% endif %}</ul></div>{% else %}<div class="alert alert-success mt-3 mb-0">Toutes les lignes ont été importées avec succès.</div>{% endif %}
+  {% else %}<p class="text-muted mb-0">Aucun rapport d’import disponible pour cette session.</p>{% endif %}
+</div>
+{% endblock %}

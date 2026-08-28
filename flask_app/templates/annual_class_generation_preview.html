@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Prévisualisation annuelle — {{ school_class.name }}{% endblock %}
+{% block page_title %}Génération des bulletins annuels{% endblock %}
+{% block page_subtitle %}{{ school_class.name }} · {{ school_year }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between gap-2 flex-wrap mb-3 no-print">
+  <a href="{{ url_for('censeur_bulletins', class_id=school_class.id) }}" class="btn-ltt-outline"><i class="bi bi-arrow-left"></i> Retour aux bulletins</a>
+  {% if approval %}<span class="badge-ltt badge-success align-self-center">Bulletins annuels validés · remise le {{ approval.official_release_date.strftime('%d/%m/%Y') if approval.official_release_date else 'date à définir' }}</span>{% endif %}
+</div>
+
+<div class="card-ltt" style="border-left:4px solid var(--gold-500);">
+  <div class="chart-kicker">Étape préalable à l’impression</div>
+  <p class="mb-0" style="font-size:12.5px;">Les moyennes annuelles des trois trimestres ont été calculées pour <strong>{{ rows|length }} élève(s)</strong>. Vérifiez chaque fiche avec <strong>Aperçu</strong>, puis utilisez <strong>PDF annuel</strong> pour imprimer ou télécharger le bulletin correspondant. La validation annuelle appose ensuite le visa numérique du Proviseur sur tous les PDF de la classe.</p>
+</div>
+
+<div class="card-ltt mt-3">
+  <div class="table-responsive"><table class="table-ltt">
+    <thead><tr><th>Matricule</th><th>Nom et prénom</th><th>Moy. annuelle /20</th><th>Rang</th><th>Trimestre 1</th><th>Trimestre 2</th><th>Trimestre 3</th><th></th></tr></thead>
+    <tbody>{% for row in rows %}
+      <tr><td><code>{{ row.student.matricule }}</code></td><td class="fw-semibold">{{ row.student.full_name }}</td><td><strong>{{ row.data.overall_avg if row.data and row.data.overall_avg is not none else '—' }}</strong></td><td>{{ row.data.rank if row.data and row.data.rank else '—' }}{% if row.data and row.data.rank %} / {{ row.data.class_size }}{% endif %}</td><td>{{ row.data.term_averages[0] if row.data and row.data.term_averages[0] is not none else '—' }}</td><td>{{ row.data.term_averages[1] if row.data and row.data.term_averages[1] is not none else '—' }}</td><td>{{ row.data.term_averages[2] if row.data and row.data.term_averages[2] is not none else '—' }}</td><td class="text-end"><a class="btn-ltt-outline py-1 px-2" style="font-size:11px;" href="{{ url_for('censeur_annual_bulletin_preview', student_id=row.student.id) }}"><i class="bi bi-eye"></i> Aperçu</a> <a class="btn-ltt-gold py-1 px-2" style="font-size:11px;" href="{{ url_for('censeur_annual_bulletin_pdf', student_id=row.student.id) }}"><i class="bi bi-file-earmark-pdf"></i> PDF annuel</a></td></tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">Aucun élève dans cette classe.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

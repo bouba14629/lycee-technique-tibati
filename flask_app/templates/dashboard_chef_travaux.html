@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import gauges %}
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}{{ current_user.scope_label }}{% endblock %}
+{% block page_subtitle %}{{ 'Gestion exclusive de la salle CRM et de ses équipements' if current_user.role == 'chef_crm' else 'Gestion exclusive des ateliers, laboratoires et équipements de la section' }}{% endblock %}
+
+{% block content %}
+{{ gauges(rates, "Taux globaux — " ~ current_user.scope_label, {"success_rate": "Équipements opérationnels", "absence_rate": "Équipements en panne", "retard_rate": "Maintenances résolues", "active_rate": "Salles actives"}) }}
+<div class="kpi-grid">
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-door-open-fill"></i></div><div class="kpi-value">{{ stats.rooms }}</div><div class="kpi-label">Salles, ateliers &amp; labos</div></a>
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-tools"></i></div><div class="kpi-value">{{ stats.ateliers }}</div><div class="kpi-label">Ateliers</div></a>
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-flask"></i></div><div class="kpi-value">{{ stats.laboratoires }}</div><div class="kpi-label">Laboratoires</div></a>
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-cpu-fill"></i></div><div class="kpi-value">{{ stats.equipments }}</div><div class="kpi-label">Équipements</div></a>
+  <a href="{{ url_for('rooms_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div><div class="kpi-value">{{ stats.maintenance_open }}</div><div class="kpi-label">Maintenances en cours</div></a>
+</div>
+
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-tools me-1" style="color:var(--gold-500);"></i> Demandes de maintenance récentes</h2><a class="muted" href="{{ url_for('rooms_list') }}">Gérer <i class="bi bi-arrow-right"></i></a></div>
+  <table class="table-ltt">
+    <thead><tr><th>Salle / Atelier</th><th>Description</th><th>Statut</th><th>Date</th></tr></thead>
+    <tbody>
+    {% for m in recent_maintenance %}
+      <tr>
+        <td>{{ m.room.name if m.room }}</td>
+        <td>{{ m.description }}</td>
+        <td><span class="badge-ltt {{ 'badge-success' if m.status=='Résolue' else ('badge-warning' if m.status=='En cours' else 'badge-danger') }}">{{ m.status }}</span></td>
+        <td class="text-muted">{{ m.date.strftime('%d/%m/%Y') }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="text-muted text-center py-3">Aucune demande de maintenance.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card-ltt">
+  <div class="section-title"><h2>Actions rapides</h2></div>
+  <div class="d-grid gap-2">
+    <a href="{{ url_for('rooms_list') }}" class="btn-ltt-navy"><i class="bi bi-door-open-fill"></i> Gérer les salles, ateliers &amp; équipements</a>
+  </div>
+</div>
+{% endblock %}

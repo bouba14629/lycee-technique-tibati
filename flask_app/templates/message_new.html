@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Nouveau message{% endblock %}
+{% block page_title %}Nouveau message{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:640px;">
+  <form method="POST" class="form-ltt">
+    <div class="mb-3">
+      <label>Destinataire</label>
+      <select name="recipient_id" class="form-select" required>
+        <option value="">— Choisir —</option>
+        {% for c in candidates %}
+          <option value="{{ c.id }}" {{ 'selected' if prefill_to==c.id }}>{{ c.full_name }} ({{ c.role_label }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3"><label>Sujet</label><input type="text" name="subject" class="form-control" required></div>
+    <div class="mb-3"><label>Message</label><textarea name="body" rows="6" class="form-control" required></textarea></div>
+    <button class="btn-ltt-navy"><i class="bi bi-send-fill"></i> Envoyer</button>
+    <a href="{{ url_for('messages_inbox') }}" class="btn-ltt-outline">Annuler</a>
+  </form>
+</div>
+{% endblock %}

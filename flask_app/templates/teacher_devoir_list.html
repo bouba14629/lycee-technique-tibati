@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Notes de contrôle continu{% endblock %}
+{% block page_title %}Notes de contrôle continu — {{ student.full_name }}{% endblock %}
+{% block page_subtitle %}{{ course.subject.name }} — {{ course.school_class.name }} — {{ term }}{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:560px;">
+  <p class="text-muted" style="font-size:12.5px;">La Note Trimestrielle affichée sur le bulletin est la moyenne automatique de ces notes. Supprimez une entrée pour corriger une erreur de saisie.</p>
+  <table class="table-ltt">
+    <thead><tr><th>Date</th><th>Note /20</th><th></th></tr></thead>
+    <tbody>
+    {% for g in grades %}
+      <tr>
+        <td>{{ g.date.strftime('%d/%m/%Y') if g.date else '—' }}</td>
+        <td class="fw-semibold">{{ g.value }}</td>
+        <td class="text-end"><a href="{{ url_for('teacher_devoir_delete', course_id=course.id, grade_id=g.id) }}" class="text-danger" onclick="return confirm('Supprimer cette note ?')"><i class="bi bi-trash"></i></a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="3" class="text-muted text-center py-3">Aucune note de contrôle continu saisie.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if grades %}
+  <div class="fw-semibold" style="font-size:13px;">Moyenne automatique : {{ (grades|sum(attribute='value') / grades|length)|round(2) }} / 20 ({{ grades|length }} note{{ 's' if grades|length > 1 }})</div>
+  {% endif %}
+  <a href="{{ url_for('teacher_grades', course_id=course.id, term=term) }}" class="btn-ltt-outline mt-3"><i class="bi bi-arrow-left"></i> Retour à la saisie des notes</a>
+</div>
+{% endblock %}

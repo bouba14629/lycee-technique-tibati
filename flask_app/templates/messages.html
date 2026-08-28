@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Messagerie{% endblock %}
+{% block page_title %}Messagerie interne{% endblock %}
+{% block page_subtitle %}Communication sécurisée entre administration, enseignants, élèves et parents{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="btn-group">
+      <a href="{{ url_for('messages_inbox', box='reception') }}" class="btn-ltt-outline {{ 'active' if box=='reception' }}" style="{{ 'background:var(--navy-900);color:#fff;' if box=='reception' }}"><i class="bi bi-inbox-fill"></i> Réception</a>
+      <a href="{{ url_for('messages_inbox', box='envois') }}" class="btn-ltt-outline ms-2 {{ 'active' if box=='envois' }}" style="{{ 'background:var(--navy-900);color:#fff;' if box=='envois' }}"><i class="bi bi-send-fill"></i> Envoyés</a>
+    </div>
+    <a href="{{ url_for('messages_new') }}" class="btn-ltt-gold"><i class="bi bi-pencil-square"></i> Nouveau message</a>
+  </div>
+  <table class="table-ltt">
+    <thead><tr><th>{{ 'Expéditeur' if box=='reception' else 'Destinataire' }}</th><th>Sujet</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+    {% for m in msgs %}
+      <tr style="{{ 'font-weight:700;' if (box=='reception' and not m.read) }}">
+        <td>{{ m.sender.full_name if box=='reception' else m.recipient.full_name }}</td>
+        <td>{{ m.subject }} {% if box=='reception' and not m.read %}<span class="badge-ltt badge-gold ms-1">Nouveau</span>{% endif %}</td>
+        <td class="text-muted">{{ m.date.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="text-end"><a href="{{ url_for('message_view', msg_id=m.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;">Lire</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="text-muted text-center py-4">Aucun message.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

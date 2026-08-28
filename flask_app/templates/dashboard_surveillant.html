@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import gauges %}
+{% block title %}Tableau de bord Surveillant Général{% endblock %}
+{% block page_title %}{{ current_user.scope_label }}{% endblock %}
+{% block page_subtitle %}Discipline et suivi des absences{% endblock %}
+
+{% block content %}
+{{ gauges(rates, "Taux globaux — " ~ current_user.scope_label) }}
+<div class="kpi-grid">
+  <a href="{{ url_for('students_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves inscrits</div></a>
+  <a href="{{ url_for('censeur_absences') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div><div class="kpi-value">{{ stats.unjustified }}</div><div class="kpi-label">Absences non justifiées</div></a>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-person-dash-fill"></i></div><div class="kpi-value">{{ stats.absences_month }}</div><div class="kpi-label">Absences enregistrées</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-clock-history"></i></div><div class="kpi-value">{{ stats.retards_month }}</div><div class="kpi-label">Retards enregistrés</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-shield-exclamation"></i></div><div class="kpi-value">{{ stats.sanctions }}</div><div class="kpi-label">Sanctions cumulées</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-award-fill"></i></div><div class="kpi-value">{{ stats.rewards }}</div><div class="kpi-label">Récompenses cumulées</div></div>
+</div>
+
+<div class="card-ltt mb-3">
+  <div class="section-title"><h2>Alertes de vie scolaire</h2><a class="muted" href="{{ url_for('late_arrivals') }}">Gérer les retards <i class="bi bi-arrow-right"></i></a></div>
+  {% for level, icon, title, message, endpoint in life_alerts %}
+  <div class="alert-item"><div class="alert-dot alert-dot-{{ level }}"><i class="bi {{ icon }}"></i></div><div><strong style="font-size:13px;">{{ title }}</strong><div class="text-muted" style="font-size:12px;">{{ message }}</div></div>{% if endpoint %}<a href="{{ url_for(endpoint) }}" class="ms-auto align-self-center text-muted"><i class="bi bi-arrow-right"></i></a>{% endif %}</div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-ltt">
+      <div class="section-title"><h2>Absences &amp; retards récents</h2><a class="muted" href="{{ url_for('censeur_absences') }}">Traiter <i class="bi bi-arrow-right"></i></a></div>
+      <table class="table-ltt">
+        <thead><tr><th>Élève</th><th>Type</th><th>Date</th><th>Justifiée</th></tr></thead>
+        <tbody>
+        {% for a in recent_absences %}
+          <tr>
+            <td><a href="{{ url_for('student_detail', student_id=a.student.id) }}">{{ a.student.full_name }}</a></td>
+            <td><span class="badge-ltt {{ 'badge-danger' if a.type=='Absence' else 'badge-warning' }}">{{ a.type }}</span></td>
+            <td>{{ a.date.strftime('%d/%m/%Y') }}</td>
+            <td>{% if a.justified %}<span class="badge-ltt badge-success">Oui</span>{% else %}<span class="badge-ltt badge-danger">Non</span>{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-muted text-center py-3">Aucune donnée.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-ltt">
+      <div class="section-title"><h2>Sanctions récentes</h2></div>
+      {% for s in recent_sanctions %}
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div>
+          <div class="fw-semibold" style="font-size:13.5px;"><a href="{{ url_for('student_detail', student_id=s.student.id) }}">{{ s.student.full_name }}</a> — {{ s.type }}</div>
+          <div class="text-muted" style="font-size:12px;">{{ s.date.strftime('%d/%m/%Y') }}</div>
+        </div>
+      </div>
+      {% else %}<p class="text-muted mb-0">Aucune sanction récente.</p>{% endfor %}
+    </div>
+    <div class="card-ltt">
+      <div class="section-title"><h2>Actions rapides</h2></div>
+      <div class="d-grid gap-2">
+        <a href="{{ url_for('censeur_absences') }}" class="btn-ltt-navy"><i class="bi bi-exclamation-triangle-fill"></i> Traiter les absences</a>
+        <a href="{{ url_for('late_arrivals') }}" class="btn-ltt-navy"><i class="bi bi-clock-history"></i> Gérer les retards</a>
+        <a href="{{ url_for('students_list') }}" class="btn-ltt-navy"><i class="bi bi-mortarboard-fill"></i> Consulter un dossier élève (sanction/récompense)</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

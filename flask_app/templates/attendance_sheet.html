@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Fiche d'appel{% endblock %}
+{% block page_title %}Fiche d'appel — {{ course.subject.name }}{% endblock %}
+{% block page_subtitle %}{{ course.school_class.name }}{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <form method="GET" class="d-flex gap-2">
+    <input type="date" name="date" class="form-control" value="{{ session_date }}" onchange="this.form.submit()">
+  </form>
+  <div class="d-flex gap-2">
+    <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Aperçu / Imprimer</button>
+    <a class="btn-ltt-gold" href="{{ url_for('teacher_attendance_sheet_pdf', course_id=course.id, date=session_date) }}"><i class="bi bi-download"></i> Télécharger en PDF</a>
+  </div>
+</div>
+
+<div class="card-ltt bulletin-wrap">
+  <div class="bulletin-header">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Blason">
+    <div>
+      <div style="font-size:11px; letter-spacing:1px; color:var(--muted); text-transform:uppercase;">République du Cameroun — Ministère des Enseignements Secondaires</div>
+      <div class="bulletin-title">Fiche d'appel</div>
+      <div style="font-size:12.5px; color:var(--muted);">Lycée Technique de Tibati</div>
+    </div>
+  </div>
+
+  <div class="bulletin-meta-grid">
+    <div><span>Classe</span>{{ course.school_class.name }}</div>
+    <div><span>Matière</span>{{ course.subject.name }}</div>
+    <div><span>Enseignant</span>{{ course.teacher.user.full_name }}</div>
+    <div><span>Date</span>{{ session_date }}</div>
+    <div><span>Horaire</span>{{ start_time }} – {{ end_time }}</div>
+    <div><span>Effectif</span>{{ students|length }} élève(s)</div>
+  </div>
+
+  <table class="table-ltt">
+    <thead><tr><th>N°</th><th>Nom et prénom</th><th>Matricule</th><th>Présent</th><th>Absent</th><th>Retard</th><th>Motif</th></tr></thead>
+    <tbody>
+    {% for s in students %}
+      {% set record = records.get(s.id) %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ s.full_name }}</td>
+        <td class="text-muted">{{ s.matricule }}</td>
+        <td class="text-center"><span class="attendance-mark {{ 'is-present' if not record else '' }}">{{ '✓' if not record else '—' }}</span></td>
+        <td class="text-center"><span class="attendance-mark {{ 'is-absent' if record and record.type=='Absence' else '' }}">{{ '●' if record and record.type=='Absence' else '—' }}</span></td>
+        <td class="text-center"><span class="attendance-mark {{ 'is-late' if record and record.type=='Retard' else '' }}">{{ '●' if record and record.type=='Retard' else '—' }}</span></td>
+        <td class="text-muted">{{ record.reason if record else '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="row mt-5 pt-4" style="border-top:1px dashed #e2dac0;">
+    <div class="col-6 text-center"><div style="font-size:11.5px; color:var(--muted);">Signature de l'enseignant</div><div style="margin-top:36px; border-top:1px solid #ccc;"></div></div>
+    <div class="col-6 text-center"><div style="font-size:11.5px; color:var(--muted);">Visa du Censeur</div><div style="margin-top:36px; border-top:1px solid #ccc;"></div></div>
+  </div>
+</div>
+{% endblock %}

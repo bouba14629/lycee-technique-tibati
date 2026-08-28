@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Indicateurs pédagogiques{% endblock %}
+{% block page_title %}Indicateurs pédagogiques{% endblock %}
+{% block page_subtitle %}Couverture des heures, des programmes et des travaux pratiques — à renseigner chaque trimestre, par classe et par matière{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:760px;">
+  <form method="GET" class="row g-2 mb-3">
+    <div class="col-md-5">
+      <label style="font-size:11px;">Classe / Matière</label>
+      <select name="course_id" class="form-select" onchange="this.form.submit()">
+        <option value="">— Choisir —</option>
+        {% for c in courses %}
+        <option value="{{ c.id }}" {{ 'selected' if course and course.id==c.id }}>{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }}{{ ' ✓' if c.id in filled_course_ids }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label style="font-size:11px;">Trimestre</label>
+      <select name="term" class="form-select" onchange="this.form.submit()">
+        {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if course %}<input type="hidden" name="course_id" value="{{ course.id }}">{% endif %}
+  </form>
+
+  {% if not courses %}
+  <p class="text-muted">Aucune classe/matière ne vous est assignée pour le moment.</p>
+  {% elif not course %}
+  <p class="text-muted">Choisissez une classe et une matière ci-dessus pour renseigner vos indicateurs. (✓ = déjà renseigné pour ce trimestre)</p>
+  {% else %}
+  <form method="POST" class="form-ltt">
+    <input type="hidden" name="term" value="{{ term }}">
+    <input type="hidden" name="course_id" value="{{ course.id }}">
+
+    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des heures</h3>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="{{ indicator.hours_due if indicator else teacher.hours_due }}"></div>
+      <div class="col-md-6"><label>Heures faites</label><input type="number" name="hours_done" class="form-control" value="{{ indicator.hours_done if indicator else 0 }}"></div>
+    </div>
+
+    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des programmes</h3>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label>Nombre de leçons prévues</label><input type="number" name="lessons_planned" class="form-control" value="{{ indicator.lessons_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Nombre de leçons faites</label><input type="number" name="lessons_done" class="form-control" value="{{ indicator.lessons_done if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Leçons digitalisées prévues</label><input type="number" name="digital_lessons_planned" class="form-control" value="{{ indicator.digital_lessons_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Leçons digitalisées faites</label><input type="number" name="digital_lessons_done" class="form-control" value="{{ indicator.digital_lessons_done if indicator else 0 }}"></div>
+    </div>
+
+    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label>Nombre de TP prévus</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Nombre de TP réalisés</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>TP digitalisés prévus</label><input type="number" name="digital_tp_planned" class="form-control" value="{{ indicator.digital_tp_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>TP digitalisés réalisés</label><input type="number" name="digital_tp_done" class="form-control" value="{{ indicator.digital_tp_done if indicator else 0 }}"></div>
+    </div>
+
+    {% if custom_types %}
+    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;"><i class="bi bi-stars"></i> Indicateurs supplémentaires (ajoutés par le Censeur)</h3>
+    <div class="row g-3 mb-3">
+      {% for ct in custom_types %}
+      {% set cv = custom_values.get(ct.id) %}
+      <div class="col-md-6"><label>{{ ct.label }} — {{ ct.unit_planned }}</label><input type="number" name="custom_{{ ct.id }}_planned" class="form-control" value="{{ cv.planned if cv else 0 }}"></div>
+      <div class="col-md-6"><label>{{ ct.label }} — {{ ct.unit_done }}</label><input type="number" name="custom_{{ ct.id }}_done" class="form-control" value="{{ cv.done if cv else 0 }}"></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <button class="btn-ltt-navy"><i class="bi bi-save-fill"></i> Enregistrer</button>
+  </form>
+  {% endif %}
+  <div class="text-muted mt-3" style="font-size:11.5px;"><i class="bi bi-info-circle"></i> Ces indicateurs alimentent la synthèse pédagogique transmise au Censeur et au Proviseur pour le conseil de classe.</div>
+</div>
+{% endblock %}

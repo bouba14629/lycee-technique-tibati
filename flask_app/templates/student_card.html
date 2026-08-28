@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Carte scolaire · {{ student.full_name }}{% endblock %}
+{% block page_title %}Carte scolaire{% endblock %}
+{% block page_subtitle %}Aperçu recto-verso · {{ student.matricule }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end gap-2 mb-3 no-print">
+  <a href="{{ url_for('student_card_pdf', student_id=student.id) }}" class="btn-ltt-gold"><i class="bi bi-file-earmark-pdf-fill"></i> Télécharger PDF</a>
+  <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer</button>
+</div>
+<div class="student-card-print-wrap">
+  <section class="student-id-card student-id-front">
+    <div class="card-cameroon-flag" aria-label="Couleurs nationales du Cameroun"><span></span><span></span><span></span></div>
+    <div class="card-header-line"><span>RÉPUBLIQUE DU CAMEROUN<br><small>Paix – Travail – Patrie</small></span><img src="{{ url_for('static', filename='img/logo.png') }}" alt="LTT"><span class="text-end">REGION DE L'ADAMAOUA<br><small>DJEREM DIVISION</small></span></div>
+    <div class="card-school-title">LYCÉE TECHNIQUE DE TIBATI</div>
+    <div class="card-label">Carte d’identité scolaire <small>Student ID Card</small></div>
+    <div class="card-front-main"><div class="card-photo"><img src="{{ photo_url }}" alt="Photo de {{ student.full_name }}"></div><div class="card-data"><p><b>NOMS:</b> {{ student.last_name|upper }}</p><p><b>PRÉNOMS:</b> {{ student.first_name|upper }}</p><p><b>NÉ(E) LE:</b> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} <span class="card-inline"><b>À:</b> {{ student.birth_place or '—' }}</span></p><p><b>MATRICULE:</b> {{ student.matricule }}</p><p><b>CLASSE:</b> {{ student.school_class.name if student.school_class else '—' }}</p></div></div>
+    <div class="card-validity">Année scolaire {{ school_year }} · Valide jusqu’en {{ validity }}</div>
+  </section>
+  <section class="student-id-card student-id-back">
+    <div class="card-cameroon-flag" aria-label="Couleurs nationales du Cameroun"><span></span><span></span><span></span></div>
+    <div class="card-back-logo"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="LTT"></div>
+    <div class="card-school-title">LYCÉE TECHNIQUE DE TIBATI</div>
+    <div class="card-contact">Mle : 2CE1TEFD110320092 · BP : 105 TIBATI · E-mail : lttibati@gmail.com</div>
+    <div class="card-back-row"><img class="card-qr" src="{{ qr_data_uri }}" alt="QR de vérification"><div class="card-signature"><span>Fait à Tibati, le {{ now.strftime('%d/%m/%Y') }}</span><b>Le Proviseur</b><em>Signature et cachet</em></div></div>
+    <div class="card-verify-text">Scanner le QR code pour vérifier la validité de cette carte.</div>
+  </section>
+</div>
+{% endblock %}

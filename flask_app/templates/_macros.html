@@ -1,0 +1,91 @@
+{% macro gauges(rates, title="Taux globaux", labels={}) %}
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-speedometer2 me-1" style="color:var(--gold-500);"></i> {{ title }}</h2></div>
+  <div class="gauge-grid">
+    <div class="gauge-card">
+      <div class="gauge-wrap"><canvas id="gaugeSuccess"></canvas><div class="gauge-value">{{ rates.success_rate }}%</div></div>
+      <div class="gauge-label">{{ labels.success_rate or "Taux de réussite" }}</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-wrap"><canvas id="gaugeAbsence"></canvas><div class="gauge-value">{{ rates.absence_rate }}%</div></div>
+      <div class="gauge-label">{{ labels.absence_rate or "Taux d'absences" }}</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-wrap"><canvas id="gaugeRetard"></canvas><div class="gauge-value">{{ rates.retard_rate }}%</div></div>
+      <div class="gauge-label">{{ labels.retard_rate or "Taux de retards" }}</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-wrap"><canvas id="gaugeActive"></canvas><div class="gauge-value">{{ rates.active_rate }}%</div></div>
+      <div class="gauge-label">{{ labels.active_rate or "Enseignants actifs" }}</div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  renderGauge('gaugeSuccess', {{ rates.success_rate }}, '#0B2545');
+  renderGauge('gaugeAbsence', {{ rates.absence_rate }}, '#1a4d8a');
+  renderGauge('gaugeRetard', {{ rates.retard_rate }}, '#123a6b');
+  renderGauge('gaugeActive', {{ rates.active_rate }}, '#2c6ca8');
+});
+</script>
+{% endmacro %}
+
+{% macro alerts_panel(alerts) %}
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-bell-fill me-1" style="color:var(--gold-500);"></i> Alertes &amp; Notifications</h2></div>
+  {% for level, icon, title, text, link_endpoint in alerts %}
+  <div class="alert-item">
+    <div class="alert-dot alert-dot-{{ level }}"><i class="bi {{ icon }}"></i></div>
+    <div>
+      <div class="fw-semibold" style="font-size:12.5px;">{{ title }}</div>
+      <div class="text-muted" style="font-size:12px;">{% if link_endpoint %}<a href="{{ url_for(link_endpoint) }}" style="color:inherit;">{{ text }}</a>{% else %}{{ text }}{% endif %}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro activity_feed(events) %}
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-activity me-1" style="color:var(--gold-500);"></i> Activités récentes</h2></div>
+  {% for evt_date, icon, text in events %}
+  <div class="timeline-item">
+    <div class="timeline-dot"></div>
+    <div>
+      <div class="fw-semibold" style="font-size:12.5px;"><i class="bi {{ icon }} me-1" style="color:var(--gold-700);"></i>{{ text }}</div>
+      <div class="text-muted" style="font-size:11px;">{{ evt_date.strftime('%d/%m/%Y') if evt_date else '—' }}</div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Aucune activité récente.</p>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro school_calendar(calendar_events) %}
+<div class="card-ltt">
+  <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+    <h2><i class="bi bi-calendar3 me-1" style="color:var(--gold-500);"></i> Calendrier scolaire</h2>
+    {% if current_user.role == 'directeur' %}<a href="{{ url_for('dir_calendar') }}" class="text-muted" style="font-size:12px;"><i class="bi bi-pencil-square"></i> Modifier</a>{% endif %}
+  </div>
+  {% for e in calendar_events %}
+  <div class="cal-item"><span>{{ e.label }}</span><strong>{{ e.date_text }}</strong></div>
+  {% else %}
+  <p class="text-muted mb-0">Aucun événement renseigné.</p>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro sortable_th(label, key, current_sort, current_dir, extra_params='') %}
+{% set next_dir = 'desc' if current_sort == key and current_dir == 'asc' else 'asc' %}
+<th>
+  <a href="?sort={{ key }}&dir={{ next_dir }}{{ extra_params }}" class="text-decoration-none" style="color:inherit;">
+    {{ label }}
+    {% if current_sort == key %}
+      <i class="bi {{ 'bi-arrow-down' if current_dir == 'asc' else 'bi-arrow-up' }}" style="font-size:10px;"></i>
+    {% else %}
+      <i class="bi bi-arrow-down-up text-muted" style="font-size:9px; opacity:.5;"></i>
+    {% endif %}
+  </a>
+</th>
+{% endmacro %}

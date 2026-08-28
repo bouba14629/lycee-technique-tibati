@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }}{% endblock %}
+{% block page_title %}{{ student.full_name }}{% endblock %}
+{% block page_subtitle %}Matricule {{ student.matricule }} · {{ student.school_class.name if student.school_class }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end gap-2 mb-3 no-print">
+  {% if current_user.role == 'directeur' %}
+  <button class="btn-ltt-outline" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="bi bi-pencil-square"></i> Modifier</button>
+  <a href="{{ url_for('student_delete', student_id=student.id) }}" class="btn-ltt-outline text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer définitivement {{ student.full_name }} et toutes ses données (notes, absences, sanctions) ? Cette action est irréversible.'"><i class="bi bi-trash"></i> Supprimer</a>
+  {% endif %}
+  <a href="{{ url_for('student_card_preview', student_id=student.id) }}" class="btn-ltt-gold"><i class="bi bi-person-vcard-fill"></i> Carte scolaire</a>
+  <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Aperçu &amp; imprimer le dossier</button>
+</div>
+
+{% if current_user.role == 'directeur' %}
+<div class="modal fade" id="editStudentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+  <div class="modal-header"><h5 class="modal-title">Modifier {{ student.full_name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <form method="POST" action="{{ url_for('student_edit', student_id=student.id) }}" class="form-ltt" enctype="multipart/form-data">
+      <div class="row g-2">
+        <div class="col-12 text-center mb-2">
+          <div style="width:90px; height:108px; border:2px solid var(--navy-900); background:var(--cream); margin:0 auto 6px; border-radius:6px; overflow:hidden;">
+            <img src="{{ student_photo_url(student.photo) }}" style="width:100%; height:100%; object-fit:cover;">
+          </div>
+          <div class="fw-semibold" style="font-size:12px; color:var(--navy-900);">{{ student.full_name }}</div>
+          <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mt-1">
+        </div>
+        <div class="col-6"><label>Prénom</label><input type="text" name="first_name" class="form-control" value="{{ student.first_name }}"></div>
+        <div class="col-6"><label>Nom</label><input type="text" name="last_name" class="form-control" value="{{ student.last_name }}"></div>
+        <div class="col-6"><label>Matricule</label><input type="text" name="matricule" class="form-control" value="{{ student.matricule }}"></div>
+        <div class="col-6">
+          <label>Sexe</label>
+          <select name="sex" class="form-select"><option value="M" {{ 'selected' if student.sex=='M' }}>M</option><option value="F" {{ 'selected' if student.sex=='F' }}>F</option></select>
+        </div>
+        <div class="col-6">
+          <label>Classe</label>
+          <select name="class_id" class="form-select">
+            {% if student.school_class %}{% for c in student.school_class.department.classes %}<option value="{{ c.id }}" {{ 'selected' if student.class_id==c.id }}>{{ c.name }}</option>{% endfor %}{% endif %}
+          </select>
+        </div>
+        <div class="col-6"><label>Lieu de naissance</label><input type="text" name="birth_place" class="form-control" value="{{ student.birth_place or '' }}"></div>
+        <div class="col-6 d-flex align-items-end pb-2">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_repeater" id="isRepeaterEditCheck" value="1" {{ 'checked' if student.is_repeater }}>
+            <label class="form-check-label" for="isRepeaterEditCheck">Élève redoublant</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label>Nouveau mot de passe</label>
+          <div class="position-relative">
+            <input type="password" name="new_password" id="stEditPw" class="form-control pe-5">
+            <button type="button" onclick="togglePassword('stEditPw', this)"
+                    class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                    aria-label="Afficher le mot de passe">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+            </button>
+          </div>
+          <div class="text-muted mt-1" style="font-size:11px;">Champ vide — laissez ainsi pour ne pas changer le mot de passe actuel de l'élève.</div>
+        </div>
+      </div>
+      <button class="btn-ltt-navy w-100 justify-content-center mt-3">Enregistrer</button>
+    </form>
+  </div>
+</div></div></div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-ltt text-center">
+      <div class="avatar mx-auto mb-3" style="width:64px;height:64px;font-size:20px;">{{ student.first_name[0] }}{{ student.last_name[0] }}</div>
+      <div class="fw-semibold" style="font-size:16px;">{{ student.full_name }}</div>
+      <div class="text-muted" style="font-size:12.5px;">{{ student.sex }} · Né(e) le {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}{{ ' à ' + student.birth_place if student.birth_place else '' }}</div>
+      <div class="text-muted" style="font-size:12.5px;">Matricule : {{ student.matricule }}</div>
+      {% if current_user.role == 'directeur' %}
+      <div class="text-muted" style="font-size:12.5px;">Identifiant : <code>{{ student.user.username if student.user }}</code> · Mot de passe : <code>{{ student.user.plain_password if student.user else '—' }}</code></div>
+      {% endif %}
+      <hr>
+      <div class="text-start" style="font-size:13px;">
+        <strong>Parents / Tuteurs</strong>
+        {% for p in student.parents %}
+          <div class="mt-1"><i class="bi bi-person-fill"></i> {{ p.user.full_name }} — {{ p.phone or '—' }}
+            {% if current_user.role == 'directeur' %}<br><span class="text-muted" style="font-size:11px;">Identifiant : <code>{{ p.user.username }}</code> · Mot de passe : <code>{{ p.user.plain_password or '—' }}</code></span>{% endif %}
+          </div>
+        {% else %}<div class="text-muted mt-1">Aucun parent renseigné.</div>{% endfor %}
+      </div>
+      <div class="kpi-value mt-3" style="font-size:26px;">{{ avg if avg is not none else '—' }}/20</div>
+      <div class="kpi-label">Moyenne générale</div>
+      {% if current_user.role in ['directeur','censeur','conseiller_orientation'] %}
+      <a href="{{ url_for('student_bulletin_staff', student_id=student.id) }}" class="btn-ltt-gold w-100 justify-content-center mt-3"><i class="bi bi-file-earmark-medical-fill"></i> Voir le bulletin (aperçu avant impression)</a>
+      {% endif %}
+    </div>
+
+    {% if current_user.role == 'surveillant_general' %}
+    <div class="card-ltt">
+      <h3 style="font-size:13.5px; color:var(--navy-800);"><i class="bi bi-shield-exclamation"></i> Nouvelle sanction</h3>
+      <form method="POST" action="{{ url_for('student_sanction', student_id=student.id) }}" class="form-ltt">
+        <select name="type" class="form-select mb-2">
+          <option>Avertissement</option><option>Blâme</option><option>Convocation des parents</option><option>Exclusion temporaire</option>
+        </select>
+        <textarea name="description" class="form-control mb-2" rows="2" placeholder="Motif"></textarea>
+        <button class="btn-ltt-outline w-100 justify-content-center">Enregistrer</button>
+      </form>
+    </div>
+    <div class="card-ltt">
+      <h3 style="font-size:13.5px; color:var(--navy-800);"><i class="bi bi-award-fill"></i> Nouvelle récompense</h3>
+      <form method="POST" action="{{ url_for('student_reward', student_id=student.id) }}" class="form-ltt">
+        <input type="text" name="description" class="form-control mb-2" placeholder="ex : Tableau d'honneur" required>
+        <button class="btn-ltt-gold w-100 justify-content-center">Enregistrer</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card-ltt">
+      <div class="section-title"><h2>Suivi pédagogique</h2></div>
+      <table class="table-ltt">
+        <thead><tr><th>Matière</th><th>Moyenne</th><th>Coefficient</th></tr></thead>
+        <tbody>
+        {% for r in subj_avgs %}
+          <tr><td>{{ r.course.subject.name }}</td><td class="fw-semibold">{{ r.average }}/20</td><td>{{ r.coef }}</td></tr>
+        {% else %}<tr><td colspan="3" class="text-muted text-center py-3">Aucune note enregistrée.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-ltt">
+      <div class="section-title"><h2>Absences &amp; retards</h2></div>
+      <table class="table-ltt">
+        <thead><tr><th>Date</th><th>Type</th><th>Motif</th><th>Justifiée</th></tr></thead>
+        <tbody>
+        {% for a in student.attendances %}
+          <tr><td>{{ a.date.strftime('%d/%m/%Y') }}</td><td><span class="badge-ltt {{ 'badge-danger' if a.type=='Absence' else 'badge-warning' }}">{{ a.type }}</span></td><td>{{ a.reason or '—' }}</td><td>{% if a.justified %}<span class="badge-ltt badge-success">Oui</span>{% else %}<span class="badge-ltt badge-danger">Non</span>{% endif %}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-muted text-center py-3">Aucune absence enregistrée.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-ltt">
+      <div class="section-title"><h2>Sanctions &amp; récompenses</h2></div>
+      {% for s in student.sanctions %}<div class="timeline-item"><div class="timeline-dot" style="background:var(--danger);"></div><div><span class="fw-semibold" style="font-size:13px;">{{ s.type }}</span> — <span class="text-muted" style="font-size:12px;">{{ s.date.strftime('%d/%m/%Y') }}</span><div class="text-muted" style="font-size:12px;">{{ s.description }}</div></div></div>{% endfor %}
+      {% for r in student.rewards %}<div class="timeline-item"><div class="timeline-dot" style="background:var(--success);"></div><div><span class="fw-semibold" style="font-size:13px;">{{ r.description }}</span> — <span class="text-muted" style="font-size:12px;">{{ r.date.strftime('%d/%m/%Y') }}</span></div></div>{% endfor %}
+      {% if not student.sanctions and not student.rewards %}<p class="text-muted mb-0">Aucun événement disciplinaire.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Planification des évaluations{% endblock %}
+{% block page_title %}Gestion pédagogique par évaluation{% endblock %}
+{% block page_subtitle %}Planifier, suivre et relancer les évaluations par classe et matière{% endblock %}
+{% block content %}
+<div class="dashboard-hero evaluation-hero">
+  <div><span class="chart-kicker">Pilotage pédagogique</span><h2>Des évaluations planifiées et suivies</h2><p>Le Censeur et le Proviseur définissent les échéances ; l’enseignant saisit ensuite les notes depuis son espace.</p></div>
+</div>
+{% if class_summaries %}
+<div class="card-ltt mb-3"><div class="section-title"><h2>Synthèse par classe</h2><span class="muted">{{ term }}</span></div><div class="table-responsive"><table class="table-ltt"><thead><tr><th>Classe</th><th>Moyenne des évaluations</th><th>Taux de saisie</th><th>Complètes</th><th>À finaliser</th></tr></thead><tbody>{% for summary in class_summaries %}<tr><td><strong>{{ summary.name }}</strong></td><td>{{ summary.average ~ '/20' if summary.average is not none else '—' }}</td><td><span class="badge-ltt {{ 'badge-success' if summary.submission_rate == 100 else 'badge-warning' if summary.submission_rate else 'badge-danger' }}">{{ summary.submission_rate }}%</span></td><td>{{ summary.complete }}/{{ summary.planned }}</td><td>{{ summary.pending }}</td></tr>{% endfor %}</tbody></table></div></div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card-ltt"><div class="section-title"><h2>Planifier une évaluation</h2></div><form method="POST" class="form-ltt">
+    <label>Période</label><select name="term" class="form-select mb-2">{% for item in terms %}<option {{ 'selected' if term==item }}>{{ item }}</option>{% endfor %}</select>
+    <label>Cours</label><select name="course_id" class="form-select mb-2" required><option value="">— Choisir un cours —</option>{% for course in courses %}<option value="{{ course.id }}">{{ course.subject.name }} · {{ course.school_class.name }} · {{ course.teacher.user.full_name }}</option>{% endfor %}</select>
+    <div class="row g-2"><div class="col-6"><label>Séquence</label><select name="sequence" class="form-select">{% for sequence in range(1,7) %}<option value="{{ sequence }}">Éval. {{ sequence }}</option>{% endfor %}</select></div><div class="col-6"><label>Sur</label><input type="number" name="max_value" class="form-control" value="20" min="1" max="20" step="0.5"><div class="text-muted mt-1" style="font-size:11px;">Maximum : 20 points</div></div></div>
+    <label class="mt-2">Intitulé</label><input name="title" class="form-control" placeholder="Ex. Devoir de synthèse" maxlength="160" required>
+    <label class="mt-2">Date prévue</label><input type="date" name="scheduled_date" class="form-control" value="{{ today }}" required>
+    <button class="btn-ltt-navy mt-3 w-100 justify-content-center"><i class="bi bi-calendar2-plus"></i> Planifier</button>
+  </form></div></div>
+  <div class="col-lg-8"><div class="card-ltt"><div class="section-title"><h2>Suivi — {{ term }}{% if selected_sequence %} · Séquence {{ selected_sequence }}{% endif %}</h2><form method="GET" class="d-flex gap-2"><select name="term" class="form-select" onchange="this.form.submit()">{% for item in terms %}<option {{ 'selected' if term==item }}>{{ item }}</option>{% endfor %}</select><select name="sequence" class="form-select" onchange="this.form.submit()"><option value="">Toutes séquences</option>{% for item in range(1,7) %}<option value="{{ item }}" {{ 'selected' if selected_sequence==item }}>Séq. {{ item }}</option>{% endfor %}</select></form></div><div class="table-responsive"><table class="table-ltt"><thead><tr><th>Date</th><th>Évaluation</th><th>Classe & matière</th><th>Enseignant</th><th>Saisie</th><th>État</th></tr></thead><tbody>{% for assessment in assessments %}{% set submitted, total = progress[assessment.id] %}<tr><td>{{ assessment.scheduled_date.strftime('%d/%m/%Y') }}</td><td><strong>Éval. {{ assessment.sequence }}</strong><div class="text-muted" style="font-size:11.5px;">{{ assessment.title }} · /{{ assessment.max_value|int }}</div></td><td>{{ assessment.course.school_class.name }}<div class="text-muted" style="font-size:11.5px;">{{ assessment.course.subject.name }}</div></td><td>{{ assessment.course.teacher.user.full_name }}</td><td>{{ submitted }}/{{ total }}</td><td><span class="badge-ltt {{ 'badge-success' if assessment.status=='Saisie complète' else 'badge-warning' if assessment.status=='Saisie en cours' else 'badge-navy' }}">{{ assessment.status }}</span></td></tr>{% else %}<tr><td colspan="6" class="text-center text-muted py-4">Aucune évaluation planifiée pour ce filtre.</td></tr>{% endfor %}</tbody></table></div></div></div>
+</div>
+{% endblock %}

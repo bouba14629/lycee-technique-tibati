@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Fiche statistique du conseil de classe{% endblock %}
+{% block page_title %}Fiche statistique — Résultats pédagogiques{% endblock %}
+{% block page_subtitle %}Calculée automatiquement à partir des notes saisies — {{ term }}{{ ' · Séquence ' ~ sequence if sequence else '' }} · {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-between align-items-center">
+  <form method="GET" class="d-flex flex-wrap gap-2">
+    <select name="term" class="form-select" style="max-width:220px;">
+      {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+    </select>
+    <select name="department_id" class="form-select" style="max-width:220px;" onchange="Array.from(this.form.elements.class_ids.options).forEach(o=>o.selected=false); Array.from(this.form.elements.subject_ids.options).forEach(o=>o.selected=false); this.form.submit()">
+      <option value="">Tous les départements</option>
+      {% for item in available_departments %}<option value="{{ item.id }}" {{ 'selected' if department_id==item.id }}>{{ item.name }}{% if item.code %} · {{ item.code }}{% endif %}</option>{% endfor %}
+    </select>
+    <select name="sequence" class="form-select" style="max-width:180px;">
+      <option value="">Synthèse trimestrielle</option>
+      {% for seq in valid_sequences %}<option value="{{ seq }}" {{ 'selected' if sequence==seq }}>Séquence {{ seq }}</option>{% endfor %}
+    </select>
+    <select id="council-class-ids" name="class_ids" class="form-select" style="min-width:190px; max-width:250px;" multiple size="4" aria-label="Sélection multiple de classes">
+      {% for item in available_classes %}<option value="{{ item.id }}" {{ 'selected' if item.id in class_ids }}>{{ item.code or 'Sans code' }}</option>{% endfor %}
+    </select>
+    <select id="council-subject-ids" name="subject_ids" class="form-select" style="min-width:210px; max-width:280px;" multiple size="4" aria-label="Sélection multiple de matières">
+      {% for item in available_subjects %}<option value="{{ item.id }}" data-class-ids="{{ subject_class_ids.get(item.id, [])|join(',') }}" {{ 'selected' if item.id in subject_ids }}>{{ item.name }}</option>{% endfor %}
+    </select>
+    <button class="btn-ltt-navy" type="submit"><i class="bi bi-funnel-fill"></i> Filtrer</button>
+    <small class="text-muted align-self-center" style="font-size:11px;">Classes et matières : sélection multiple possible.</small>
+  </form>
+  <div class="d-flex gap-2">
+    <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu / Imprimer</button>
+    <form method="GET" action="{{ url_for('censeur_council_stats_export') }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="sequence" value="{{ sequence or '' }}"><input type="hidden" name="department_id" value="{{ department_id or '' }}">{% for item_id in class_ids %}<input type="hidden" name="class_ids" value="{{ item_id }}">{% endfor %}{% for item_id in subject_ids %}<input type="hidden" name="subject_ids" value="{{ item_id }}">{% endfor %}<button class="btn-ltt-gold"><i class="bi bi-file-earmark-excel-fill"></i> Excel</button></form>
+  </div>
+</div>
+<script>
+function filterCouncilSubjects() {
+  const classes = document.getElementById('council-class-ids');
+  const subjects = document.getElementById('council-subject-ids');
+  if (!classes || !subjects) return;
+  const selectedClasses = new Set(Array.from(classes.selectedOptions).map(option => option.value));
+  Array.from(subjects.options).forEach(option => {
+    const relatedClasses = option.dataset.classIds ? option.dataset.classIds.split(',') : [];
+    const visible = selectedClasses.size === 0 || relatedClasses.some(classId => selectedClasses.has(classId));
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (!visible) option.selected = false;
+  });
+}
+document.getElementById('council-class-ids')?.addEventListener('change', filterCouncilSubjects);
+filterCouncilSubjects();
+</script>
+{% macro stat_row(label, r, is_total=false, school_class=none) %}
+<tr {{ 'class="fw-bold" style="background:var(--cream);"'|safe if is_total else '' }}>
+  <td>{% if school_class %}<strong>{{ school_class.code or 'Sans code' }}</strong>{% else %}{{ label }}{% endif %}</td>
+  <td>{{ r.inscrits.F }}</td><td>{{ r.inscrits.G }}</td><td class="fw-semibold">{{ r.inscrits.T }}</td>
+  <td>{{ r.evalues.F }}</td><td>{{ r.evalues.G }}</td><td class="fw-semibold">{{ r.evalues.T }}</td>
+  <td>{{ r.reussite.F }}</td><td>{{ r.reussite.G }}</td><td class="fw-semibold">{{ r.reussite.T }}</td>
+  <td>{{ r.pct.F if r.pct.F is not none else '—' }}%</td><td>{{ r.pct.G if r.pct.G is not none else '—' }}%</td><td class="fw-semibold">{{ r.pct.T if r.pct.T is not none else '—' }}%</td>
+  <td>{{ r.th.F }}</td><td>{{ r.th.G }}</td><td class="fw-semibold">{{ r.th.T }}</td>
+  <td>{{ r.encouragement.F }}</td><td>{{ r.encouragement.G }}</td><td class="fw-semibold">{{ r.encouragement.T }}</td>
+  <td>{{ r.felicitations.F }}</td><td>{{ r.felicitations.G }}</td><td class="fw-semibold">{{ r.felicitations.T }}</td>
+  <td class="fw-semibold">{{ r.moyenne_generale if r.moyenne_generale is not none else '—' }}</td>
+  <td>{{ r.forte_moyenne.F if r.forte_moyenne.F is not none else '—' }}</td><td>{{ r.forte_moyenne.G if r.forte_moyenne.G is not none else '—' }}</td>
+  <td>{{ r.faible_moyenne.F if r.faible_moyenne.F is not none else '—' }}</td><td>{{ r.faible_moyenne.G if r.faible_moyenne.G is not none else '—' }}</td>
+  <td class="text-muted" style="font-size:11px;">{{ r.observation }}</td>
+</tr>
+{% endmacro %}
+
+<div class="card-ltt">
+  <div style="overflow-x:auto;">
+  <table class="table-ltt council-stats-table" style="font-size:10.5px; white-space:nowrap;">
+    <thead>
+      <tr>
+        <th rowspan="2">Code</th>
+        <th colspan="3" class="text-center">Inscrits</th>
+        <th colspan="3" class="text-center">Évalués</th>
+        <th colspan="3" class="text-center">Moyenne ≥10</th>
+        <th colspan="3" class="text-center">% Réussite</th>
+        <th colspan="3" class="text-center">Nbre TH</th>
+        <th colspan="3" class="text-center">Encouragement</th>
+        <th colspan="3" class="text-center">Félicitations</th>
+        <th rowspan="2">Moy. Générale</th>
+        <th colspan="2" class="text-center">Forte Moyenne</th>
+        <th colspan="2" class="text-center">Faible Moyenne</th>
+        <th rowspan="2">Observations</th>
+      </tr>
+      <tr>
+        <th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th>
+        <th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th>
+        <th>F</th><th>G</th><th>F</th><th>G</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% if stats.cycle1 %}
+      <tr><td colspan="26" class="fw-bold" style="background:var(--navy-900); color:#fff;">PREMIER CYCLE</td></tr>
+      {% for r in stats.cycle1 %}{{ stat_row('', r, school_class=r.class) }}{% endfor %}
+      {{ stat_row("TOTAL 1", stats.total_cycle1, true) }}
+    {% endif %}
+    {% if stats.cycle2 %}
+      <tr><td colspan="26" class="fw-bold" style="background:var(--navy-900); color:#fff;">SECOND CYCLE</td></tr>
+      {% for r in stats.cycle2 %}{{ stat_row('', r, school_class=r.class) }}{% endfor %}
+      {{ stat_row("TOTAL 2", stats.total_cycle2, true) }}
+    {% endif %}
+    {% if stats.total_general %}
+      {{ stat_row("TOTAL GÉNÉRAL", stats.total_general, true) }}
+    {% endif %}
+    {% if not stats.rows %}
+      <tr><td colspan="26" class="text-muted text-center py-4">Aucune classe dans votre périmètre.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

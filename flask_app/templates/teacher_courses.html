@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Mes classes{% endblock %}
+{% block page_title %}Mes classes &amp; matières{% endblock %}
+{% block page_subtitle %}{{ teacher.department.name if teacher.department }}{% endblock %}
+{% block content %}
+<div class="row g-3">
+{% for c in courses %}
+<div class="col-md-6 col-lg-4">
+  <div class="card-ltt">
+    <span class="badge-ltt badge-navy mb-2">{{ c.school_class.name }}</span>
+    <h3 style="font-size:15px; color:var(--navy-900);">{{ c.subject.name }}</h3>
+    <div class="text-muted mb-3" style="font-size:12.5px;">{{ c.school_class.students|length }} élève(s) · coefficient {{ c.subject.coefficient }}</div>
+    <div class="d-grid gap-2">
+      <a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>
+      <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="col-12"><div class="card-ltt text-center text-muted py-4">Aucun cours affecté pour le moment.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

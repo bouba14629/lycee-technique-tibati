@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Emploi du temps officiel{% endblock %}
+{% block page_title %}{{ 'Emploi de temps par classe' if mode == 'classe' else 'Emploi de temps individuel' }}{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-end gap-2">
+  <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu / Imprimer</button>
+  <a class="btn-ltt-gold" href="{{ pdf_url }}"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</a>
+  <a class="btn-ltt-outline" href="{{ xlsx_url }}"><i class="bi bi-file-earmark-excel-fill"></i> Excel</a>
+</div>
+
+<div class="card-ltt bulletin-wrap" style="font-size:10.5px; max-width:100%;">
+  <table style="width:100%;">
+    <tr>
+      <td style="width:26%; font-size:8.5px; vertical-align:top; text-align:center;">
+        RÉPUBLIQUE DU CAMEROUN<br>Paix-Travail-Patrie<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        RÉGION DE L'ADAMAOUA<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        DÉLÉGATION RÉGIONALE DES<br>ENSEIGNEMENTS SECONDAIRES<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        DÉLÉGATION DÉPARTEMENTALE DU DJEREM
+      </td>
+      <td style="width:48%; text-align:center; vertical-align:top;">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" width="100"><br>
+        <strong style="font-family:'Playfair Display',serif; font-size:15px; color:var(--navy-900);">LYCÉE TECHNIQUE DE TIBATI</strong><br>
+        <span style="font-size:10px; font-style:italic; color:var(--navy-800);">GOVERNMENT TECHNICAL HIGH SCHOOL TIBATI</span><br>
+        <span style="font-size:9px; color:var(--muted);">BP 105 TIBATI &nbsp;&nbsp; Mle : 2CE1TEFD110320092 &nbsp;&nbsp; E-mail: lttibati@gmail.com</span>
+      </td>
+      <td style="width:26%; font-size:8.5px; text-align:center; vertical-align:top;">
+        REPUBLIC OF CAMEROON<br>Peace-Work-Fatherland<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        ADAMAWA REGION<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        REGIONAL DELEGATION OF<br>SECONDARY EDUCATION<br>
+        <span style="font-size:7.5px;">********************</span><br>
+        DJEREM DIVISIONAL DELEGATION
+      </td>
+    </tr>
+  </table>
+
+  <div class="text-center" style="border-top:2.5px solid var(--navy-900); border-bottom:2.5px solid var(--navy-900); padding:6px 0; margin:10px 0;">
+    <div class="bulletin-title" style="font-size:18px; text-decoration:underline;">{{ 'EMPLOI DE TEMPS PAR CLASSE' if mode == 'classe' else 'EMPLOI DE TEMPS INDIVIDUEL' }}</div>
+  </div>
+
+  {% if mode == 'classe' %}
+  <table style="width:100%; table-layout:fixed; margin-bottom:10px; font-size:12px;">
+    <tr>
+      <td style="width:30%; text-align:left; padding-right:24px;"><span style="color:#c0392b; font-weight:700;">{{ school_class.department.section.code }}</span></td>
+      <td style="width:40%; text-align:center; padding-left:24px; padding-right:24px;"><strong>CLASSE :</strong> <span style="color:#c0392b; font-weight:700;">{{ school_class.name }}</span></td>
+      <td style="width:30%; text-align:right; padding-left:24px;"><strong>ANNÉE SCOLAIRE :</strong> <span style="color:#c0392b; font-weight:700;">{{ school_year }}</span></td>
+    </tr>
+  </table>
+  {% else %}
+  <table style="width:100%; margin-bottom:10px; font-size:11.5px;">
+    <tr>
+      <td><strong>NOM DU PROFESSEUR :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.user.full_name.upper() }}</span></td>
+      <td colspan="2" style="text-align:right;"><strong>DÉPARTEMENT :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.department.code if teacher.department }}</span></td>
+    </tr>
+    <tr>
+      <td><strong>HEURES DUES :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.hours_due }}</span></td>
+      <td colspan="2" style="text-align:right;"><strong>CRÉNEAUX PLANIFIÉS :</strong> <span style="color:#c0392b; font-weight:700;">{{ planned_slots if planned_slots is defined else hours_faites }}</span></td>
+    </tr>
+    <tr>
+      <td><strong>HEURES FAITES :</strong> <span style="color:#c0392b; font-weight:700;">{{ hours_faites }}</span></td>
+      <td colspan="2" style="text-align:right;"><strong>ANNÉE SCOLAIRE :</strong> <span style="color:#c0392b; font-weight:700;">{{ school_year }}</span></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>CLASSES TENUES :</strong> <span style="color:#c0392b; font-weight:700;">{{ classes_tenues }}</span></td>
+      <td style="text-align:right;"><strong>GRADE :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.grade }}</span></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="text-align:right;"><strong>HEURES SUPPLÉMENTAIRES :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.extra_hours }}</span></td>
+    </tr>
+  </table>
+  {% endif %}
+
+  <div style="display:grid; grid-template-columns: 6% repeat(3,9.6%) 3.8% repeat(3,9.6%) 3.8% repeat(3,9.6%); border:1.5px solid var(--navy-900);">
+    <div style="grid-column:1; grid-row:1; border:1px solid #ddd3ae; background:var(--cream);"></div>
+    {% for idx in [0,1,2] %}
+    <div style="grid-column:{{ idx+2 }}; grid-row:1; border:1px solid #ddd3ae; background:var(--cream); text-align:center; font-size:9.5px; padding:4px 2px;">{{ idx+1 }}<br><span style="font-weight:400;">{{ periods[idx][0] }}–{{ periods[idx][1] }}</span></div>
+    {% endfor %}
+    <div style="grid-column:5; grid-row:1 / span {{ days|length + 1 }}; background:var(--navy-900); color:#fff; text-align:center; font-size:8px; line-height:2.3; letter-spacing:.5px; padding:4px 0; border:1px solid var(--navy-900); display:flex; align-items:center; justify-content:center;">RÉ<br>C.<br>R.<br>É.<br>A.<br>T.<br>I.<br>O.<br>N.</div>
+    {% for idx in [3,4,5] %}
+    <div style="grid-column:{{ idx+3 }}; grid-row:1; border:1px solid #ddd3ae; background:var(--cream); text-align:center; font-size:9.5px; padding:4px 2px;">{{ idx+1 }}<br><span style="font-weight:400;">{{ periods[idx][0] }}–{{ periods[idx][1] }}</span></div>
+    {% endfor %}
+    <div style="grid-column:9; grid-row:1 / span {{ days|length + 1 }}; background:var(--navy-900); color:#fff; text-align:center; font-size:8px; line-height:2.3; letter-spacing:.5px; padding:4px 0; border:1px solid var(--navy-900); display:flex; align-items:center; justify-content:center;">D.<br>É.<br>J.<br>E.<br>U.<br>N.<br>E.<br>R.</div>
+    {% for idx in [6,7,8] %}
+    <div style="grid-column:{{ idx+4 }}; grid-row:1; border:1px solid #ddd3ae; background:var(--cream); text-align:center; font-size:9.5px; padding:4px 2px;">{{ idx+1 }}<br><span style="font-weight:400;">{{ periods[idx][0] }}–{{ periods[idx][1] }}</span></div>
+    {% endfor %}
+
+    {% for day in days %}
+    {% set row = loop.index + 1 %}
+    <div style="grid-column:1; grid-row:{{ row }}; border:1px solid #ddd3ae; background:var(--cream); text-align:center; font-size:9px; padding:6px 2px; display:flex; flex-direction:column; justify-content:center;"><strong>{{ day.upper() }}</strong><span style="font-style:italic; color:var(--muted);">{{ day_en[day] }}</span></div>
+    {% for idx in [0,1,2] %}
+    <div style="grid-column:{{ idx+2 }}; grid-row:{{ row }}; border:1px solid #ddd3ae; text-align:center; padding:4px; display:flex; flex-direction:column; justify-content:center; overflow-wrap:break-word;">
+      {% if grid[day][idx] %}<strong style="font-size:9.5px;">{{ grid[day][idx].course.subject.name }}</strong><span class="text-muted" style="font-size:8.5px; font-style:italic;">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% for idx in [3,4,5] %}
+    <div style="grid-column:{{ idx+3 }}; grid-row:{{ row }}; border:1px solid #ddd3ae; text-align:center; padding:4px; display:flex; flex-direction:column; justify-content:center; overflow-wrap:break-word;">
+      {% if grid[day][idx] %}<strong style="font-size:9.5px;">{{ grid[day][idx].course.subject.name }}</strong><span class="text-muted" style="font-size:8.5px; font-style:italic;">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% for idx in [6,7,8] %}
+    <div style="grid-column:{{ idx+4 }}; grid-row:{{ row }}; border:1px solid #ddd3ae; text-align:center; padding:4px; display:flex; flex-direction:column; justify-content:center; overflow-wrap:break-word;">
+      {% if grid[day][idx] %}<strong style="font-size:9.5px;">{{ grid[day][idx].course.subject.name }}</strong><span class="text-muted" style="font-size:8.5px; font-style:italic;">{{ grid[day][idx].course.teacher.user.full_name if mode=='classe' else grid[day][idx].display_class_label }}</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+
+  <div class="row mt-5 pt-3" style="border-top:0;">
+    <div class="col-6 text-start"><div style="font-size:11px; color:var(--muted);">LE CENSEUR {{ school_class.department.section.code if mode=='classe' else (teacher.department.section.code if teacher.department) }}</div><div style="margin-top:34px; height:1px;"></div></div>
+    <div class="col-6 text-center">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">TIBATI, le ______</div>
+      <div style="font-size:11px; color:var(--muted);">LE PROVISEUR</div>
+      <div style="margin-top:22px; height:1px;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

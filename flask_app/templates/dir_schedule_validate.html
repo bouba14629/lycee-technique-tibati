@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Emplois du temps{% endblock %}
+{% block page_title %}Emplois du temps{% endblock %}
+{% block page_subtitle %}{{ 'Consultation des emplois du temps par classe' if schedule_view == 'classe' else 'Consultation des emplois du temps individuels des enseignants' }} — la gestion des créneaux relève du Censeur{% endblock %}
+{% block content %}
+{% if schedule_view == 'classe' %}
+<div class="card-ltt mb-4" id="emploi-par-classe">
+  <div class="section-title"><h2><i class="bi bi-diagram-3-fill me-1" style="color:var(--gold-500);"></i> Emplois du temps par classe</h2></div>
+  <form method="GET" class="row g-2 align-items-end mb-3" aria-label="Filtrer les emplois du temps par classe">
+    <input type="hidden" name="view" value="classe">
+    <div class="col-md-4">
+      <label for="schedule-section" class="form-label mb-1">Section</label>
+      <select id="schedule-section" name="section_id" class="form-select" onchange="this.form.elements.department_id.value=''; this.form.elements.class_id.value=''; this.form.submit()">
+        <option value="">Toutes les sections</option>
+        {% for section in sections %}<option value="{{ section.id }}" {{ 'selected' if section_id == section.id }}>{{ section.name }}{% if section.code %} ({{ section.code }}){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label for="schedule-department" class="form-label mb-1">Filière / Département</label>
+      <select id="schedule-department" name="department_id" class="form-select" onchange="this.form.elements.class_id.value=''; this.form.submit()">
+        <option value="">Toutes les filières / tous les départements</option>
+        {% for department in departments %}<option value="{{ department.id }}" {{ 'selected' if department_id == department.id }}>{{ department.name }}{% if department.code %} ({{ department.code }}){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="schedule-class" class="form-label mb-1">Classe</label>
+      <select id="schedule-class" name="class_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Toutes les classes</option>
+        {% for school_class in available_classes %}<option value="{{ school_class.id }}" {{ 'selected' if class_id == school_class.id }}>{{ school_class.code or school_class.name }}{% if school_class.code %} · {{ school_class.name }}{% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-1"><button class="btn-ltt-navy w-100 justify-content-center" title="Filtrer"><i class="bi bi-funnel-fill"></i></button></div>
+  </form>
+  <table class="table-ltt">
+    <thead><tr><th>Classe</th><th>Section</th><th>Filière / Département</th><th>Créneaux planifiés</th><th></th></tr></thead>
+    <tbody>
+    {% for c in classes %}
+      {% set entries = c.courses|map(attribute='schedule_entries')|sum(start=[]) %}
+      <tr data-schedule-class-id="{{ c.id }}">
+        <td class="fw-semibold">{{ c.name }}</td>
+        <td>{{ c.department.section.name }}</td>
+        <td>{{ c.department.name }}</td>
+        <td>{{ entries|length }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('class_schedule_official', class_id=c.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-eye"></i> Voir</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">Aucune classe ne correspond aux filtres sélectionnés.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="card-ltt" id="emploi-individuel">
+  <div class="section-title"><h2><i class="bi bi-person-workspace me-1" style="color:var(--gold-500);"></i> Emplois du temps individuels des enseignants</h2></div>
+  <form method="GET" class="row g-2 align-items-end mb-3" aria-label="Rechercher un enseignant">
+    <input type="hidden" name="view" value="individuel">
+    <div class="col-md-7">
+      <label for="teacher-schedule-search" class="form-label mb-1">Rechercher un enseignant</label>
+      <input id="teacher-schedule-search" type="search" name="q" class="form-control" value="{{ teacher_query }}" placeholder="Saisir un nom d’enseignant">
+    </div>
+    <div class="col-md-2"><button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-search"></i> Rechercher</button></div>
+    {% if teacher_query %}<div class="col-md-2"><a href="{{ url_for('dir_schedule_validate', view='individuel') }}" class="btn-ltt-outline w-100 justify-content-center">Réinitialiser</a></div>{% endif %}
+  </form>
+  <div class="table-responsive">
+    <table class="table-ltt">
+      <thead><tr><th>Enseignant</th><th>Filière</th><th>Heures faites</th><th>Heures dues</th><th></th></tr></thead>
+      <tbody>
+      {% for teacher in teachers %}
+        <tr data-teacher-id="{{ teacher.id }}">
+          <td class="fw-semibold">{{ teacher.user.full_name }}</td>
+          <td>{{ teacher.department.name if teacher.department else 'Enseignements généraux' }}</td>
+          <td>{{ teacher_schedule_slots.get(teacher.id, 0) }}</td>
+          <td>{{ teacher.hours_due or 0 }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('dir_teacher_schedule_official', teacher_id=teacher.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-eye"></i> Voir l’emploi individuel</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Aucun enseignant ne correspond à la recherche.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

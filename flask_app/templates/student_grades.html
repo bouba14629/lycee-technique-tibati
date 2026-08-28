@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Mes notes{% endblock %}
+{% block page_title %}Mes notes{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <form method="GET" class="mb-3">
+    <select name="term" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+      {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+    </select>
+  </form>
+  <table class="table-ltt">
+    <thead><tr><th>Matière</th><th>Moyenne</th><th>Coefficient</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td>{{ r.course.subject.name }}</td><td class="fw-semibold">{{ r.average }}/20</td><td>{{ r.coef }}</td></tr>
+    {% else %}<tr><td colspan="3" class="text-muted text-center py-4">Aucune note pour ce trimestre.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

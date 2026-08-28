@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord Enseignant{% endblock %}
+{% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] }}{% endblock %}
+{% block page_subtitle %}{{ teacher.department.name if teacher and teacher.department }} — {{ courses|length }} cours en charge{% endblock %}
+
+{% block content %}
+<section class="role-hero role-hero-teacher">
+  <div><div class="eyebrow"><i class="bi bi-journal-check"></i> Espace pédagogique</div><h2>Préparez vos cours et suivez vos classes.</h2><p>Accédez rapidement à la saisie des notes, à l’appel et à votre organisation hebdomadaire.</p></div>
+  <a class="btn-hero-ghost" href="{{ url_for('teacher_courses') }}"><i class="bi bi-journal-bookmark-fill"></i> Mes classes</a>
+</section>
+<div class="kpi-grid compact-kpi-grid">
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-journal-bookmark-fill"></i></div><div class="kpi-value">{{ courses|length }}</div><div class="kpi-label">Cours affectés</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-people-fill"></i></div><div class="kpi-value">{{ courses|map(attribute='school_class')|map(attribute='students')|map('length')|sum }}</div><div class="kpi-label">Élèves suivis</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-calendar2-week-fill"></i></div><div class="kpi-value">{{ schedule|length }}</div><div class="kpi-label">Créneaux hebdomadaires</div></div>
+</div>
+<div class="card-ltt dashboard-table-card">
+  <div class="chart-title-row"><div><span class="chart-kicker">Mes enseignements</span><h2>Classes et actions pédagogiques</h2></div><a class="chart-pill" href="{{ url_for('teacher_courses') }}">Tout voir <i class="bi bi-arrow-right"></i></a></div>
+  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Matière</th><th>Classe</th><th>Effectif</th><th class="text-end">Actions</th></tr></thead><tbody>
+  {% for c in courses %}<tr><td><strong>{{ c.subject.name }}</strong></td><td><span class="badge-ltt badge-navy">{{ c.school_class.name }}</span></td><td>{{ c.school_class.students|length }}</td><td class="text-end"><a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-pencil-square"></i> Notes</a> <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-clipboard2-check"></i> Appel</a></td></tr>
+  {% else %}<tr><td colspan="4" class="text-muted text-center py-4">Aucun cours affecté pour le moment.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

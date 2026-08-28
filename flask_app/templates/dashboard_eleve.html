@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Mon espace{% endblock %}
+{% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] }}{% endblock %}
+{% block page_subtitle %}{{ student.school_class.name if student and student.school_class }} — Matricule {{ student.matricule if student }}{% endblock %}
+
+{% block content %}
+<section class="role-hero role-hero-student">
+  <div><div class="eyebrow"><i class="bi bi-mortarboard-fill"></i> Mon parcours</div><h2>Suivez votre progression en toute simplicité.</h2><p>Consultez vos dernières évaluations, votre bulletin et les informations importantes de l’établissement.</p></div>
+  <a href="{{ url_for('student_bulletin_self') }}" class="btn-hero-ghost"><i class="bi bi-file-earmark-medical-fill"></i> Mon bulletin</a>
+</section>
+<div class="row g-3">
+  <div class="col-lg-4"><div class="student-average-card"><span class="chart-kicker">Moyenne générale</span><div class="student-average-value">{{ avg if avg is not none else '—' }}<small>/20</small></div><p>Trimestre en cours</p><a href="{{ url_for('student_bulletin_self') }}" class="btn-ltt-gold w-100 justify-content-center"><i class="bi bi-file-earmark-medical-fill"></i> Voir mon bulletin</a></div></div>
+  <div class="col-lg-8"><div class="card-ltt dashboard-table-card"><div class="chart-title-row"><div><span class="chart-kicker">Résultats récents</span><h2>Dernières notes enregistrées</h2></div><a class="chart-pill" href="{{ url_for('student_grades') }}">Toutes mes notes <i class="bi bi-arrow-right"></i></a></div><div class="table-responsive"><table class="table-ltt"><thead><tr><th>Matière</th><th>Type</th><th>Note</th><th>Date</th></tr></thead><tbody>
+  {% for g in recent_grades %}<tr><td><strong>{{ g.course.subject.name }}</strong></td><td><span class="badge-ltt badge-navy">{{ g.type }}</span></td><td class="fw-semibold">{{ g.value }}/{{ g.max_value|int }}</td><td class="text-muted">{{ g.date.strftime('%d/%m/%Y') }}</td></tr>
+  {% else %}<tr><td colspan="4" class="text-muted text-center py-4">Aucune note enregistrée pour l'instant.</td></tr>{% endfor %}
+  </tbody></table></div></div></div>
+</div>
+<div class="card-ltt mt-3"><div class="chart-title-row"><div><span class="chart-kicker">Vie de l’établissement</span><h2>Annonces à consulter</h2></div><a class="chart-pill" href="{{ url_for('announcements') }}">Toutes les annonces <i class="bi bi-arrow-right"></i></a></div>{% for a in announcements %}<div class="timeline-item"><div class="timeline-dot"></div><div><div class="fw-semibold" style="font-size:13.5px;">{{ a.title }}</div><div class="text-muted" style="font-size:12.5px;">{{ a.body[:140] }}{{ '…' if a.body|length > 140 }}</div></div></div>{% else %}<p class="text-muted mb-0">Aucune annonce.</p>{% endfor %}</div>
+{% endblock %}

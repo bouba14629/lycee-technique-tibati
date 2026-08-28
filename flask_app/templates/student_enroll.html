@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Inscription{% endblock %}
+{% block page_title %}Inscription / Réinscription d'un élève{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-end gap-2">
+  <a href="{{ url_for('students_export') }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Exporter la liste (Excel)</a>
+  <a href="{{ url_for('students_export_pdf') }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-pdf-fill"></i> Exporter la liste avec photos (PDF)</a>
+  <button type="button" class="btn-ltt-gold" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload"></i> Importer une liste</button>
+</div>
+
+<div class="modal fade" id="importModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+  <div class="modal-header"><h5 class="modal-title">Importer des élèves</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="alert alert-info py-2" style="font-size:12.5px; border-radius:10px;"><strong>Import rapide par classe</strong><br>Choisissez la classe cible ci-dessous, puis importez toute votre liste Excel. Dans ce mode, la colonne <strong>Classe</strong> n’est pas nécessaire : tous les élèves du fichier seront affectés à la classe sélectionnée.</div>
+    <p class="text-muted" style="font-size:12.5px;">Formats acceptés : <strong>CSV</strong> et <strong>XLSX</strong>. Colonnes conseillées : <strong>Nom complet</strong>, Matricule, Sexe, Date de naissance, Lieu de naissance. Laissez la classe cible vide uniquement si votre fichier contient une colonne <strong>Classe</strong> différente pour chaque élève.</p>
+    <a class="btn-ltt-outline w-100 justify-content-center mb-3" href="{{ url_for('import_template_download', kind='eleves') }}"><i class="bi bi-download"></i> Télécharger le modèle Excel</a>
+    <form method="POST" action="{{ url_for('students_import_preview') }}" enctype="multipart/form-data" class="form-ltt">
+      <label for="import-department">Filière / Département à contrôler (facultatif)</label><select id="import-department" name="department_id" class="form-select mb-2"><option value="">— Toutes les filières —</option>{% for dept in import_departments %}<option value="{{ dept.id }}">{{ dept.code }} — {{ dept.name }}</option>{% endfor %}</select>
+      <label class="fw-semibold" for="import-class">Classe cible de l’import</label><select id="import-class" name="class_id" class="form-select mb-1"><option value="">— Plusieurs classes : utiliser la colonne Classe —</option>{% for cls in classes %}<option value="{{ cls.id }}" data-import-class-department-id="{{ cls.department_id }}">{{ cls.code or cls.name }}{% if cls.code %} · {{ cls.name }}{% endif %}</option>{% endfor %}</select>
+      <div class="text-muted mb-3" style="font-size:11px;">Pour une seule classe, choisissez-la ici : chaque ligne importée sera automatiquement rattachée à cette classe.</div>
+      <label>Fichier de la liste élèves</label><input type="file" name="import_file" accept=".csv,.xlsx" class="form-control mb-2" required>
+      <label>Photos des élèves (facultatif)</label><input type="file" name="photos_zip" accept=".zip" class="form-control mb-1">
+      <div class="text-muted mb-3" style="font-size:11px;">Envoyez un ZIP contenant une photo par élève. Nommez chaque image avec le <strong>matricule</strong> (recommandé) ou le nom complet : <code>MAT-001.jpg</code>.</div>
+      <button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-eye-fill"></i> Prévisualiser avant l’import</button>
+    </form>
+  </div>
+</div></div></div>
+
+<div class="card-ltt" style="max-width:760px;">
+  <form method="POST" class="form-ltt" enctype="multipart/form-data">
+    <h3 style="font-size:14px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Informations de l'élève</h3>
+    <div class="row g-3 mb-3">
+      <div class="col-md-3 text-center">
+        <label class="d-block">Photo</label>
+        <div style="width:100px; height:120px; border:2px solid var(--navy-900); background:var(--cream); margin:0 auto 6px; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img id="photoPreview" src="{{ url_for('static', filename='img/avatar_placeholder.png') }}" style="width:100%; height:100%; object-fit:cover; display:none;">
+          <i id="photoPlaceholderIcon" class="bi bi-person-fill" style="font-size:42px; color:#c9c0a0;"></i>
+        </div>
+        <input type="file" name="photo" id="photoInput" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mb-1" onchange="previewStudentPhoto(this)">
+        <div id="photoNameCaption" class="fw-semibold" style="font-size:12px; color:var(--navy-900); min-height:16px;"></div>
+      </div>
+      <div class="col-md-9">
+        <div class="row g-3">
+          <div class="col-md-6"><label>Prénom</label><input type="text" name="first_name" id="fnInput" class="form-control" required oninput="updatePhotoCaption()"></div>
+          <div class="col-md-6"><label>Nom</label><input type="text" name="last_name" id="lnInput" class="form-control" required oninput="updatePhotoCaption()"></div>
+          <div class="col-md-6"><label>Matricule</label><input type="text" name="matricule" class="form-control" maxlength="30" placeholder="Ex. LTT-2026-001" required autocomplete="off" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><div class="text-muted mt-1" style="font-size:11px;">Code unique officiel de l’élève.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label>Sexe</label>
+        <select name="sex" class="form-select"><option value="M">Masculin</option><option value="F">Féminin</option></select>
+      </div>
+      <div class="col-md-4"><label>Date de naissance</label><input type="date" name="dob" class="form-control"></div>
+      <div class="col-md-4">
+        <label>Statut</label>
+        <select name="status" class="form-select"><option value="Inscrit">Nouvelle inscription</option><option value="Réinscrit">Réinscription</option></select>
+      </div>
+      <div class="col-md-6">
+        <label>Classe</label>
+        <select name="class_id" class="form-select" required>
+          {% for c in classes %}<option value="{{ c.id }}">{{ c.name }} — {{ c.department.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6"><label>Lieu de naissance</label><input type="text" name="birth_place" class="form-control"></div>
+      <div class="col-md-6 d-flex align-items-end pb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="is_repeater" id="isRepeaterCheck" value="1">
+          <label class="form-check-label" for="isRepeaterCheck">Élève redoublant</label>
+        </div>
+      </div>
+      <div class="col-md-6"><label>Compte élève</label><div class="auto-password-note"><strong>Mot de passe généré automatiquement</strong><span>Il sera remis avec l’identifiant de l’élève et devra être remplacé à sa première connexion.</span></div></div>
+    </div>
+    <h3 style="font-size:14px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Parent / Tuteur (optionnel — crée automatiquement un accès à l'Espace Parents)</h3>
+    <div class="row g-3 mb-2">
+      <div class="col-md-6">
+        <label>Parent déjà inscrit dans l'établissement ?</label>
+        <select name="existing_parent_id" id="existingParentSelect" class="form-select" onchange="toggleParentFields()">
+          <option value="">— Créer un nouveau parent —</option>
+          {% for p in existing_parents %}
+          <option value="{{ p.id }}">{{ p.user.full_name }}{% if p.phone %} — {{ p.phone }}{% endif %} ({{ p.children|length }} enfant{{ 's' if p.children|length > 1 }} déjà inscrit{{ 's' if p.children|length > 1 }})</option>
+          {% endfor %}
+        </select>
+        <div class="text-muted mt-1" style="font-size:11px;">Si ce parent a déjà un ou plusieurs enfants dans l'établissement, choisissez son compte ici pour rattacher ce nouvel enfant au même compte — un parent peut suivre plusieurs enfants avec un seul identifiant.</div>
+      </div>
+    </div>
+    <div id="newParentFields" class="row g-3">
+      <div class="col-md-4"><label>Nom complet du parent</label><input type="text" name="parent_name" class="form-control"></div>
+      <div class="col-md-3"><label>Téléphone</label><input type="text" name="parent_phone" class="form-control"></div>
+      <div class="col-md-2"><label>Profession</label><input type="text" name="parent_profession" class="form-control"></div>
+      <div class="col-md-3"><label>Compte parent</label><div class="auto-password-note"><strong>Généré automatiquement</strong><span>Remis au parent à la création.</span></div></div>
+    </div>
+    <div class="text-muted mt-1" style="font-size:11px;"><i class="bi bi-info-circle"></i> Un parent peut suivre plusieurs enfants inscrits dans l'établissement depuis un seul compte — il ne voit que les informations de ses propres enfants.</div>
+    <script>
+    function toggleParentFields() {
+      const sel = document.getElementById('existingParentSelect');
+      const fields = document.getElementById('newParentFields');
+      fields.style.display = sel.value ? 'none' : 'flex';
+    }
+    </script>
+    <button class="btn-ltt-navy mt-4"><i class="bi bi-clipboard2-check-fill"></i> Enregistrer l'inscription</button>
+  </form>
+</div>
+<script>
+function previewStudentPhoto(input) {
+  const preview = document.getElementById('photoPreview');
+  const icon = document.getElementById('photoPlaceholderIcon');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      icon.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function updatePhotoCaption() {
+  const fn = document.getElementById('fnInput').value.trim();
+  const ln = document.getElementById('lnInput').value.trim();
+  document.getElementById('photoNameCaption').textContent = (fn || ln) ? (fn + ' ' + ln).trim() : '';
+}
+function filterImportClasses() {
+  const department = document.getElementById('import-department');
+  const classSelect = document.getElementById('import-class');
+  if (!department || !classSelect) return;
+  const selectedDepartment = department.value;
+  Array.from(classSelect.options).forEach(option => {
+    if (!option.dataset.importClassDepartmentId) return;
+    const visible = !selectedDepartment || option.dataset.importClassDepartmentId === selectedDepartment;
+    option.hidden = !visible;
+    option.disabled = !visible;
+    if (!visible && option.selected) classSelect.value = '';
+  });
+}
+document.getElementById('import-department')?.addEventListener('change', filterImportClasses);
+filterImportClasses();
+</script>
+{% endblock %}

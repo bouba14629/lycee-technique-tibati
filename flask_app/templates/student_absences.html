@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Mes absences{% endblock %}
+{% block page_title %}Absences &amp; retards{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <table class="table-ltt">
+    <thead><tr><th>Date</th><th>Type</th><th>Motif</th><th>Justifiée</th></tr></thead>
+    <tbody>
+    {% for a in records %}
+      <tr>
+        <td>{{ a.date.strftime('%d/%m/%Y') }}</td>
+        <td><span class="badge-ltt {{ 'badge-danger' if a.type=='Absence' else 'badge-warning' }}">{{ a.type }}</span></td>
+        <td>{{ a.reason or '—' }}</td>
+        <td>{% if a.justified %}<span class="badge-ltt badge-success">Oui</span>{% else %}<span class="badge-ltt badge-danger">Non</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="text-muted text-center py-4">Aucune absence enregistrée. Continuez ainsi !</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Appréciation du travail{% endblock %}
+{% block page_title %}Appréciation du travail{% endblock %}
+{% block page_subtitle %}Bulletin {{ term }} — {{ student.full_name }}{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:760px;">
+  <div class="mb-3 p-3" style="background:var(--cream);border-left:4px solid var(--gold-500);border-radius:8px;">
+    <strong>{{ student.full_name }}</strong><br><span class="text-muted">{{ student.school_class.name if student.school_class else '' }} · {{ student.matricule }}</span>
+  </div>
+  <form method="POST">
+    <input type="hidden" name="term" value="{{ term }}">
+    <label class="form-label fw-semibold" for="content">Appréciation du travail de l’élève</label>
+    <textarea id="content" name="content" class="form-control" rows="5" maxlength="500" required placeholder="Exemple : Trimestre satisfaisant. Poursuivez vos efforts avec régularité.">{{ appreciation.content if appreciation else '' }}</textarea>
+    <div class="form-text">Cette appréciation remplace le commentaire automatique dans le bulletin {{ term }}.</div>
+    <div class="d-flex gap-2 mt-4"><button class="btn-ltt-gold"><i class="bi bi-check2-circle"></i> Enregistrer</button><a class="btn-ltt-outline" href="{{ url_for('censeur_bulletins', class_id=student.class_id, term=term) }}">Retour aux bulletins</a></div>
+  </form>
+</div>
+{% endblock %}

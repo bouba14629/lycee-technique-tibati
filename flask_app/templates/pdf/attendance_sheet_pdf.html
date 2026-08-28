@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @font-face { font-family: 'Playfair'; src: url('{{ font_bold }}'); }
+  @font-face { font-family: 'Inter'; src: url('{{ font_regular }}'); }
+  @page { size: A4; margin: 1.6cm; }
+  body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 10pt; }
+  .header-table { width: 100%; border-bottom: 2.5pt solid #0B2545; padding-bottom: 10pt; margin-bottom: 12pt; }
+  .school { font-family: 'Playfair', Helvetica, sans-serif; font-size: 15pt; color: #0B2545; font-weight: bold; }
+  .subtitle { font-size: 8pt; color: #6b7688; text-transform: uppercase; }
+  .title { font-family: 'Playfair', Helvetica, sans-serif; font-size: 13pt; color: #0B2545; margin: 10pt 0 4pt; }
+  .meta-table { width: 100%; margin-bottom: 10pt; font-size: 9pt; }
+  .meta-table td { padding: 2pt 8pt 2pt 0; }
+  .meta-label { color: #6b7688; font-size: 7.5pt; text-transform: uppercase; display: block; }
+  table.roster { width: 100%; border-collapse: collapse; margin-top: 8pt; }
+  table.roster th { background-color: #F8F5EC; color: #6b7688; font-size: 8pt; text-transform: uppercase;
+                     text-align: left; padding: 6pt 6pt; border: 0.75pt solid #EFE9D8; }
+  table.roster td { padding: 7pt 6pt; border: 0.75pt solid #F1EAD9; font-size: 9.5pt; }
+  .checkbox { width: 11pt; height: 11pt; border: 1pt solid #999; display: inline-block; }
+  .signatures { width: 100%; margin-top: 26pt; }
+  .signatures td { text-align: center; font-size: 8pt; color: #6b7688; padding-top: 28pt; border-top: 0.75pt solid #ccc; }
+</style>
+</head>
+<body>
+
+<table class="header-table">
+  <tr>
+    <td style="width:56pt;"><img src="{{ logo_path }}" width="46"/></td>
+    <td>
+      <div class="subtitle">République du Cameroun — Ministère des Enseignements Secondaires</div>
+      <div class="school">Lycée Technique de Tibati</div>
+    </td>
+  </tr>
+</table>
+
+<div class="title">Fiche d'appel</div>
+
+<table class="meta-table">
+  <tr>
+    <td><span class="meta-label">Classe</span>{{ course.school_class.name }}</td>
+    <td><span class="meta-label">Matière</span>{{ course.subject.name }}</td>
+    <td><span class="meta-label">Enseignant</span>{{ course.teacher.user.full_name }}</td>
+  </tr>
+  <tr>
+    <td><span class="meta-label">Date</span>{{ session_date }}</td>
+    <td><span class="meta-label">Horaire</span>{{ start_time }} – {{ end_time }}</td>
+    <td><span class="meta-label">Effectif</span>{{ students|length }} élève(s)</td>
+  </tr>
+</table>
+
+<table class="roster">
+  <tr><th style="width:24pt;">N°</th><th>Nom et prénom</th><th>Matricule</th><th style="width:60pt;">Présent</th><th style="width:60pt;">Absent</th><th style="width:60pt;">Retard</th><th>Motif / Observation</th></tr>
+  {% for s in students %}
+  <tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ s.full_name }}</td>
+    <td>{{ s.matricule }}</td>
+    {% set record = records.get(s.id) %}
+    <td style="text-align:center;">{% if not record %}<span class="checkbox"></span>{% endif %}</td>
+    <td style="text-align:center;">{% if record and record.type == 'Absence' %}X{% else %}<span class="checkbox"></span>{% endif %}</td>
+    <td style="text-align:center;">{% if record and record.type == 'Retard' %}X{% else %}<span class="checkbox"></span>{% endif %}</td>
+    <td>{{ record.reason if record else '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<table class="signatures">
+  <tr>
+    <td style="width:50%;">Signature de l'enseignant</td>
+    <td style="width:50%;">Visa du Censeur</td>
+  </tr>
+</table>
+
+</body>
+</html>

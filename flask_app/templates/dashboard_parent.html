@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Espace Parent{% endblock %}
+{% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] }}{% endblock %}
+{% block page_subtitle %}Suivi de la scolarité de vos enfants{% endblock %}
+
+{% block content %}
+<section class="role-hero role-hero-parent">
+  <div><div class="eyebrow"><i class="bi bi-people-fill"></i> Suivi familial</div><h2>Gardez une vue simple sur la scolarité de vos enfants.</h2><p>Accédez aux résultats, aux bulletins et aux informations communiquées par l’établissement.</p></div>
+  <span class="role-hero-metric"><strong>{{ child_data|length }}</strong><small>enfant{{ 's' if child_data|length > 1 else '' }} suivi{{ 's' if child_data|length > 1 else '' }}</small></span>
+</section>
+<div class="row g-3">
+  {% for child, avg in child_data %}<div class="col-md-6 col-lg-4"><article class="family-card"><div class="family-card-head"><div class="avatar family-avatar">{{ child.first_name[0] }}{{ child.last_name[0] }}</div><div><h2>{{ child.full_name }}</h2><p>{{ child.school_class.name if child.school_class }} · {{ child.matricule }}</p></div></div><div class="family-average"><span>Moyenne générale</span><strong>{{ avg if avg is not none else '—' }}<small>/20</small></strong></div><a href="{{ url_for('parent_child_detail', student_id=child.id) }}" class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-eye-fill"></i> Voir le suivi complet</a></article></div>
+  {% else %}<div class="col-12"><div class="card-ltt text-center text-muted py-5"><i class="bi bi-people" style="font-size:28px;"></i><p class="mt-2 mb-0">Aucun enfant rattaché à votre compte pour le moment.</p></div></div>{% endfor %}
+</div>
+<div class="card-ltt mt-3"><div class="chart-title-row"><div><span class="chart-kicker">Vie de l’établissement</span><h2>Annonces à consulter</h2></div><a class="chart-pill" href="{{ url_for('announcements') }}">Toutes les annonces <i class="bi bi-arrow-right"></i></a></div>{% for a in announcements %}<div class="timeline-item"><div class="timeline-dot"></div><div><div class="fw-semibold" style="font-size:13.5px;">{{ a.title }}</div><div class="text-muted" style="font-size:12.5px;">{{ a.body[:160] }}{{ '…' if a.body|length > 160 }}</div></div></div>{% else %}<p class="text-muted mb-0">Aucune annonce.</p>{% endfor %}</div>
+{% endblock %}

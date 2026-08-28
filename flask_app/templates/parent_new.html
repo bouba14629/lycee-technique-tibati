@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Nouveau compte parent{% endblock %}
+{% block page_title %}Créer un compte parent{% endblock %}
+{% block page_subtitle %}Rattachez le compte à un ou plusieurs élèves déjà inscrits{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:720px;">
+  <form method="POST" class="form-ltt">
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label>Nom complet du parent</label><input type="text" name="full_name" class="form-control" required></div>
+      <div class="col-md-3"><label>Téléphone</label><input type="text" name="phone" class="form-control"></div>
+      <div class="col-md-3"><label>Profession</label><input type="text" name="profession" class="form-control"></div>
+      <div class="col-md-6"><label>Mot de passe</label><div class="auto-password-note"><strong>Généré automatiquement</strong><span>Le parent recevra un mot de passe temporaire à remplacer lors de sa première connexion.</span></div></div>
+    </div>
+
+    <label>Rechercher le(s) enfant(s) à rattacher</label>
+    <div class="d-flex gap-2 mb-3">
+      <input type="text" id="studentSearchBox" class="form-control" placeholder="Nom, prénom ou matricule de l'élève" value="{{ search }}">
+      <button type="button" class="btn-ltt-outline" onclick="doStudentSearch()"><i class="bi bi-search"></i> Rechercher</button>
+    </div>
+
+    {% if students %}
+    <div class="mb-3" style="max-height:260px; overflow-y:auto; border:1px solid #eee3c8; border-radius:10px; padding:10px;">
+      {% for s in students %}
+      <div class="form-check py-1">
+        <input class="form-check-input" type="checkbox" name="student_ids" value="{{ s.id }}" id="st{{ s.id }}">
+        <label class="form-check-label" for="st{{ s.id }}" style="font-size:13px;">
+          {{ s.full_name }} — <span class="text-muted">{{ s.matricule }} · {{ s.school_class.name if s.school_class }}</span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif search %}
+    <p class="text-muted mb-3">Aucun élève trouvé pour « {{ search }} ».</p>
+    {% endif %}
+
+    <button class="btn-ltt-navy"><i class="bi bi-person-plus-fill"></i> Créer le compte parent</button>
+    <a href="{{ url_for('dir_users', role='parent') }}" class="btn-ltt-outline">Annuler</a>
+  </form>
+</div>
+<script>
+function doStudentSearch() {
+  const val = document.getElementById('studentSearchBox').value;
+  window.location.href = "{{ url_for('parent_new') }}?q=" + encodeURIComponent(val);
+}
+document.getElementById('studentSearchBox').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); doStudentSearch(); }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Bulletin annuel — {{ student.full_name }}{% endblock %}
+{% block page_title %}Bulletin annuel{% endblock %}
+{% block page_subtitle %}Aperçu conforme au modèle annuel · {{ student.full_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between gap-2 flex-wrap mb-3 no-print">
+  <a href="{{ url_for('censeur_bulletins', class_id=student.class_id) }}" class="btn-ltt-outline"><i class="bi bi-arrow-left"></i> Retour aux bulletins</a>
+  <div class="d-flex gap-2 flex-wrap"><a href="{{ preview_pdf_url }}" target="_blank" class="btn-ltt-outline"><i class="bi bi-arrows-fullscreen"></i> Ouvrir le modèle annuel</a><a href="{{ pdf_url }}" class="btn-ltt-gold"><i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF annuel</a></div>
+</div>
+
+<div class="card-ltt mb-3" style="border-left:4px solid var(--gold-500);">
+  <strong><i class="bi bi-eye-fill me-1"></i> Prévisualisation avant impression</strong>
+  <span class="d-block mt-1" style="font-size:12px;">Contrôlez ce bulletin annuel complet avant de le télécharger ou de l’imprimer. Il reprend le tableau annuel, les bilans de travail et discipline, la décision du conseil et le visa du Proviseur.</span>
+  {% if approval %}<span class="badge-ltt badge-success mt-2">Validé numériquement · {{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% else %}<span class="badge-ltt badge-warning mt-2">En attente de validation annuelle par le Censeur</span>{% endif %}
+</div>
+
+<div class="card-ltt p-0 overflow-hidden" style="min-height:78vh;">
+  <iframe title="Aperçu du bulletin annuel de {{ student.full_name }}" src="{{ preview_pdf_url }}" style="width:100%; height:78vh; border:0; display:block;"></iframe>
+</div>
+{% endblock %}

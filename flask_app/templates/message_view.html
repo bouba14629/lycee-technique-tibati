@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ msg.subject }}{% endblock %}
+{% block page_title %}{{ msg.subject }}{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:680px;">
+  <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom:1px solid #f1ead9;">
+    <div>
+      <div class="fw-semibold">{{ msg.sender.full_name }}</div>
+      <div class="text-muted" style="font-size:12px;">à {{ msg.recipient.full_name }} · {{ msg.date.strftime('%d/%m/%Y %H:%M') }}</div>
+    </div>
+    <span class="badge-ltt badge-navy">{{ msg.sender.role_label }}</span>
+  </div>
+  <p style="white-space:pre-line; font-size:14px; line-height:1.7;">{{ msg.body }}</p>
+  <a href="{{ url_for('messages_new', to=msg.sender_id) }}" class="btn-ltt-gold mt-3"><i class="bi bi-reply-fill"></i> Répondre</a>
+  <a href="{{ url_for('messages_inbox') }}" class="btn-ltt-outline mt-3">Retour</a>
+</div>
+{% endblock %}

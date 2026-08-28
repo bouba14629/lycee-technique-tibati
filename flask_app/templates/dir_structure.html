@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Structure pédagogique{% endblock %}
+{% block page_title %}Sections, filières &amp; matières{% endblock %}
+{% block content %}
+{% if current_user.role == 'directeur' %}
+<div class="card-ltt setup-structure-card">
+  <div class="chart-title-row"><div><span class="chart-kicker">Étape 1</span><h2>Créer une section</h2></div><span class="chart-pill"><i class="bi bi-diagram-3-fill"></i> Structure initiale</span></div>
+  <p class="text-muted" style="font-size:12.5px;">Commencez par les grandes sections de l’établissement, puis ajoutez leurs filières, classes et matières.</p>
+  <form method="POST" action="{{ url_for('dir_section_new') }}" class="form-ltt row g-3 align-items-end">
+    <div class="col-md-7"><label>Nom de la section</label><input type="text" name="name" class="form-control" placeholder="Ex. Enseignement Industriel" required></div>
+    <div class="col-md-3"><label>Code</label><input type="text" name="code" class="form-control" placeholder="Ex. SECTION-INDUSTRIELLE" maxlength="20" required></div>
+    <div class="col-md-2"><button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-plus-lg"></i> Ajouter</button></div>
+  </form>
+</div>
+
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-plus-circle-fill me-1" style="color:var(--gold-500);"></i> Ajouter une filière</h2></div>
+  <form method="POST" action="{{ url_for('dir_department_new') }}" class="form-ltt row g-3 align-items-end">
+    <div class="col-md-3">
+      <label>Section</label>
+      <select name="section_id" class="form-select">{% for s in sections %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="col-md-5"><label>Nom de la filière</label><input type="text" name="name" class="form-control" required></div>
+    <div class="col-md-2"><label>Code</label><input type="text" name="code" class="form-control" required></div>
+    <div class="col-md-2"><button class="btn-ltt-navy w-100">+</button></div>
+  </form>
+</div>
+{% endif %}
+{% if current_user.role == 'censeur' %}
+<div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-book-fill me-1" style="color:var(--gold-500);"></i> Ajouter une matière</h2></div>
+  <p class="text-muted mb-2" style="font-size:12px;">Chaque matière est rattachée à une classe et sera proposée uniquement dans l’emploi du temps de cette classe.</p>
+  <form method="POST" action="{{ url_for('dir_subject_new') }}" class="form-ltt row g-3 align-items-end">
+    <div class="col-md-4"><label>Rattacher à</label><select name="target_scope" class="form-select" required>
+      <option value="" selected disabled>— Choisir une classe —</option>
+      {% for section in sections %}<optgroup label="Classes — {{ section.name }}">{% for dept in section.departments %}{% for c in dept.classes %}<option value="classe:{{ c.id }}" {{ 'selected' if last_subject_class_id == c.id }}>Classe : {{ c.code or c.name }}</option>{% endfor %}{% endfor %}</optgroup>{% endfor %}
+    </select></div>
+    <div class="col-md-3"><label>Nom de la matière</label><input type="text" name="name" class="form-control" required></div>
+    <div class="col-md-2"><label>Coefficient</label><input type="number" name="coefficient" class="form-control" value="2" min="1" required></div>
+    <div class="col-md-2"><label>Catégorie</label><select name="category" class="form-select"><option>Enseignements Généraux</option><option>Enseignements Professionnels Théoriques</option><option>Enseignements Professionnels Pratiques</option><option>Enseignements Divers</option></select></div>
+    <div class="col-md-1"><button class="btn-ltt-gold w-100 justify-content-center" title="Ajouter"><i class="bi bi-plus-lg"></i></button></div>
+  </form>
+</div>
+{% endif %}
+{% for section in sections %}
+<div class="card-ltt">
+  <div class="section-title d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-diagram-3-fill me-1" style="color:var(--gold-500);"></i> {{ section.name }} <span class="badge-ltt badge-navy" style="font-size:11px; vertical-align:middle;">{{ section.code }}</span></h2>
+    {% if current_user.role == 'directeur' %}
+    <a href="#" data-bs-toggle="modal" data-bs-target="#sectionEdit{{ section.id }}Modal" class="text-muted" title="Modifier la section"><i class="bi bi-pencil-square"></i> Modifier</a>
+    {% endif %}
+  </div>
+  {% if current_user.role == 'directeur' %}
+  <div class="modal fade" id="sectionEdit{{ section.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+    <div class="modal-header"><h5 class="modal-title">Modifier {{ section.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('dir_section_edit', section_id=section.id) }}" class="form-ltt">
+        <label>Nom de la section</label><input type="text" name="name" class="form-control mb-2" value="{{ section.name }}" required>
+        <label>Code</label><input type="text" name="code" class="form-control mb-3" value="{{ section.code }}" maxlength="20" required>
+        <button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-check2"></i> Enregistrer</button>
+      </form>
+    </div>
+  </div></div></div>
+  {% endif %}
+  <div class="row g-3">
+    {% for dept in section.departments %}
+    <div class="col-md-6 col-lg-4">
+      <div style="background:var(--cream); border:1px solid #eee3c8; border-radius:12px; padding:14px;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong style="font-size:13.5px;">{{ dept.name }}</strong>
+          <div class="d-flex align-items-center gap-1">
+            <span class="badge-ltt badge-navy">{{ dept.code }}</span>
+            {% if current_user.role == 'directeur' %}
+            <a href="#" data-bs-toggle="modal" data-bs-target="#deptEdit{{ dept.id }}Modal" class="text-muted" title="Modifier"><i class="bi bi-pencil-square"></i></a>
+            <a href="{{ url_for('dir_department_delete', dept_id=dept.id) }}" class="text-danger" title="Supprimer" onclick="return confirm('Supprimer la filière {{ dept.name }} ? Impossible si des classes y sont rattachées.')"><i class="bi bi-trash"></i></a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="text-muted mb-2" style="font-size:12px;">{{ dept.classes|length }} classe(s) · {{ dept.subjects|length }} matière(s) rattachée(s) aux classes</div>
+
+        <div class="mb-2" style="font-size:11.5px;">
+          {% for c in dept.classes %}
+          <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
+            <span class="badge-ltt badge-gold" data-bs-toggle="modal" data-bs-target="#classEdit{{ c.id }}Modal" style="cursor:pointer;">{{ c.code or 'Sans code' }} · {{ c.name }} ({{ c.students|length }})</span>
+            <span class="text-muted" data-bs-toggle="modal" data-bs-target="#hr{{ c.id }}Modal" style="cursor:pointer;">
+              <i class="bi bi-person-badge"></i> {{ c.homeroom_teacher.user.full_name if c.homeroom_teacher else 'Aucun prof. principal' }}
+            </span>
+          </div>
+          <div class="modal fade" id="hr{{ c.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header"><h5 class="modal-title">Professeur principal — {{ c.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <form method="POST" action="{{ url_for('dir_class_homeroom', class_id=c.id) }}" class="form-ltt">
+                <select name="teacher_id" class="form-select mb-2">
+                  <option value="">— Aucun —</option>
+                  {% for t in dept.teachers %}<option value="{{ t.id }}" {{ 'selected' if c.homeroom_teacher_id==t.id }}>{{ t.user.full_name }}</option>{% endfor %}
+                </select>
+                <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+              </form>
+            </div>
+          </div></div></div>
+          {% if current_user.role == 'directeur' %}
+          <div class="modal fade" id="classEdit{{ c.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header"><h5 class="modal-title">Classe {{ c.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <form method="POST" action="{{ url_for('dir_class_edit', class_id=c.id) }}" class="form-ltt mb-3">
+                <label>Niveau</label>
+                <select name="level" class="form-select mb-2">
+                  <optgroup label="1er cycle (CAP)">
+                    <option value="1A" {{ 'selected' if c.level=='1A' }}>PREMIERE ANNEE</option>
+                    <option value="2A" {{ 'selected' if c.level=='2A' }}>DEUXIEME ANNEE</option>
+                    <option value="3A" {{ 'selected' if c.level=='3A' }}>TROISIEME ANNEE</option>
+                    <option value="4A" {{ 'selected' if c.level=='4A' }}>QUATRIEME ANNEE</option>
+                  </optgroup>
+                  <optgroup label="2nd cycle (Probatoire / Bac technique)">
+                    <option value="2nde" {{ 'selected' if c.level=='2nde' }}>SECONDE</option>
+                    <option value="P" {{ 'selected' if c.level=='P' }}>PREMIERE</option>
+                    <option value="Tle" {{ 'selected' if c.level=='Tle' }}>TERMINALE</option>
+                  </optgroup>
+                </select>
+                <label>Spécialité (code de classe)</label>
+                <input type="text" name="specialty" class="form-control mb-2" value="{{ c.specialty or dept.code }}" placeholder="ex : ELEQ, F3, COME…">
+                <label>Code de la classe</label>
+                <input type="text" name="code" class="form-control mb-2" value="{{ c.code or '' }}" placeholder="ex : IND-1A-ELEQ" maxlength="30" required>
+                <label>Capacité</label>
+                <div class="d-flex gap-2">
+                  <input type="number" name="capacity" class="form-control" value="{{ c.capacity }}">
+                  <button class="btn-ltt-navy">Modifier</button>
+                </div>
+              </form>
+              <a href="{{ url_for('dir_class_delete', class_id=c.id) }}" class="btn-ltt-outline w-100 justify-content-center text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer la classe {{ c.name }} ? Impossible si des élèves y sont inscrits.')"><i class="bi bi-trash"></i> Supprimer la classe</a>
+            </div>
+          </div></div></div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        {% if (current_user.role == 'directeur' or (current_user.role == 'censeur' and scoped_dept_ids is none) or (current_user.role == 'censeur' and scoped_dept_ids is not none and dept.id in scoped_dept_ids)) and dept.subjects %}
+        <div class="mb-2" style="font-size:11px; max-height:140px; overflow-y:auto;">
+          {% for subj in dept.subjects %}
+          <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
+            <span>{{ subj.name }} <span class="text-muted">(coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }})</span></span>
+            <span class="d-flex gap-1">
+              <a href="#" data-bs-toggle="modal" data-bs-target="#subjEdit{{ subj.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a>
+              <a href="{{ url_for('dir_subject_delete', subject_id=subj.id) }}" class="text-danger" onclick="return confirm('Supprimer la matière {{ subj.name }} ?')"><i class="bi bi-trash"></i></a>
+            </span>
+          </div>
+          <div class="modal fade" id="subjEdit{{ subj.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header"><h5 class="modal-title">Modifier {{ subj.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <form method="POST" action="{{ url_for('dir_subject_edit', subject_id=subj.id) }}" class="form-ltt">
+                <label>Nom</label><input type="text" name="name" class="form-control mb-2" value="{{ subj.name }}">
+                <label>Coefficient</label><input type="number" name="coefficient" class="form-control mb-2" value="{{ subj.coefficient }}">
+                {% if scoped_dept_ids is not none %}
+                <label>Catégorie</label>
+                <select name="category" class="form-select mb-2">
+                  {% for cat in ["Enseignements Généraux","Enseignements Professionnels Théoriques","Enseignements Professionnels Pratiques","Enseignements Divers"] %}
+                  <option {{ 'selected' if subj.category==cat }}>{{ cat }}</option>
+                  {% endfor %}
+                </select>
+                {% endif %}
+                <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+              </form>
+            </div>
+          </div></div></div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if current_user.role == 'directeur' %}
+        <button class="btn-ltt-outline w-100 justify-content-center py-1" style="font-size:11.5px;" data-bs-toggle="modal" data-bs-target="#dept{{ dept.id }}Modal"><i class="bi bi-plus-lg"></i> Gérer les classes</button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if current_user.role == 'directeur' %}
+    <div class="modal fade" id="deptEdit{{ dept.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+      <div class="modal-header"><h5 class="modal-title">Modifier {{ dept.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('dir_department_edit', dept_id=dept.id) }}" class="form-ltt">
+          <label>Nom de la filière</label><input type="text" name="name" class="form-control mb-2" value="{{ dept.name }}">
+          <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+        </form>
+      </div>
+    </div></div></div>
+    {% endif %}
+
+    <div class="modal fade" id="dept{{ dept.id }}Modal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:14px;">
+          <div class="modal-header"><h5 class="modal-title">{{ dept.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            {% if current_user.role == 'directeur' %}
+            <form method="POST" action="{{ url_for('dir_class_new') }}" class="form-ltt">
+              <input type="hidden" name="department_id" value="{{ dept.id }}">
+              <label>Niveau</label>
+              <select name="level" class="form-select mb-2">
+                <optgroup label="1er cycle (CAP)">
+                  <option value="1A">PREMIERE ANNEE</option><option value="2A">DEUXIEME ANNEE</option><option value="3A">TROISIEME ANNEE</option><option value="4A">QUATRIEME ANNEE</option>
+                </optgroup>
+                <optgroup label="2nd cycle (Probatoire / Bac technique)">
+                  <option value="2nde">SECONDE</option><option value="P">PREMIERE</option><option value="Tle">TERMINALE</option>
+                </optgroup>
+              </select>
+              <label>Spécialité (code de classe)</label>
+              <input type="text" name="specialty" class="form-control mb-2" value="{{ dept.code }}" placeholder="ex : ELEQ, F3, COME…">
+              <label>Code de la classe</label>
+              <input type="text" name="code" class="form-control mb-2" placeholder="ex : IND-1A-ELEQ" maxlength="30" required>
+              <div class="text-muted mb-2" style="font-size:10.5px;">Le code de spécialité peut différer selon le cycle au sein d'une même filière (ex. « ELEQ » au 1er cycle, « F3 » au second cycle).</div>
+              <div class="d-flex gap-2">
+                <input type="number" name="capacity" class="form-control" value="48" style="max-width:100px;">
+                <button class="btn-ltt-navy">Créer</button>
+              </div>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

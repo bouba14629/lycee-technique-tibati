@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Carnet numérique{% endblock %}
+{% block page_title %}Carnet de correspondance numérique{% endblock %}
+{% block page_subtitle %}Communications officielles, lecture parentale et traçabilité{% endblock %}
+{% block content %}
+<div class="dashboard-hero correspondence-hero">
+  <div><span class="chart-kicker">Vie scolaire</span><h2>Suivi partagé avec les familles</h2><p>Chaque message est associé à un élève et peut être lu puis accusé de réception par son responsable.</p></div>
+  {% if can_write %}<a href="{{ url_for('correspondence_new') }}" class="btn-hero-gold"><i class="bi bi-pencil-square"></i> Nouveau message</a>{% endif %}
+</div>
+<div class="card-ltt">
+  <div class="section-title"><h2>Messages du carnet</h2><span class="muted">{{ entries|length }} communication(s)</span></div>
+  <div class="correspondence-list">
+  {% for entry in entries %}
+    {% set receipt = receipts.get(entry.id) %}
+    <a href="{{ url_for('correspondence_view', entry_id=entry.id) }}" class="correspondence-row {{ 'is-priority' if entry.priority == 'Critique' else '' }}">
+      <div class="correspondence-icon {{ 'is-critical' if entry.priority == 'Critique' else '' }}"><i class="bi {{ 'bi-exclamation-diamond-fill' if entry.priority == 'Critique' else 'bi-journal-text' }}"></i></div>
+      <div class="correspondence-main"><div class="d-flex align-items-center gap-2 flex-wrap"><strong>{{ entry.subject }}</strong><span class="badge-ltt {{ 'badge-danger' if entry.priority == 'Critique' else 'badge-warning' if entry.priority == 'Importante' else 'badge-navy' }}">{{ entry.priority }}</span><span class="badge-ltt badge-gold">{{ entry.category }}</span></div><div class="text-muted" style="font-size:12.5px;">{{ entry.student.full_name }} · {{ entry.student.school_class.name if entry.student.school_class else 'Classe à renseigner' }} · par {{ entry.author.full_name }}</div></div>
+      <div class="correspondence-meta"><span>{{ entry.created_at.strftime('%d/%m/%Y') }}</span>{% if receipt %}<span class="{{ 'text-success' if receipt.acknowledged_at else 'text-muted' }}">{{ 'Accusé reçu' if receipt.acknowledged_at else 'À lire' }}</span>{% endif %}</div>
+    </a>
+  {% else %}
+    <div class="empty-ltt"><i class="bi bi-journal-text"></i><strong>Aucun message dans le carnet</strong><span>Les communications relatives aux élèves apparaîtront ici.</span></div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

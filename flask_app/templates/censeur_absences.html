@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Absences{% endblock %}
+{% block page_title %}Absences &amp; retards à traiter{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
+    <select name="class_id" class="form-select" style="max-width:260px;" onchange="this.form.submit()"><option value="">Toutes les classes autorisées</option>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if class_id==c.id }}>{{ c.name }} — {{ c.department.name }}</option>{% endfor %}</select>
+    {% if class_id and current_user.role == 'surveillant_general' %}<a class="btn-ltt-outline" href="{{ url_for('surveillant_absences_export_xlsx', class_id=class_id) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a><a class="btn-ltt-gold" href="{{ url_for('surveillant_absences_export_pdf', class_id=class_id) }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>{% endif %}
+  </form>
+  <table class="table-ltt">
+    <thead><tr><th>Élève</th><th>Classe</th><th>Heures cumulées</th><th>Type</th><th>Date</th><th>Motif</th>{% if current_user.role == 'surveillant_general' %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for a in records %}
+      <tr>
+        <td><a href="{{ url_for('student_detail', student_id=a.student.id) }}">{{ a.student.full_name }}</a></td>
+        <td>{{ a.student.school_class.name if a.student.school_class }}</td>
+        <td><strong>{{ student_hours.get(a.student_id, 0) }} h</strong></td>
+        <td><span class="badge-ltt {{ 'badge-danger' if a.type=='Absence' else 'badge-warning' }}">{{ a.type }}</span></td>
+        <td>{{ a.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ a.reason or '—' }}</td>
+        {% if current_user.role == 'surveillant_general' %}
+        <td class="text-end"><a href="{{ url_for('censeur_absence_justify', att_id=a.id) }}" class="btn-ltt-gold py-1 px-2" style="font-size:11.5px;"><i class="bi bi-check2"></i> Justifier</a></td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="text-muted text-center py-4">Aucune absence enregistrée pour ce périmètre.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

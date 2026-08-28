@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Justifier un retard{% endblock %}
+{% block page_title %}Justifier un retard{% endblock %}
+{% block page_subtitle %}{{ record.student.full_name }} · {{ record.date.strftime('%d/%m/%Y') if record.date else '—' }} à {{ record.start_time or '—' }}{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:720px;"><div class="alert alert-warning" style="border-radius:12px;"><i class="bi bi-clock-history me-1"></i> Votre justification sera examinée par la vie scolaire avant validation.</div><form method="POST" class="form-ltt"><label>Motif de justification</label><textarea name="justification_note" class="form-control" rows="5" placeholder="Expliquez le retard de votre enfant." required></textarea><div class="d-flex gap-2 mt-4"><button class="btn-ltt-navy"><i class="bi bi-send"></i> Envoyer la justification</button><a href="{{ url_for('parent_children') }}" class="btn-ltt-outline">Annuler</a></div></form></div>
+{% endblock %}
+

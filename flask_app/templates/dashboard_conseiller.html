@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import gauges, alerts_panel, activity_feed %}
+{% block title %}Tableau de bord Conseiller d'Orientation{% endblock %}
+{% block page_title %}Espace Orientation{% endblock %}
+{% block page_subtitle %}Consultation — élèves, parents, enseignants, bulletins, discipline et absences{% endblock %}
+
+{% block content %}
+{{ gauges(rates, "Taux globaux — établissement") }}
+<div class="kpi-grid">
+  <a href="{{ url_for('students_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves</div></a>
+  <a href="{{ url_for('dir_users', role='parent') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-people-fill"></i></div><div class="kpi-value">{{ stats.parents }}</div><div class="kpi-label">Parents</div></a>
+  <a href="{{ url_for('dir_users', role='enseignant') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-person-workspace"></i></div><div class="kpi-value">{{ stats.teachers }}</div><div class="kpi-label">Enseignants</div></a>
+  <a href="{{ url_for('dir_structure') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-diagram-3-fill"></i></div><div class="kpi-value">{{ stats.classes }}</div><div class="kpi-label">Classes</div></a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    {{ alerts_panel(alerts) }}
+    <div class="card-ltt">
+      <div class="section-title"><h2>Accès rapide</h2></div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('students_list') }}" class="btn-ltt-navy"><i class="bi bi-mortarboard-fill"></i> Liste des élèves</a>
+        <a href="{{ url_for('censeur_absences') }}" class="btn-ltt-outline"><i class="bi bi-exclamation-triangle-fill"></i> Absences &amp; discipline</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    {{ activity_feed(activities) }}
+    <div class="card-ltt">
+      <div class="section-title"><h2><i class="bi bi-megaphone-fill me-1" style="color:var(--gold-500);"></i> Annonces</h2></div>
+      {% for a in announcements %}
+      <div class="timeline-item"><div class="timeline-dot"></div><div>
+        <div class="fw-semibold" style="font-size:13.5px;">{{ a.title }}</div>
+        <div class="text-muted" style="font-size:12.5px;">{{ a.body[:160] }}{{ '…' if a.body|length > 160 }}</div>
+      </div></div>
+      {% else %}<p class="text-muted mb-0">Aucune annonce.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

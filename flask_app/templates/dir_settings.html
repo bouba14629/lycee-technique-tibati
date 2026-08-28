@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Paramètres généraux{% endblock %}
+{% block page_title %}Paramètres généraux{% endblock %}
+{% block page_subtitle %}Réglages appliqués à l'ensemble de l'application (bulletins, emplois du temps, exports…){% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:520px;">
+  <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Année scolaire en cours</h3>
+  <form method="POST" class="form-ltt">
+    <label>Année scolaire</label>
+    <input type="text" name="school_year" class="form-control mb-2" value="{{ setting.current_school_year }}" placeholder="ex : 2025-2026">
+    <div class="text-muted mb-3" style="font-size:11.5px;">Cette valeur s'affiche automatiquement partout où l'année scolaire doit apparaître : bulletins, emplois du temps, exports Excel/PDF, tableau de bord — aucun besoin de la modifier ailleurs.</div>
+    <button class="btn-ltt-navy"><i class="bi bi-save-fill"></i> Enregistrer</button>
+  </form>
+</div>
+{% endblock %}

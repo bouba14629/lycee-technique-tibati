@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }}{% endblock %}
+{% block page_title %}{{ student.full_name }}{% endblock %}
+{% block page_subtitle %}{{ student.school_class.name if student.school_class }} · Matricule {{ student.matricule }}{% endblock %}
+{% block content %}
+<div class="d-flex gap-2 mb-3 no-print">
+  <a href="{{ url_for('parent_child_schedule', student_id=student.id) }}" class="btn-ltt-outline"><i class="bi bi-calendar2-week-fill"></i> Emploi du temps</a>
+  <a href="{{ url_for('parent_child_bulletin', student_id=student.id) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-medical-fill"></i> Bulletin</a>
+  <a href="{{ url_for('messages_new') }}" class="btn-ltt-gold ms-auto"><i class="bi bi-chat-dots-fill"></i> Contacter un enseignant</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card-ltt">
+      <div class="d-flex justify-content-between mb-3">
+        <form method="GET"><select name="term" class="form-select" onchange="this.form.submit()">
+          {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+        </select></form>
+        <div class="text-end"><div class="text-muted" style="font-size:11px; text-transform:uppercase;">Moyenne</div><div class="fw-bold" style="font-size:22px; color:var(--navy-900);">{{ avg if avg is not none else '—' }}/20</div></div>
+      </div>
+      <table class="table-ltt">
+        <thead><tr><th>Matière</th><th>Moyenne</th><th>Coefficient</th></tr></thead>
+        <tbody>
+        {% for r in rows %}<tr><td>{{ r.course.subject.name }}</td><td class="fw-semibold">{{ r.average }}/20</td><td>{{ r.coef }}</td></tr>
+        {% else %}<tr><td colspan="3" class="text-muted text-center py-3">Aucune note pour ce trimestre.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card-ltt">
+      <div class="section-title"><h2>Absences &amp; retards récents</h2></div>
+      {% for a in absences %}
+      <div class="timeline-item"><div class="timeline-dot" style="background:{{ 'var(--danger)' if a.type=='Absence' else 'var(--warning)' }};"></div>
+        <div class="flex-grow-1"><span class="fw-semibold" style="font-size:12.5px;">{{ a.type }}</span> — {{ a.date.strftime('%d/%m/%Y') }}{% if a.type == 'Retard' %}<span class="badge-ltt {{ 'badge-success' if a.justified else 'badge-warning' if a.justification_requested_at else 'badge-danger' }} ms-1">{{ 'Validé' if a.justified else 'À valider' if a.justification_requested_at else 'À justifier' }}</span>{% endif %}<div class="text-muted" style="font-size:11.5px;">{{ a.reason or '—' }}</div>{% if a.type == 'Retard' and not a.justified and not a.justification_requested_at %}<a href="{{ url_for('late_arrival_justify', record_id=a.id) }}" class="btn-ltt-outline py-1 px-2 mt-2" style="font-size:10.5px;">Justifier ce retard</a>{% endif %}</div>
+      </div>
+      {% else %}<p class="text-muted mb-0">Aucune absence ou retard récent.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

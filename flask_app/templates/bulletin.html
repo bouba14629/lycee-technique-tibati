@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Bulletin — {{ student.full_name }}{% endblock %}
+{% block page_title %}Bulletin de notes{% endblock %}
+{% block content %}
+<div class="mb-3 no-print d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <form method="GET" class="d-flex gap-2">
+    <select name="term" class="form-select" onchange="this.form.submit()">
+      {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
+    </select>
+  </form>
+  {% if viewer == 'staff' %}
+  <div class="d-flex gap-2 flex-wrap">
+    {% if can_export %}
+    <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu avant impression</button>
+    <a class="btn-ltt-gold" href="{{ download_url }}"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</a>
+    <a class="btn-ltt-outline" href="{{ download_xlsx_url }}"><i class="bi bi-file-earmark-excel-fill"></i> Excel</a>
+    {% else %}
+    <span class="text-muted" style="font-size:12px;"><i class="bi bi-info-circle"></i> Consultation uniquement — l'impression du bulletin relève du Censeur.</span>
+    {% endif %}
+    {% if back_url %}<a class="btn-ltt-outline" href="{{ back_url }}"><i class="bi bi-arrow-left"></i> Retour au dossier</a>{% endif %}
+  </div>
+  {% else %}
+  <span class="text-muted" style="font-size:12px;"><i class="bi bi-info-circle"></i> Consultation uniquement — pour une copie imprimée, adressez-vous au secrétariat.</span>
+  {% endif %}
+</div>
+
+{% if not data %}
+<div class="card-ltt text-center text-muted py-5">Cet élève n'est affecté à aucune classe — impossible de générer un bulletin.</div>
+{% else %}
+<div class="card-ltt bulletin-wrap" style="font-size:12px; font-weight:700;">
+  <style>
+    .bulletin-wrap .profile-grid, .bulletin-wrap .work-grid, .bulletin-wrap .discipline-grid { border-collapse:collapse; }
+    .bulletin-wrap .profile-grid td, .bulletin-wrap .work-grid td, .bulletin-wrap .discipline-grid td { border:1px solid #CFCFCF; padding:3px; }
+    .bulletin-wrap .profile-grid td:nth-child(even) { text-align:center; }
+    .bulletin-wrap .term-average { background:#D9D9D9; }
+    .bulletin-wrap .low-score { color:#C62828; }
+  </style>
+  <table style="width:100%;">
+    <tr>
+      <td style="width:26%; font-size:9.5px; text-align:center; vertical-align:top;">
+        RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie<br>
+        RÉGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>
+        LYCÉE TECHNIQUE DE TIBATI<br><span style="font-size:9.5px;">Mle : 2CE1TEFD110320092</span>
+      </td>
+      <td style="width:48%; text-align:center; vertical-align:top;">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" width="68">
+      </td>
+      <td style="width:26%; font-size:9.5px; text-align:center; vertical-align:top;">
+        REPUBLIC OF CAMEROON<br>Peace – Work – Fatherland<br>
+        ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>
+        G.T.H.S OF TIBATI<br><span style="font-size:9.5px;">Mle : 2CE1TEFD110320092</span>
+      </td>
+    </tr>
+  </table>
+
+  <table style="width:100%; border-top:3px solid var(--navy-900); border-bottom:3px solid var(--navy-900); margin:8px 0;">
+    <tr>
+      <td style="width:78%; text-align:center; padding:6px 0; position:relative;">
+        <div class="bulletin-title" style="font-size:19px;">BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
+        <div style="font-size:14px; font-weight:800; color:var(--navy-900); letter-spacing:.6px; margin-top:4px;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
+      </td>
+      <td style="width:22%; text-align:center; vertical-align:middle;">
+        <div style="width:74px; height:90px; border:2px solid var(--navy-900); background:var(--cream); margin:0 auto; overflow:hidden; border-radius:4px;">
+          <img src="{{ student_photo_url(student.photo) }}" style="width:100%; height:100%; object-fit:cover;" alt="Photo de l'élève">
+        </div>
+        <div style="font-size:8.5px; color:var(--navy-900); font-weight:600; margin-top:2px;">{{ student.full_name }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <table style="width:100%; font-size:11.5px; margin-bottom:8px;">
+    <tr>
+      <td style="width:50%; vertical-align:top; padding-right:14px;">
+        <strong>Noms et Prénoms :</strong> {{ student.full_name }}<br>
+        <strong>Date de naissance :</strong> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>
+        <strong>Genre :</strong> {{ student.sex or '—' }}<br>
+        <strong>Identifiant Unique :</strong> {{ student.matricule }}<br>
+        <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
+      </td>
+      <td style="width:50%; vertical-align:top; padding-left:16px;">
+        <strong>Année Scolaire :</strong> {{ school_year }}<br>
+        <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
+        <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
+        <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
+      </td>
+    </tr>
+  </table>
+
+  <table class="table-ltt" style="font-size:11px;">
+    <thead><tr><th style="width:25%">Matières/Enseignant</th><th style="width:8%">Notes trimestrielles</th><th style="width:6%">Éval.{{ TERM_SEQ_A }}</th><th style="width:6%">Éval.{{ TERM_SEQ_B }}</th><th style="width:5%">Coef.</th><th style="width:6%">Notes×coef.</th><th style="width:5%">Rang</th><th style="width:29%">Appréciations/Signatures</th><th style="width:10%">Signatures</th></tr></thead>
+    <tbody>
+    {% for cat in data.categories %}
+      <tr style="background:var(--cream);"><td colspan="9" style="font-weight:700; color:var(--navy-900); font-size:10.5px; text-transform:uppercase;">{{ cat.name }}</td></tr>
+      {% for row in cat.rows %}
+      <tr>
+        <td>{{ row.course.subject.name }}<br><span class="text-muted" style="font-size:9.5px; font-style:italic;">{{ row.course.teacher.user.formal_name }}</span></td>
+        <td>{{ row.notes_trim if row.notes_trim is not none else '—' }}</td>
+        <td>{{ row.eval_a if row.eval_a is not none else '—' }}</td>
+        <td>{{ row.eval_b if row.eval_b is not none else '—' }}</td>
+        <td>{{ row.coef }}</td>
+        <td class="fw-semibold">{{ row.points if row.points is not none else '—' }}</td>
+        <td>{{ row.rank if row.rank is not none else '—' }}{{ 'e' if row.rank }}</td>
+        <td class="text-muted" style="font-size:9.5px;">{{ row.appreciation }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      <tr style="font-weight:700; font-size:10px;">
+        <td colspan="4" class="text-end">Total Points : {{ cat.total_points }}</td>
+        <td>{{ cat.total_coef }}</td>
+        <td colspan="3">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count %}<br><span class="text-muted" style="font-weight:400; font-size:8.5px;">{{ cat.pending_count }} matière{{ 's' if cat.pending_count > 1 }} en attente</span>{% endif %}</td>
+        <td></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <table style="width:100%; margin-top:10px; border-collapse:collapse;">
+    <tr>
+      <td colspan="3" style="border:1px solid #CFCFCF; vertical-align:top; padding:6px; font-size:10px;">
+        <strong style="color:var(--navy-900); font-size:10.5px;">PROFIL DE LA CLASSE</strong>
+        <table class="profile-grid" style="width:100%; margin-top:3px;">
+          <tr><td>Moyenne classe</td><td class="fw-semibold">{{ data.class_avg if data.class_avg is not none else '—' }}</td><td>Total des points</td><td class="fw-semibold">{{ data.overall_points }}</td></tr>
+          <tr><td>Coefficient</td><td class="fw-semibold">{{ data.overall_coef }}</td><td>Moyenne du premier</td><td class="fw-semibold">{{ data.highest_avg if data.highest_avg is not none else '—' }}</td></tr>
+          <tr><td>Moyenne du dernier</td><td class="fw-semibold">{{ data.lowest_avg if data.lowest_avg is not none else '—' }}</td><td>Moyenne trimestrielle</td><td class="fw-semibold">{{ data.overall_avg if data.overall_avg is not none else '—' }}</td></tr>
+          <tr><td>Moyennes ≥ 10</td><td class="fw-semibold">{{ data.nb_above_10 }}/{{ data.class_size }}</td><td>Rang</td><td class="fw-semibold">{{ data.rank if data.rank is not none else '—' }}{{ 'e' if data.rank }}/{{ data.class_size }}</td></tr>
+          <tr><td>Taux de Réussite</td><td class="fw-semibold">{{ data.success_rate if data.success_rate is not none else '—' }}%</td><td>Éval.{{ data.term_seq_a }}</td><td class="fw-semibold">{{ data.class_eval_a_avg if data.class_eval_a_avg is not none else '—' }}</td></tr>
+          <tr><td></td><td></td><td>Éval.{{ data.term_seq_b }}</td><td class="fw-semibold">{{ data.class_eval_b_avg if data.class_eval_b_avg is not none else '—' }}</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:50%; border:1px solid #CFCFCF; vertical-align:top; padding:6px; font-size:10px;">
+        <strong style="color:var(--navy-900); font-size:10.5px;">TRAVAIL DE L'ÉLÈVE</strong>
+        <table class="work-grid" style="width:100%; margin-top:3px;">
+          <tr>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.tableau_honneur else '' }}">{{ '✓' if data.work_marks.tableau_honneur else '○' }}</span> Tableau d'Honneur</td>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.travail_insuffisant else '' }}">{{ '✓' if data.work_marks.travail_insuffisant else '○' }}</span> Travail Insuff.</td>
+          </tr>
+          <tr>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.encouragements else '' }}">{{ '✓' if data.work_marks.encouragements else '○' }}</span> Encouragements</td>
+            <td><span class="bulletin-mark">○</span> Travail Méd.</td>
+          </tr>
+          <tr>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.felicitations else '' }}">{{ '✓' if data.work_marks.felicitations else '○' }}</span> Félicitations</td>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.travail_passable else '' }}">{{ '✓' if data.work_marks.travail_passable else '○' }}</span> Travail Pass.</td>
+          </tr>
+          <tr>
+            <td><span class="bulletin-mark">○</span> Avert. Travail</td>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.assez_bon_travail else '' }}">{{ '✓' if data.work_marks.assez_bon_travail else '○' }}</span> Assez Bon Trav.</td>
+          </tr>
+          <tr>
+            <td><span class="bulletin-mark">○</span> Blâme Travail</td>
+            <td><span class="bulletin-mark {{ 'is-selected' if data.work_marks.bon_travail else '' }}">{{ '✓' if data.work_marks.bon_travail else '○' }}</span> Bon Travail</td>
+          </tr>
+        </table>
+      </td>
+      <td style="width:50%; border:1px solid #CFCFCF; vertical-align:top; padding:6px; font-size:10px;">
+        <strong style="color:var(--navy-900); font-size:10.5px;">DISCIPLINE</strong>
+        <table class="discipline-grid" style="width:100%; margin-top:3px;">
+          <tr><td rowspan="2">Absences</td><td>N. heures</td><td>{{ data.absences_justified_hours + data.absences_non_justified_hours }}</td></tr>
+          <tr><td>N. jours</td><td>{{ data.absences_justified_days + data.absences_non_justified_days }}</td></tr>
+          <tr><td colspan="2">Just.</td><td>{{ data.absences_justified_days }}j</td></tr>
+          <tr><td colspan="2">Non Just.</td><td>{{ data.absences_non_justified_days }}j</td></tr>
+          <tr><td rowspan="2">Exclusions</td><td>N. heures</td><td>—</td></tr>
+          <tr><td>N. jours</td><td>{{ data.exclusions|length }}</td></tr>
+          <tr><td colspan="2"><span class="bulletin-mark {{ 'is-selected' if data.avert_conduite else '' }}">{{ '✓' if data.avert_conduite else '○' }}</span> Avert. Conduite</td><td><span class="bulletin-mark {{ 'is-selected' if data.blame_conduite else '' }}">{{ '✓' if data.blame_conduite else '○' }}</span> Blâme Conduite</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div class="row mt-3 align-items-center">
+    <div class="col-md-8"></div>
+    <div class="col-md-4 text-md-end">
+      <div class="text-muted" style="font-size:10.5px; text-transform:uppercase;">Moyenne générale</div>
+      <div class="brand-font" style="font-size:30px; color:var(--navy-900);">{{ data.overall_avg if data.overall_avg is not none else '—' }}<span style="font-size:14px; color:var(--muted);">/20</span></div>
+      <div class="text-muted" style="font-size:10.5px;">Rang : {{ data.rank if data.rank else '—' }} sur {{ data.class_size }}</div>
+    </div>
+  </div>
+
+  <table style="width:100%; margin-top:14px; border-collapse:collapse;">
+    <tr>
+      <td style="width:28%; border:1px solid #eee3c8; padding:6px; vertical-align:top; font-size:10px;">
+        <strong style="color:var(--navy-900); font-size:10px;">APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br>
+        <span style="font-style:italic;">
+        {% if data.work_appreciation %}
+          {{ data.work_appreciation }}
+        {% endif %}
+        </span>
+      </td>
+      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px; height:70px;">VISA DU PARENT</td>
+      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
+        VISA DU PROF. PRINCIPAL<br>
+        <span style="font-size:9.5px; font-weight:600; color:var(--navy-900);">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span>
+      </td>
+      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
+        VISA DU CHEF D'ÉTABLISSEMENT<br><span style="font-size:9px; color:var(--muted);">TIBATI, le ______</span>
+      </td>
+    </tr>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @font-face { font-family: 'Playfair'; src: url('{{ font_bold }}'); }
+  @font-face { font-family: 'Inter'; src: url('{{ font_regular }}'); }
+  @page { size: A4; margin: 1.3cm; }
+  body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 8pt; }
+  .school { font-family: 'Playfair', Helvetica, sans-serif; font-size: 13pt; color: #0B2545; font-weight: bold; text-align:center; }
+  .subtitle { text-align:center; font-size: 8pt; color: #6b7688; margin-bottom: 8pt; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background-color: #F8F5EC; color: #6b7688; font-size: 7pt; text-transform: uppercase;
+       text-align: left; padding: 4pt; border: 0.5pt solid #EFE9D8; }
+  td { padding: 3pt; border: 0.5pt solid #F1EAD9; font-size: 7.2pt; vertical-align: middle; }
+  .student-photo { width: 28pt; height: 34pt; border: 0.5pt solid #0B2545; background: #F8F5EC; }
+</style>
+</head>
+<body>
+<img src="{{ logo_path }}" width="40" style="display:block; margin:0 auto;"/>
+<div class="school">LYCÉE TECHNIQUE DE TIBATI — LISTE DES ÉLÈVES</div>
+<div class="subtitle">{{ students|length }} élève(s) — Année scolaire {{ school_year }}</div>
+<table>
+<tr><th width="8%">Photo</th><th width="13%">Matricule</th><th width="21%">Nom complet</th><th width="6%">Sexe</th><th width="13%">Classe</th><th width="10%">Statut</th><th width="29%">Parent(s)</th></tr>
+{% for s in students %}
+<tr>
+  <td width="8%"><img class="student-photo" src="{{ storage_base_url ~ s.photo if s.photo and s.photo.startswith('/manus-storage/') else student_photo_dir ~ '/' ~ s.photo if s.photo else avatar_path }}"/></td>
+  <td width="13%">{{ s.matricule }}</td>
+  <td width="21%">{{ s.full_name }}</td>
+  <td width="6%">{{ s.sex or '' }}</td>
+  <td width="13%">{{ s.school_class.name if s.school_class else '' }}</td>
+  <td width="10%">{{ s.status }}</td>
+  <td width="29%">{{ s.parents|map(attribute='user.full_name')|join(', ') }}</td>
+</tr>
+{% endfor %}
+</table>
+</body>
+</html>

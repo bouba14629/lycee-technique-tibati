@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Occupation des salles{% endblock %}
+{% block page_title %}Calendrier d’occupation des salles{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <div class="section-title flex-wrap gap-2">
+    <div><h2><i class="bi bi-calendar2-week-fill me-1" style="color:var(--gold-500);"></i> Semaine du {{ week_start.strftime('%d/%m/%Y') }}</h2><p class="text-muted mb-0" style="font-size:12px;">Cours réguliers et réservations ponctuelles des salles, ateliers et laboratoires.</p></div>
+    <div class="d-flex gap-2 no-print"><a class="btn-ltt-outline" href="{{ url_for('rooms_occupation', semaine=previous_week.isoformat()) }}">← Semaine précédente</a><a class="btn-ltt-outline" href="{{ url_for('rooms_occupation', semaine=next_week.isoformat()) }}">Semaine suivante →</a><button class="btn-ltt-gold" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer</button></div>
+  </div>
+  <section class="room-utilisation-chart" aria-labelledby="room-utilisation-title">
+    <div class="room-utilisation-heading"><div><span class="chart-kicker">Occupation hebdomadaire</span><h3 id="room-utilisation-title">Taux d’occupation des salles</h3></div><p>Base indicative : 50 heures ouvrées par semaine.</p></div>
+    <div class="room-utilisation-grid">{% for item in room_utilisation %}<article><div class="room-utilisation-label"><strong>{{ item.room.name }}</strong><span>{{ item.rate }} %</span></div><div class="room-utilisation-track" role="progressbar" aria-label="Occupation de {{ item.room.name }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ item.rate }}"><i style="width: {{ item.rate }}%;"></i></div><small>{{ (item.minutes / 60)|round(1) }} h planifiée(s) cette semaine</small></article>{% else %}<p class="text-muted mb-0">Aucune salle à analyser.</p>{% endfor %}</div>
+  </section>
+  <div class="table-responsive">
+    <table class="table-ltt room-occupation-table">
+      <thead><tr><th>Salle / atelier</th>{% for day in week_days %}<th>{{ ('Lun Mar Mer Jeu Ven'.split())[loop.index0] }}<br><small>{{ day.strftime('%d/%m') }}</small></th>{% endfor %}</tr></thead>
+      <tbody>{% for room in rooms %}<tr><td><strong>{{ room.name }}</strong><br><small class="text-muted">{{ room.type }}</small></td>{% for day in week_days %}<td>{% for slot in occupancy[room.id][day.isoformat()] %}<div class="room-slot {{ 'is-reservation' if slot.kind == 'Réservation' else '' }}"><strong>{{ slot.start }}–{{ slot.end }}</strong><span>{{ slot.label }}</span></div>{% else %}<span class="text-muted" style="font-size:11px;">Disponible</span>{% endfor %}</td>{% endfor %}</tr>{% else %}<tr><td colspan="6" class="text-center text-muted py-4">Aucune salle n’a encore été déclarée.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Vérification de carte scolaire{% endblock %}
+{% block page_title %}Vérification de carte scolaire{% endblock %}
+{% block content %}
+<div class="card-ltt mx-auto" style="max-width:620px; text-align:center; padding:34px;">
+  {% if valid %}
+  <div class="verify-icon verify-valid"><i class="bi bi-patch-check-fill"></i></div><h2>Carte scolaire valide</h2>
+  <p class="text-muted">Cette carte appartient à <strong>{{ student.full_name }}</strong>, matricule <strong>{{ student.matricule }}</strong>.</p>
+  <p class="mb-0">Classe : <strong>{{ student.school_class.name if student.school_class else '—' }}</strong> · Année : <strong>{{ school_year }}</strong> · Valide jusqu’en <strong>{{ validity }}</strong>.</p>
+  {% else %}
+  <div class="verify-icon verify-invalid"><i class="bi bi-x-octagon-fill"></i></div><h2>Carte non valide</h2><p class="text-muted mb-0">Le QR code est invalide, expiré ou la carte n’est plus active.</p>
+  {% endif %}
+</div>
+{% endblock %}

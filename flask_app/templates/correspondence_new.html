@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Nouveau message carnet{% endblock %}
+{% block page_title %}Nouveau message du carnet{% endblock %}
+{% block page_subtitle %}Transmis à l’élève et à ses responsables légaux{% endblock %}
+{% block content %}
+<div class="card-ltt" style="max-width:850px;">
+  <form method="POST" class="form-ltt">
+    <div class="row g-3">
+      <div class="col-md-7"><label>Élève concerné</label><select name="student_id" class="form-select" required><option value="">— Choisir un élève —</option>{% for student in students %}<option value="{{ student.id }}">{{ student.full_name }} · {{ student.matricule }} · {{ student.school_class.name if student.school_class else 'Classe à renseigner' }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label>Catégorie</label><select name="category" class="form-select"><option>Information</option><option>Discipline</option><option>Travail scolaire</option><option>Convocation</option><option>Félicitations</option></select></div>
+      <div class="col-md-2"><label>Priorité</label><select name="priority" class="form-select"><option>Normale</option><option>Importante</option><option>Critique</option></select></div>
+      <div class="col-12"><label>Objet</label><input name="subject" class="form-control" maxlength="160" placeholder="Ex. Retard répété constaté cette semaine" required></div>
+      <div class="col-12"><label>Message</label><textarea name="body" class="form-control" rows="7" placeholder="Décrivez clairement l’information ou l’action attendue de la famille." required></textarea><div class="text-muted mt-1" style="font-size:11.5px;">Le message sera consultable par l’élève et les parents rattachés à son dossier.</div></div>
+    </div>
+    <div class="d-flex gap-2 mt-4"><button class="btn-ltt-navy"><i class="bi bi-send-fill"></i> Ajouter au carnet</button><a href="{{ url_for('correspondence_inbox') }}" class="btn-ltt-outline">Annuler</a></div>
+  </form>
+</div>
+{% endblock %}

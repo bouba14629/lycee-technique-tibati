@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sortable_th %}
+{% block title %}Utilisateurs{% endblock %}
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+{% block page_subtitle %}Comptes du personnel, enseignants, élèves et parents{{ ' (lecture seule — la création/gestion des comptes relève du Proviseur)' if current_user.role != 'directeur' }}{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <form method="GET" class="d-flex gap-2 mb-3">
+    <input type="hidden" name="role" value="{{ role_filter }}">
+    <input type="text" name="q" class="form-control" style="max-width:280px;" placeholder="Rechercher (nom, identifiant, email)" value="{{ search }}">
+    <button class="btn-ltt-outline"><i class="bi bi-search"></i> Rechercher</button>
+  </form>
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="btn-group flex-wrap">
+      {% for r, label in [('', 'Tous'), ('directeur','Proviseurs'), ('censeur','Censeurs'), ('censeur_crm','Censeur CRM'), ('surveillant_general','Surveillants'), ('conseiller_orientation','Conseillers'), ('chef_travaux','Chefs des Travaux'), ('chef_crm','Chef CRM'), ('enseignant','Enseignants'), ('eleve','Élèves'), ('parent','Parents')] %}
+      <a href="{{ url_for('dir_users', role=r, q=search) }}" class="btn-ltt-outline me-1 mb-1" style="{{ 'background:var(--navy-900);color:#fff;' if role_filter==r }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    {% if current_user.role == 'directeur' %}
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('dir_user_new') }}" class="btn-ltt-gold"><i class="bi bi-person-plus-fill"></i> Nouveau compte staff</a>
+      <a href="{{ url_for('parent_new') }}" class="btn-ltt-gold"><i class="bi bi-person-plus-fill"></i> Nouveau compte parent</a>
+      <button type="button" class="btn-ltt-gold" data-bs-toggle="modal" data-bs-target="#importTeacherModal"><i class="bi bi-upload"></i> Importer enseignants</button>
+      <a href="{{ url_for('dir_users_export', role=role_filter, q=search) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Exporter Excel</a>
+    </div>
+    {% elif current_user.role == 'conseiller_orientation' %}
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('parent_new') }}" class="btn-ltt-gold"><i class="bi bi-person-plus-fill"></i> Nouveau compte parent</a>
+      <a href="{{ url_for('dir_users_export', role=role_filter, q=search) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Exporter Excel</a>
+    </div>
+    {% else %}
+    <a href="{{ url_for('dir_users_export', role=role_filter, q=search) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Exporter Excel</a>
+    {% endif %}
+
+    <div class="modal fade" id="importTeacherModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+      <div class="modal-header"><h5 class="modal-title">Importer des enseignants</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:12.5px;">Formats acceptés : <strong>CSV</strong> et <strong>XLSX</strong>. Pour le nom, utilisez soit <strong>Nom complet</strong> / <strong>Noms et prénoms</strong>, soit deux colonnes <strong>Nom</strong> et <strong>Prénom</strong>. Les colonnes Email, Téléphone, Département (code), Spécialité, Grade et Heures dues restent facultatives. Vous pouvez sélectionner un département ci-dessous si la colonne est absente.</p>
+        <a class="btn-ltt-outline w-100 justify-content-center mb-3" href="{{ url_for('import_template_download', kind='enseignants') }}"><i class="bi bi-download"></i> Télécharger le modèle Excel</a>
+        <form method="POST" action="{{ url_for('teachers_import') }}" enctype="multipart/form-data" class="form-ltt">
+          <label>Département par défaut (facultatif)</label><select name="department_id" class="form-select mb-3"><option value="">— Utiliser la colonne Département —</option>{% for dept in import_departments %}<option value="{{ dept.id }}">{{ dept.code }} — {{ dept.name }}</option>{% endfor %}</select>
+          <input type="file" name="import_file" accept=".csv,.xlsx" class="form-control mb-3" required>
+          <button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-upload"></i> Importer</button>
+        </form>
+      </div>
+    </div></div></div>
+  </div>
+  <table class="table-ltt">
+    <thead><tr>
+      {{ sortable_th('Nom', 'full_name', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
+      {{ sortable_th('Identifiant', 'username', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
+      {% if current_user.role == 'directeur' %}<th>Mot de passe</th>{% endif %}
+      {{ sortable_th('Rôle', 'role', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
+      <th>Contact</th><th>Statut</th>{% if current_user.role == 'directeur' %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td class="fw-semibold">{{ u.full_name }}</td>
+        <td><code>{{ u.username }}</code></td>
+        {% if current_user.role == 'directeur' %}<td><code>{{ u.plain_password or '—' }}</code></td>{% endif %}
+        <td><span class="badge-ltt badge-navy">{{ u.scope_label }}</span></td>
+        <td class="text-muted">{{ u.email or u.phone or '—' }}</td>
+        <td>{% if u.active %}<span class="badge-ltt badge-success">Actif</span>{% else %}<span class="badge-ltt badge-danger">Désactivé</span>{% endif %}</td>
+        {% if current_user.role == 'directeur' %}
+        <td class="text-end">
+          {% if u.role not in ['eleve','parent'] %}
+          <a href="#" data-bs-toggle="modal" data-bs-target="#userEdit{{ u.id }}Modal" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-pencil-square"></i></a>
+          {% endif %}
+          <form method="POST" action="{{ url_for('dir_user_reset', user_id=u.id) }}" class="d-inline"><button type="submit" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;" title="Régénérer le mot de passe" onclick="return confirm('Générer un nouveau mot de passe temporaire pour {{ u.username }} ?')"><i class="bi bi-key-fill"></i> Régénérer</button></form>
+          <a href="{{ url_for('dir_user_toggle', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-power"></i></a>
+          {% if u.role not in ['eleve','parent'] %}
+          <a href="{{ url_for('dir_user_delete', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2 text-danger" style="font-size:11.5px; border-color:var(--danger);" onclick="return confirm('Supprimer définitivement le compte {{ u.username }} ?')"><i class="bi bi-trash"></i></a>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% if current_user.role == 'directeur' and u.role not in ['eleve','parent'] %}
+      <div class="modal fade" id="userEdit{{ u.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
+        <div class="modal-header"><h5 class="modal-title">Modifier {{ u.full_name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <form method="POST" action="{{ url_for('dir_user_edit', user_id=u.id) }}" class="form-ltt">
+            <input type="hidden" name="role_filter" value="{{ role_filter }}">
+            <label>Nom complet</label><input type="text" name="full_name" class="form-control mb-2" value="{{ u.full_name }}">
+            <label>Email</label><input type="email" name="email" class="form-control mb-2" value="{{ u.email or '' }}">
+            <label>Téléphone</label><input type="text" name="phone" class="form-control mb-2" value="{{ u.phone or '' }}">
+            <label>Grade</label>
+            <input type="text" name="grade" class="form-control mb-1" list="teacher-grade-suggestions-{{ u.id }}" value="{{ u.teacher_profile.grade if u.role=='enseignant' and u.teacher_profile else u.grade or '' }}" placeholder="Saisir le grade">
+            <datalist id="teacher-grade-suggestions-{{ u.id }}"><option value="Instituteur">{% for g in ['PLEG', 'PLET', 'PCEG', 'PCET', 'IGE', 'IPR', 'CPE'] %}<option value="{{ g }}">{% endfor %}</datalist>
+            <div class="text-muted mb-2" style="font-size:11px;">Saisie libre : les suggestions restent facultatives.</div>
+            {% if u.role in ['censeur','surveillant_general','chef_travaux'] %}
+            <label>Section (portée)</label>
+            <select name="section_id" class="form-select mb-2">
+              <option value="">— Portée transversale —</option>
+              {% for s in sections %}<option value="{{ s.id }}" {{ 'selected' if u.section_id==s.id }}>{{ s.name }} ({{ s.code }})</option>{% endfor %}
+            </select>
+            {% endif %}
+            {% if u.role == 'enseignant' and u.teacher_profile %}
+            <label>Spécialité</label><input type="text" name="specialty" class="form-control mb-2" value="{{ u.teacher_profile.specialty or '' }}">
+            <label>Heures dues</label><input type="number" name="hours_due" class="form-control mb-2" value="{{ u.teacher_profile.hours_due }}">
+            {% endif %}
+            <label>Nouveau mot de passe</label>
+            <div class="position-relative mb-1">
+              <input type="password" name="new_password" id="userEditPw{{ u.id }}" class="form-control pe-5">
+              <button type="button" onclick="togglePassword('userEditPw{{ u.id }}', this)"
+                      class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                      aria-label="Afficher le mot de passe">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+              </button>
+            </div>
+            <div class="text-muted mb-2" style="font-size:11px;">Champ vide — laissez ainsi pour ne pas changer le mot de passe actuel.</div>
+            <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+          </form>
+        </div>
+      </div></div></div>
+      {% endif %}
+    {% else %}
+      <tr><td colspan="6" class="text-muted text-center py-4">Aucun utilisateur.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
