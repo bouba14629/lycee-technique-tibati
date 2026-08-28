@@ -14,3 +14,5 @@
 - [x] Compiler le client et le serveur avec succès.
 - [x] Vérifier visuellement la page de connexion et les états responsive desktop/mobile.
 - [x] Sauvegarder un checkpoint final avant livraison.
+
+- [x] Réinitialiser uniquement le mot de passe du compte Flask `proviseur` sans supprimer ni modifier les autres données.
