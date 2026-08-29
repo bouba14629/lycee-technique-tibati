@@ -32,3 +32,12 @@
 - [x] Supprimer cette mention des documents imprimés et des exports PDF sans altérer leur contenu.
 - [x] Vérifier les tests, la compilation et le rendu d’impression après correction.
 - [x] Sauvegarder un checkpoint et publier la correction.
+
+- [x] Analyser les filtres actuels du module Bulletins et leur portée par rôle.
+- [x] Ajouter un menu déroulant Filière dans le module Bulletins.
+- [x] Filtrer côté serveur les classes selon la filière sélectionnée.
+- [x] Mettre à jour dynamiquement la liste des classes lors du changement de filière.
+- [x] Conserver la filière et la classe sélectionnées dans l’URL et les actions liées aux bulletins.
+- [x] Ajouter des tests du filtrage Filière → Classes.
+- [x] Vérifier le rendu desktop et mobile du nouveau filtre.
+- [x] Sauvegarder un checkpoint et publier la fonctionnalité.

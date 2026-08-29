@@ -386,16 +386,36 @@ def censeur_bulletins():
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
-    classes = classes_q.all()
+    all_classes = classes_q.all()
     class_id = request.args.get("class_id", type=int)
+    department_id = request.args.get("department_id", type=int)
+    accessible_class_ids = {school_class.id for school_class in all_classes}
+    accessible_department_ids = {school_class.department_id for school_class in all_classes}
+    if class_id and class_id not in accessible_class_ids:
+        abort(403)
+    selected_class = next((school_class for school_class in all_classes if school_class.id == class_id), None)
+    if selected_class and department_id is None:
+        department_id = selected_class.department_id
+    if department_id is not None and department_id not in accessible_department_ids:
+        abort(403)
+    if selected_class and selected_class.department_id != department_id:
+        abort(400)
+    departments = (Department.query.filter(Department.id.in_(sorted(accessible_department_ids)))
+                   .order_by(Department.name).all()) if accessible_department_ids else []
+    classes = [school_class for school_class in all_classes if school_class.department_id == department_id]
+    classes_by_department = {}
+    for school_class in all_classes:
+        classes_by_department.setdefault(str(school_class.department_id), []).append({
+            "id": school_class.id,
+            "name": school_class.name,
+            "department": school_class.department.name,
+        })
     period_options = TERMS[:2] + ["Annuel"]
     term = request.args.get("term", TERMS[0])
     if term == "Trimestre 3":
         term = "Annuel"
     if term not in period_options:
         term = TERMS[0]
-    if class_id and scoped_class_ids is not None and class_id not in scoped_class_ids:
-        abort(403)
     search = request.args.get("q", "").strip()
     students = []
     current_class = None
@@ -409,9 +429,22 @@ def censeur_bulletins():
             students = [s for s in students if like in s.full_name.lower() or like in s.matricule.lower()]
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first() if class_id else None
     annual_approval = BulletinApproval.query.filter_by(class_id=class_id, term="Annuel", status="Validé").first() if class_id else None
-    return render_template("censeur_bulletins.html", classes=classes, class_id=class_id, students=students, search=search,
+    return render_template("censeur_bulletins.html", classes=classes, all_classes=all_classes,
+                           departments=departments, department_id=department_id,
+                           classes_by_department=classes_by_department,
+                           class_id=class_id, students=students, search=search,
                            term=term, terms=period_options, approval=approval, annual_approval=annual_approval,
                            current_class=current_class, class_teachers=class_teachers)
+
+
+def _bulletins_url(class_id=None, term=None):
+    params = {}
+    if class_id:
+        school_class = db.session.get(SchoolClass, class_id)
+        params.update(class_id=class_id, department_id=school_class.department_id if school_class else None)
+    if term:
+        params["term"] = term
+    return url_for("censeur_bulletins", **params)
 
 
 @app.route("/censeur/classes/<int:class_id>/professeur-principal", methods=["POST"])
@@ -426,11 +459,11 @@ def censeur_class_homeroom(class_id):
     teacher = Teacher.query.get(teacher_id) if teacher_id else None
     if teacher and teacher.department_id != school_class.department_id:
         flash("Le professeur principal doit appartenir au département de cette classe.", "danger")
-        return redirect(url_for("censeur_bulletins", class_id=class_id, term=request.form.get("term", TERMS[0])))
+        return redirect(_bulletins_url(class_id, request.form.get("term", TERMS[0])))
     school_class.homeroom_teacher_id = teacher.id if teacher else None
     db.session.commit()
     flash(f"Professeur principal de {school_class.name} mis à jour.", "success")
-    return redirect(url_for("censeur_bulletins", class_id=class_id, term=request.form.get("term", TERMS[0])))
+    return redirect(_bulletins_url(class_id, request.form.get("term", TERMS[0])))
 
 
 DEFAULT_HONOR_CONGRATULATIONS = "pour son travail apprécié et sa bonne conduite."
@@ -657,7 +690,7 @@ def censeur_bulletins_validate_annual(class_id):
         release_date = datetime.strptime(release_date, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         flash("Indiquez la date officielle de remise annuelle.", "danger")
-        return redirect(url_for("censeur_bulletins", class_id=class_id))
+        return redirect(_bulletins_url(class_id, "Annuel"))
     approval = BulletinApproval.query.filter_by(class_id=class_id, term="Annuel").first()
     if not approval:
         approval = BulletinApproval(class_id=class_id, term="Annuel")
@@ -669,7 +702,7 @@ def censeur_bulletins_validate_annual(class_id):
     approval.revocation_reason = None
     db.session.commit()
     flash("Bulletins annuels validés : le visa numérique sera apposé aux PDF.", "success")
-    return redirect(url_for("censeur_bulletins", class_id=class_id))
+    return redirect(_bulletins_url(class_id, "Annuel"))
 
 
 @app.route("/censeur/bulletins/classe/<int:class_id>/valider", methods=["POST"])
@@ -686,7 +719,7 @@ def censeur_bulletins_validate(class_id):
         official_release_date = __import__("datetime").date.fromisoformat(release_value)
     except ValueError:
         flash("Choisissez la date officielle de remise avant de valider la diffusion.", "warning")
-        return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+        return redirect(_bulletins_url(class_id, term))
     from utils import bulletin_data
     pending = []
     for student in cls.students:
@@ -695,7 +728,7 @@ def censeur_bulletins_validate(class_id):
             pending.append(student.full_name)
     if pending:
         flash(f"Validation impossible : des notes sont encore en attente pour {len(pending)} élève(s).", "warning")
-        return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+        return redirect(_bulletins_url(class_id, term))
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term).first()
     if approval is None:
         approval = BulletinApproval(class_id=class_id, term=term, validated_by_id=user.id,
@@ -711,7 +744,7 @@ def censeur_bulletins_validate(class_id):
         approval.revocation_reason = None
     db.session.commit()
     flash(f"Les bulletins de {cls.name} pour {term} sont validés. La notification sera visible le {official_release_date.strftime('%d/%m/%Y')}, jour de remise officielle.", "success")
-    return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+    return redirect(_bulletins_url(class_id, term))
 
 
 @app.route("/censeur/bulletins/<int:student_id>/appreciation", methods=["GET", "POST"])
@@ -741,7 +774,7 @@ def censeur_bulletin_work_appreciation(student_id):
                 appreciation.updated_by_id = user.id
             db.session.commit()
             flash("Appréciation du travail enregistrée sur le bulletin.", "success")
-            return redirect(url_for("censeur_bulletins", class_id=student.class_id, term=term))
+            return redirect(_bulletins_url(student.class_id, term))
     return render_template("censeur_bulletin_appreciation.html", student=student, term=term, appreciation=appreciation)
 
 
@@ -756,18 +789,18 @@ def censeur_bulletins_revoke_validation(class_id):
     reason = request.form.get("reason", "").strip()
     if not reason:
         flash("Indiquez le motif du retrait de validation.", "warning")
-        return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+        return redirect(_bulletins_url(class_id, term))
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first()
     if approval is None:
         flash("Aucune validation active à annuler.", "warning")
-        return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+        return redirect(_bulletins_url(class_id, term))
     approval.status = "Retiré"
     approval.revoked_by_id = user.id
     approval.revoked_at = __import__("datetime").datetime.utcnow()
     approval.revocation_reason = reason
     db.session.commit()
     flash("Validation retirée : les bulletins redeviennent indisponibles à la diffusion.", "info")
-    return redirect(url_for("censeur_bulletins", class_id=class_id, term=term))
+    return redirect(_bulletins_url(class_id, term))
 
 
 @app.route("/censeur/bulletins/classe/<int:class_id>/telecharger.pdf")

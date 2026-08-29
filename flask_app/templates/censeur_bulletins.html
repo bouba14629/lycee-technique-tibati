@@ -5,17 +5,30 @@
 {% block content %}
 <div class="card-ltt">
   <div class="d-flex gap-2 mb-3 flex-wrap align-items-start">
-    <form method="GET" class="d-flex gap-2 flex-wrap">
-      <select name="class_id" class="form-select" style="max-width:280px;" onchange="this.form.submit()">
+    <form method="GET" id="bulletinFilters" class="d-flex gap-2 flex-wrap align-items-end">
+      <div>
+        <label for="bulletinDepartmentFilter" class="form-label mb-1 fw-semibold" style="font-size:12px;">Filière</label>
+        <select id="bulletinDepartmentFilter" name="department_id" class="form-select" style="min-width:220px; max-width:280px;">
+          <option value="">— Choisir une filière —</option>
+          {% for department in departments %}<option value="{{ department.id }}" {{ 'selected' if department_id==department.id }}>{{ department.name }}{% if department.code %} — {{ department.code }}{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="bulletinClassFilter" class="form-label mb-1 fw-semibold" style="font-size:12px;">Classe</label>
+        <select id="bulletinClassFilter" name="class_id" class="form-select" style="min-width:220px; max-width:280px;" onchange="this.form.requestSubmit()" {{ 'disabled' if not department_id }}>
         <option value="">— Choisir une classe —</option>
         {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if class_id==c.id }}>{{ c.name }} — {{ c.department.name }}</option>{% endfor %}
-      </select>
-      <select name="term" class="form-select" style="max-width:200px;" onchange="this.form.submit()">
+        </select>
+      </div>
+      <div>
+        <label for="bulletinTermFilter" class="form-label mb-1 fw-semibold" style="font-size:12px;">Période</label>
+        <select id="bulletinTermFilter" name="term" class="form-select" style="min-width:160px; max-width:200px;" onchange="this.form.requestSubmit()">
         {% for t in terms %}<option value="{{ t }}" {{ 'selected' if term==t }}>{{ t }}</option>{% endfor %}
-      </select>
+        </select>
+      </div>
       {% if class_id %}
-      <input type="text" name="q" class="form-control" style="max-width:240px;" placeholder="Rechercher un élève" value="{{ search }}">
-      <button class="btn-ltt-outline"><i class="bi bi-search"></i> Rechercher</button>
+      <div><label for="bulletinStudentSearch" class="form-label mb-1 fw-semibold" style="font-size:12px;">Élève</label><input id="bulletinStudentSearch" type="text" name="q" class="form-control" style="max-width:240px;" placeholder="Rechercher un élève" value="{{ search }}"></div>
+      <button class="btn-ltt-outline align-self-end"><i class="bi bi-search"></i> Rechercher</button>
       {% endif %}
     </form>
     {% if class_id and current_user.role == 'censeur' %}
@@ -71,4 +84,28 @@
   <p class="text-muted text-center py-4">Sélectionnez une classe pour consulter les bulletins de ses élèves.</p>
   {% endif %}
 </div>
+<script id="bulletinClassData" type="application/json">{{ classes_by_department|tojson }}</script>
+<script>
+(function () {
+  const form = document.getElementById('bulletinFilters');
+  const departmentSelect = document.getElementById('bulletinDepartmentFilter');
+  const classSelect = document.getElementById('bulletinClassFilter');
+  const dataElement = document.getElementById('bulletinClassData');
+  if (!form || !departmentSelect || !classSelect || !dataElement) return;
+
+  const classesByDepartment = JSON.parse(dataElement.textContent || '{}');
+  departmentSelect.addEventListener('change', function () {
+    const classes = classesByDepartment[departmentSelect.value] || [];
+    classSelect.replaceChildren(new Option('— Choisir une classe —', ''));
+    classes.forEach(function (schoolClass) {
+      classSelect.add(new Option(schoolClass.name + ' — ' + schoolClass.department, String(schoolClass.id)));
+    });
+    classSelect.disabled = !departmentSelect.value;
+    const search = document.getElementById('bulletinStudentSearch');
+    if (search) search.value = '';
+    if (!departmentSelect.value) form.requestSubmit();
+    else classSelect.focus();
+  });
+})();
+</script>
 {% endblock %}
