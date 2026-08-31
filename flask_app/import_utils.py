@@ -1,7 +1,8 @@
 import csv
+import re
 import unicodedata
 from datetime import datetime
-from io import BytesIO
+from io import BytesIO, StringIO
 
 from openpyxl import Workbook, load_workbook
 
@@ -12,11 +13,18 @@ MAX_IMPORT_ROWS = 2000
 
 def normalized_key(value):
     raw = str(value or "").strip().lower()
-    return "".join(c for c in unicodedata.normalize("NFKD", raw) if not unicodedata.combining(c))
+    without_accents = "".join(
+        c for c in unicodedata.normalize("NFKD", raw) if not unicodedata.combining(c)
+    )
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", without_accents).split())
 
 
 def cell_text(value):
-    return str(value).strip() if value is not None else ""
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 def get_value(row, *names):
@@ -41,6 +49,40 @@ def parse_date(value):
     raise ValueError("date invalide — utilisez AAAA-MM-JJ ou JJ/MM/AAAA")
 
 
+def _is_blank_row(values):
+    return not any(cell_text(value) for value in values)
+
+
+def _csv_rows(content):
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("cp1252")
+    sample = text[:8192]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;\\t|")
+        return list(csv.reader(StringIO(text), dialect))
+    except csv.Error:
+        delimiter = ";" if sample.count(";") > sample.count(",") else ","
+        return list(csv.reader(StringIO(text), delimiter=delimiter))
+
+
+def _xlsx_rows(content):
+    workbook = None
+    try:
+        workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
+        for worksheet in workbook.worksheets:
+            rows = list(worksheet.iter_rows(values_only=True))
+            if any(not _is_blank_row(row) for row in rows):
+                return rows
+    except Exception as exc:
+        raise ValueError("fichier XLSX illisible ou corrompu") from exc
+    finally:
+        if workbook is not None:
+            workbook.close()
+    return []
+
+
 def read_tabular_rows(file_storage):
     filename = (file_storage.filename or "").lower()
     if not filename.endswith((".csv", ".xlsx")):
@@ -51,32 +93,32 @@ def read_tabular_rows(file_storage):
     if len(content) > MAX_IMPORT_BYTES:
         raise ValueError("fichier trop volumineux (5 Mo maximum)")
 
-    if filename.endswith(".csv"):
-        try:
-            text = content.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            text = content.decode("latin-1")
-        reader = csv.reader(text.splitlines())
-        rows = list(reader)
-    else:
-        try:
-            workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
-            rows = list(workbook.active.iter_rows(values_only=True))
-        except Exception as exc:
-            raise ValueError("fichier XLSX illisible ou corrompu") from exc
-
-    if not rows:
+    rows = _csv_rows(content) if filename.endswith(".csv") else _xlsx_rows(content)
+    header_index = next((index for index, row in enumerate(rows) if not _is_blank_row(row)), None)
+    if header_index is None:
         raise ValueError("aucune ligne trouvée")
-    headers = [normalized_key(v) for v in rows[0]]
-    if not any(headers):
+    raw_headers = rows[header_index]
+    headers = [normalized_key(value) for value in raw_headers]
+    non_empty_headers = [header for header in headers if header]
+    if not non_empty_headers:
         raise ValueError("ligne d’en-tête introuvable")
+    if len(non_empty_headers) != len(set(non_empty_headers)):
+        raise ValueError("en-têtes en double — chaque colonne doit avoir un nom unique")
+
     parsed = []
-    for line_number, values in enumerate(rows[1:], start=2):
-        if not any(v not in (None, "") for v in values):
+    for line_number, values in enumerate(rows[header_index + 1:], start=header_index + 2):
+        if _is_blank_row(values):
             continue
-        parsed.append((line_number, dict(zip(headers, values))))
+        row = {
+            header: values[index] if index < len(values) else ""
+            for index, header in enumerate(headers)
+            if header
+        }
+        parsed.append((line_number, row))
         if len(parsed) > MAX_IMPORT_ROWS:
             raise ValueError(f"trop de lignes (maximum {MAX_IMPORT_ROWS})")
+    if not parsed:
+        raise ValueError("aucune ligne de données trouvée")
     return parsed
 
 

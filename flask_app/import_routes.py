@@ -121,17 +121,93 @@ def _read_photo_archive(path):
     return photos
 
 
-def _preview_student_rows(rows, chosen_class):
+def _student_full_name(row):
+    """Accepte Nom complet ou les colonnes distinctes Nom et Prénom."""
+    full_name = get_value(row, "nom complet", "noms et prenoms", "nom et prenom", "eleve")
+    if full_name:
+        return " ".join(full_name.split())
+    last_name = get_value(row, "nom", "nom de famille", "noms")
+    first_name = get_value(row, "prenom", "prenoms", "prenom s")
+    return " ".join(part for part in (first_name, last_name) if part)
+
+
+def _class_lookup():
+    """Indexe les classes par nom et par code sans écraser les homonymes."""
+    lookup = {}
+    for school_class in SchoolClass.query.join(Department).all():
+        for value in (school_class.name, school_class.code):
+            key = value and value.strip().lower()
+            if key:
+                lookup.setdefault(key, []).append(school_class)
+    return lookup
+
+
+def _resolve_student_class(class_ref, classes_by_identifier, department_id=None):
+    if not class_ref:
+        return None, "classe requise ou introuvable"
+    candidates = classes_by_identifier.get(class_ref.strip().lower(), [])
+    if department_id:
+        candidates = [school_class for school_class in candidates
+                      if school_class.department_id == department_id]
+    if not candidates:
+        return None, f"classe introuvable ({class_ref})"
+    if len(candidates) > 1:
+        return None, f"classe ambiguë ({class_ref}) — utilisez le code de classe"
+    return candidates[0], None
+
+
+def _student_sex(value):
+    normalized = (value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized in {"m", "masculin", "homme", "garcon", "garçon"}:
+        return "M"
+    if normalized in {"f", "feminin", "féminin", "femme", "fille"}:
+        return "F"
+    return "INVALID"
+
+
+def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, department_id=None):
     """Construit une prévisualisation légère, sans créer aucun compte ni élève."""
+    classes_by_identifier = classes_by_identifier or _class_lookup()
     preview, errors = [], []
+    seen_matricules = set()
     for line_number, row in rows[:100]:
-        full_name = get_value(row, "nom complet")
+        full_name = _student_full_name(row)
         if not full_name:
-            errors.append(f"Ligne {line_number} : nom complet obligatoire.")
+            errors.append(f"Ligne {line_number} : renseignez « Nom complet » ou « Nom » et « Prénom ».")
             continue
+        class_ref = get_value(row, "classe", "classe scolaire", "code classe")
+        school_class = chosen_class
+        if not school_class and class_ref:
+            school_class, class_error = _resolve_student_class(class_ref, classes_by_identifier, department_id)
+            if class_error:
+                errors.append(f"Ligne {line_number} : {class_error}.")
+                continue
+        if not school_class:
+            errors.append(f"Ligne {line_number} : sélectionnez une classe ou renseignez la colonne « Classe ».")
+            continue
+        sex = _student_sex(get_value(row, "sexe", "genre"))
+        if sex == "INVALID":
+            errors.append(f"Ligne {line_number} : sexe invalide — utilisez M ou F.")
+            continue
+        try:
+            parse_date(get_value(row, "date de naissance", "naissance", "date naissance"))
+        except ValueError as exc:
+            errors.append(f"Ligne {line_number} : {exc}.")
+            continue
+        requested_matricule = get_value(row, "matricule", "matricule scolaire")
+        if requested_matricule and (requested_matricule in seen_matricules or
+                                    Student.query.filter_by(matricule=requested_matricule).first()):
+            errors.append(f"Ligne {line_number} : matricule déjà utilisé ({requested_matricule}).")
+            continue
+        if requested_matricule:
+            seen_matricules.add(requested_matricule)
         preview.append({"line": line_number, "full_name": full_name,
-                        "matricule": get_value(row, "matricule") or "Automatique",
-                        "class_name": chosen_class.name if chosen_class else get_value(row, "classe") or "À vérifier"})
+                        "matricule": requested_matricule or "Automatique",
+                        "class_name": school_class.name,
+                        "department_name": school_class.department.name,
+                        "photo_found": False})
     return preview, errors
 
 
@@ -199,52 +275,80 @@ def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen
             flash(f"Import impossible : {exc}.", "danger")
             return redirect(url_for("student_enroll"))
 
-    classes_by_name = {school_class.name.strip().lower(): school_class for school_class in SchoolClass.query.all()}
     if chosen_class_id is None:
         chosen_class_id = request.form.get("class_id", type=int)
     if chosen_department_id is None:
         chosen_department_id = request.form.get("department_id", type=int)
     chosen_class = SchoolClass.query.get(chosen_class_id) if chosen_class_id else None
+    if chosen_class_id and not chosen_class:
+        flash("La classe cible sélectionnée est introuvable.", "danger")
+        return redirect(url_for("student_enroll"))
     if chosen_class and chosen_department_id and chosen_class.department_id != chosen_department_id:
         flash("La classe cible ne relève pas de la filière sélectionnée.", "danger")
         return redirect(url_for("student_enroll"))
+
+    classes_by_identifier = _class_lookup()
     created, skipped, errors = 0, 0, []
+    seen_matricules = set()
 
     for line_number, row in rows:
-        full_name = get_value(row, "nom complet")
+        full_name = _student_full_name(row)
         if not full_name:
-            skipped += 1; errors.append(f"Ligne {line_number} : nom complet obligatoire."); continue
-        class_name = get_value(row, "classe")
-        school_class = chosen_class or classes_by_name.get(class_name.lower())
+            skipped += 1
+            errors.append(f"Ligne {line_number} : renseignez « Nom complet » ou « Nom » et « Prénom ».")
+            continue
+
+        class_ref = get_value(row, "classe", "classe scolaire", "code classe")
+        school_class = chosen_class
         if not school_class:
-            skipped += 1; errors.append(f"Ligne {line_number} : classe requise ou introuvable."); continue
-        if chosen_department_id and school_class.department_id != chosen_department_id:
-            skipped += 1; errors.append(f"Ligne {line_number} : classe hors de la filière sélectionnée."); continue
-        sex = get_value(row, "sexe").upper()[:1] or None
-        if sex and sex not in ("M", "F"):
-            skipped += 1; errors.append(f"Ligne {line_number} : sexe doit être M ou F."); continue
+            school_class, class_error = _resolve_student_class(class_ref, classes_by_identifier, chosen_department_id)
+            if class_error:
+                skipped += 1
+                errors.append(f"Ligne {line_number} : {class_error}.")
+                continue
+        elif chosen_department_id and school_class.department_id != chosen_department_id:
+            skipped += 1
+            errors.append(f"Ligne {line_number} : classe hors de la filière sélectionnée.")
+            continue
+
+        sex = _student_sex(get_value(row, "sexe", "genre"))
+        if sex == "INVALID":
+            skipped += 1
+            errors.append(f"Ligne {line_number} : sexe invalide — utilisez M ou F.")
+            continue
         try:
-            dob = parse_date(get_value(row, "date de naissance", "naissance"))
+            dob = parse_date(get_value(row, "date de naissance", "naissance", "date naissance"))
         except ValueError as exc:
-            skipped += 1; errors.append(f"Ligne {line_number} : {exc}."); continue
-        requested_matricule = get_value(row, "matricule")
-        if requested_matricule and Student.query.filter_by(matricule=requested_matricule).first():
-            skipped += 1; errors.append(f"Ligne {line_number} : matricule déjà utilisé ({requested_matricule})."); continue
+            skipped += 1
+            errors.append(f"Ligne {line_number} : {exc}.")
+            continue
+
+        requested_matricule = get_value(row, "matricule", "matricule scolaire")
+        if requested_matricule and (requested_matricule in seen_matricules or
+                                    Student.query.filter_by(matricule=requested_matricule).first()):
+            skipped += 1
+            errors.append(f"Ligne {line_number} : matricule déjà utilisé ({requested_matricule}).")
+            continue
         matricule = requested_matricule or f"LTT{date.today().year}{random.randint(1000, 9999)}"
-        while Student.query.filter_by(matricule=matricule).first():
+        while matricule in seen_matricules or Student.query.filter_by(matricule=matricule).first():
             matricule = f"LTT{date.today().year}{random.randint(1000, 9999)}"
+        seen_matricules.add(matricule)
+
         first_name, last_name = (full_name.split(" ", 1) + [""])[:2]
         username = gen_username(full_name)
         password = generate_account_password(full_name, "eleve")
         user = User(username=username, role="eleve", full_name=full_name, must_change_password=True)
         user.set_password(password)
-        db.session.add(user); db.session.flush()
+        db.session.add(user)
+        db.session.flush()
+
         repeater_value = get_value(row, "redoublant", "statut redoublant", "repeater").strip().lower()
         is_repeater = repeater_value in {"oui", "o", "1", "true", "vrai", "redoublant", "redoublante"}
+        status = get_value(row, "statut", "situation") or "Inscrit"
         student = Student(user_id=user.id, matricule=matricule, first_name=first_name,
                           last_name=last_name, sex=sex, dob=dob,
-                          birth_place=get_value(row, "lieu de naissance", "adresse"),
-                          class_id=school_class.id, status="Inscrit", is_repeater=is_repeater)
+                          birth_place=get_value(row, "lieu de naissance", "adresse", "lieu naissance"),
+                          class_id=school_class.id, status=status, is_repeater=is_repeater)
         db.session.add(student)
         if photo_files:
             match = photo_files.get(_photo_key(matricule)) or photo_files.get(_photo_key(full_name))
@@ -307,13 +411,25 @@ def students_import_preview():
         os.remove(source_path)
         flash(f"Archive de photos invalide : {exc}.", "danger")
         return redirect(url_for("student_enroll"))
-    preview, errors = _preview_student_rows(rows, chosen_class)
+    preview, errors = _preview_student_rows(
+        rows,
+        chosen_class,
+        classes_by_identifier=_class_lookup(),
+        department_id=chosen_department_id,
+    )
     for row in preview:
         row["photo_found"] = bool(photos.get(_photo_key(row["matricule"])) or photos.get(_photo_key(row["full_name"])))
     session["pending_student_import"] = {"id": import_id, "source_path": source_path, "archive_path": archive_path,
                                         "class_id": chosen_class_id, "department_id": chosen_department_id}
-    return render_template("students_import_preview.html", preview=preview, errors=errors,
-                           total_rows=len(rows), selected_class=chosen_class, photo_count=len(photos))
+    return render_template(
+        "students_import_preview.html",
+        preview=preview,
+        errors=errors,
+        total_rows=len(rows),
+        selected_class=chosen_class,
+        photo_count=len(photos),
+        valid_rows=len(preview),
+    )
 
 
 @app.route("/eleves/import/confirmer", methods=["POST"])

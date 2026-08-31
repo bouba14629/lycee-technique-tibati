@@ -32,7 +32,7 @@ def seed_structure():
     db.session.add(section); db.session.flush()
     department = Department(name="Filière test", code="FT", section_id=section.id)
     db.session.add(department); db.session.flush()
-    school_class = SchoolClass(name="1A FT", level="1A", department_id=department.id)
+    school_class = SchoolClass(name="1A FT", code="FT-1A", level="1A", department_id=department.id)
     db.session.add(school_class); db.session.commit()
     other_department = Department(name="Filière voisine", code="FV", section_id=section.id)
     db.session.add(other_department); db.session.flush()
@@ -105,6 +105,15 @@ def main():
             "import_file": (workbook_buffer, "eleves.xlsx"),
         }, content_type="multipart/form-data")
         assert xlsx_response.status_code in (302, 303)
+
+        semicolon_csv = (
+            "Nom;Prénom;Code classe;Sexe;Matricule\n"
+            "NKOA;Natacha;FT-1A;F;MAT-003\n"
+        ).encode("cp1252")
+        semicolon_response = client.post("/eleves/import", data={
+            "import_file": (BytesIO(semicolon_csv), "eleves_nom_prenom.csv"),
+        }, content_type="multipart/form-data")
+        assert semicolon_response.status_code in (302, 303)
 
         preview_csv = b"Nom complet,Matricule,Sexe\nMarc PHOTO,MAT-PHOTO,M\n"
         photo_archive = BytesIO()
@@ -187,7 +196,7 @@ def main():
         assert b'name="photos_zip"' in enrollment_screen.data
         assert b"Pr\xc3\xa9visualiser avant l\xe2\x80\x99import" in enrollment_screen.data
         assert b"\xc3\x89l\xc3\xa8ves inscrits" in dashboard.data
-        assert b">3</div><div class=\"kpi-label\">\xc3\x89l\xc3\xa8ves inscrits" in dashboard.data
+        assert b'>4</div><div class="kpi-label">\xc3\x89l\xc3\xa8ves inscrits' in dashboard.data
         assert b">3</div><div class=\"kpi-label\">Enseignants" in dashboard.data
         assert b"Absences" in dashboard.data
         assert b"\xc3\x89valuations" in dashboard.data
@@ -204,11 +213,12 @@ def main():
     with app.app_context():
         assert Teacher.query.count() == 3
         assert Teacher.query.filter(Teacher.specialty == "Informatique").one().grade == "Grade saisi librement"
-        assert Student.query.count() == 3
+        assert Student.query.count() == 4
         assert User.query.filter_by(role="enseignant").count() == 3
         assert User.query.filter_by(full_name="NGO Natacha", role="enseignant").count() == 1
         assert User.query.filter_by(full_name="MBOG André", role="enseignant").count() == 1
-        assert User.query.filter_by(role="eleve").count() == 3
+        assert User.query.filter_by(full_name="Natacha NKOA", role="eleve").count() == 1
+        assert User.query.filter_by(role="eleve").count() == 4
         student = Student.query.filter_by(matricule="MAT-001").one()
         assert student.matricule == "MAT-001"
         assert student.class_id == class_id

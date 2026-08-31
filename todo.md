@@ -41,3 +41,12 @@
 - [x] Ajouter des tests du filtrage Filière → Classes.
 - [x] Vérifier le rendu desktop et mobile du nouveau filtre.
 - [x] Sauvegarder un checkpoint et publier la fonctionnalité.
+
+- [ ] Diagnostiquer le flux d’importation CSV/XLSX des élèves.
+- [ ] Corriger la détection des colonnes, encodages et séparateurs.
+- [ ] Corriger l’association des élèves aux classes et la validation des références.
+- [ ] Gérer les doublons et les lignes invalides sans interrompre inutilement tout l’import.
+- [ ] Améliorer le rapport d’erreurs et le retour utilisateur après importation.
+- [ ] Mettre à jour le modèle d’importation des élèves.
+- [ ] Ajouter des tests CSV/XLSX, cas limites et non-régression.
+- [ ] Compiler, vérifier et publier la correction de l’importation.
