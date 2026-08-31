@@ -3,7 +3,7 @@ import sys
 import zipfile
 from io import BytesIO
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-import-feature.sqlite"
 os.environ["LTT_ENV"] = "development"
@@ -168,6 +168,12 @@ def main():
         template_response = client.get("/directeur/imports/modele/eleves.xlsx")
         assert template_response.status_code == 200
         assert template_response.data[:2] == b"PK"
+        template_workbook = load_workbook(BytesIO(template_response.data), data_only=True)
+        template_rows = list(template_workbook.active.iter_rows(values_only=True))
+        assert "Nom" in template_rows[0] and "Prénom" in template_rows[0]
+        assert "Classe" in template_rows[0] and "Code classe" in template_rows[0]
+        assert template_rows[1][0] == "MBOG" and template_rows[1][1] == "Paul"
+        template_workbook.close()
         users_screen = client.get("/directeur/utilisateurs")
         new_user_screen = client.get("/directeur/utilisateurs/nouveau")
         enrollment_screen = client.get("/eleves/inscription")

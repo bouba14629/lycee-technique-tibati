@@ -125,11 +125,11 @@ def read_tabular_rows(file_storage):
 def import_template(kind):
     headers = {
         "enseignants": ["Nom complet", "Email", "Téléphone", "Département", "Spécialité", "Grade", "Heures dues"],
-        "eleves": ["Nom complet", "Matricule", "Classe", "Sexe", "Date de naissance", "Lieu de naissance", "Redoublant"],
+        "eleves": ["Nom", "Prénom", "Nom complet", "Matricule", "Classe", "Code classe", "Sexe", "Date de naissance", "Lieu de naissance", "Redoublant", "Statut"],
     }
     examples = {
         "enseignants": ["Marie NGONO", "marie.ngono@example.cm", "699000000", "ACA", "Bureautique", "PLET", 18],
-        "eleves": ["Paul MBOG", "", "1A ACA", "M", "2008-09-14", "Tibati", "Non"],
+        "eleves": ["MBOG", "Paul", "", "", "1A ACA", "ACA-1A", "M", "2008-09-14", "Tibati", "Non", "Inscrit"],
     }
     workbook = Workbook()
     sheet = workbook.active
