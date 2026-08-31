@@ -693,6 +693,13 @@ def student_edit(student_id):
     student.first_name = request.form.get("first_name", student.first_name).strip()
     student.last_name = request.form.get("last_name", student.last_name).strip()
     student.sex = request.form.get("sex", student.sex)
+    if "dob" in request.form:
+        raw_dob = request.form.get("dob", "").strip()
+        try:
+            student.dob = date.fromisoformat(raw_dob) if raw_dob else None
+        except ValueError:
+            flash("La date de naissance est invalide. Utilisez le format JJ/MM/AAAA ou AAAA-MM-JJ.", "danger")
+            return redirect(url_for("student_detail", student_id=student.id))
     student.birth_place = request.form.get("birth_place", student.birth_place)
     student.is_repeater = request.form.get("is_repeater") == "1"
     new_matricule = request.form.get("matricule", "").strip()

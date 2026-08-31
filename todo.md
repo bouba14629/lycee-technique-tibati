@@ -50,3 +50,11 @@
 - [x] Mettre à jour le modèle d’importation des élèves.
 - [x] Ajouter des tests CSV/XLSX, cas limites et non-régression.
 - [x] Compiler, vérifier et publier la correction de l’importation.
+
+- [x] Ajouter la date de naissance au formulaire de modification des élèves.
+- [x] Enregistrer et valider la date de naissance modifiée.
+- [x] Réafficher la date enregistrée dans le formulaire et ajouter un test de non-régression.
+- [x] Compiler, vérifier et publier la correction.
+
+- [x] Sauvegarder un checkpoint après l’ajout du champ « Date de naissance » dans la modification des élèves.
+- [x] Publier ou livrer explicitement la correction de la date de naissance après validation finale.

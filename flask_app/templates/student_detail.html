@@ -33,6 +33,10 @@
           <select name="sex" class="form-select"><option value="M" {{ 'selected' if student.sex=='M' }}>M</option><option value="F" {{ 'selected' if student.sex=='F' }}>F</option></select>
         </div>
         <div class="col-6">
+          <label for="studentDobEdit">Date de naissance</label>
+          <input type="date" id="studentDobEdit" name="dob" class="form-control" value="{{ student.dob.isoformat() if student.dob else '' }}">
+        </div>
+        <div class="col-6">
           <label>Classe</label>
           <select name="class_id" class="form-select">
             {% if student.school_class %}{% for c in student.school_class.department.classes %}<option value="{{ c.id }}" {{ 'selected' if student.class_id==c.id }}>{{ c.name }}</option>{% endfor %}{% endif %}
