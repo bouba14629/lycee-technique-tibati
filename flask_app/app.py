@@ -501,14 +501,32 @@ def dashboard():
 def profil():
     user = User.query.get(session["user_id"])
     if request.method == "POST":
-        user.email = request.form.get("email", user.email)
-        user.phone = request.form.get("phone", user.phone)
-        new_pw = request.form.get("new_password")
-        if new_pw:
-            user.set_password(new_pw)
-            flash("Mot de passe mis à jour.", "success")
+        user.email = request.form.get("email", user.email).strip()
+        user.phone = request.form.get("phone", user.phone).strip()
+        current_pw = request.form.get("current_password", "")
+        new_pw = request.form.get("new_password", "")
+        confirm_pw = request.form.get("confirm_password", "")
+
+        password_error = False
+        if new_pw or current_pw or confirm_pw:
+            if not current_pw or not user.check_password(current_pw):
+                flash("Votre mot de passe actuel est incorrect.", "danger")
+                password_error = True
+            elif len(new_pw) < 8:
+                flash("Le nouveau mot de passe doit contenir au moins 8 caractères.", "danger")
+                password_error = True
+            elif new_pw != confirm_pw:
+                flash("La confirmation du nouveau mot de passe ne correspond pas.", "danger")
+                password_error = True
+            elif new_pw == current_pw:
+                flash("Le nouveau mot de passe doit être différent de l’ancien.", "danger")
+                password_error = True
+            else:
+                user.set_password(new_pw)
+                flash("Mot de passe mis à jour.", "success")
         db.session.commit()
-        flash("Profil mis à jour.", "success")
+        if not password_error:
+            flash("Profil mis à jour.", "success")
         return redirect(url_for("profil"))
     return render_template("profil.html", user=user)
 

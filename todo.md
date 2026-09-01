@@ -77,3 +77,15 @@
 
 - [x] Sauvegarder un nouveau checkpoint après la permutation « Total des points » / « Moyenne classe ».
 - [x] Livrer explicitement la version publiée contenant cette permutation.
+
+- [x] Permuter Moyenne du dernier avec Moyenne trimestrielle dans la synthèse des bulletins.
+- [x] Permuter Moyennes ≥ 10 avec Rang dans la synthèse des bulletins.
+- [x] Permuter Taux réussite avec Éval.1 dans la synthèse des bulletins.
+- [x] Afficher Éval.2 sous Éval.1 dans la synthèse des bulletins.
+- [x] Remplacer « PROFIL DE LA CLASSE » par « TRAVAIL DE L’ÉLÈVE ».
+- [x] Permettre à tous les rôles de modifier leur propre mot de passe avec validation de l’ancien mot de passe.
+- [x] Ajouter les tests de permutations et de changement de mot de passe multi-rôles.
+- [x] Compiler, sauvegarder et publier les corrections.
+
+- [x] Sauvegarder un nouveau checkpoint après les permutations de synthèse et l’ouverture du changement de mot de passe à tous les rôles.
+- [x] Livrer explicitement la version publiée contenant ces corrections.

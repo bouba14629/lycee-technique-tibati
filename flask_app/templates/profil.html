@@ -19,18 +19,40 @@
           <div class="col-md-6"><label>Email</label><input type="email" name="email" class="form-control" value="{{ user.email or '' }}"></div>
           <div class="col-md-6"><label>Téléphone</label><input type="text" name="phone" class="form-control" value="{{ user.phone or '' }}"></div>
           <div class="col-12"><hr></div>
-          <div class="col-md-6">
-            <label>Nouveau mot de passe</label>
+          <div class="col-md-4">
+            <label for="currentPasswordInput">Mot de passe actuel</label>
             <div class="position-relative">
-              <input type="password" name="new_password" id="newPasswordInput" class="form-control pe-5">
-              <button type="button" onclick="togglePassword('newPasswordInput', this)"
+              <input type="password" name="current_password" id="currentPasswordInput" class="form-control pe-5" autocomplete="current-password">
+              <button type="button" onclick="togglePassword('currentPasswordInput', this)"
                       class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
-                      aria-label="Afficher le mot de passe">
+                      aria-label="Afficher le mot de passe actuel">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
               </button>
             </div>
-            <div class="text-muted mt-1" style="font-size:11px;">Champ vide — laissez ainsi pour ne pas changer votre mot de passe actuel.</div>
           </div>
+          <div class="col-md-4">
+            <label for="newPasswordInput">Nouveau mot de passe</label>
+            <div class="position-relative">
+              <input type="password" name="new_password" id="newPasswordInput" class="form-control pe-5" autocomplete="new-password">
+              <button type="button" onclick="togglePassword('newPasswordInput', this)"
+                      class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                      aria-label="Afficher le nouveau mot de passe">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label for="confirmPasswordInput">Confirmer le nouveau mot de passe</label>
+            <div class="position-relative">
+              <input type="password" name="confirm_password" id="confirmPasswordInput" class="form-control pe-5" autocomplete="new-password">
+              <button type="button" onclick="togglePassword('confirmPasswordInput', this)"
+                      class="password-toggle position-absolute top-50 end-0 translate-middle-y me-3"
+                      aria-label="Afficher la confirmation">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.3 12S5.8 5.7 12 5.7 21.7 12 21.7 12 18.2 18.3 12 18.3 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="col-12"><div class="text-muted" style="font-size:11px;">Laissez ces champs vides pour conserver votre mot de passe. Pour le modifier, saisissez votre mot de passe actuel et un nouveau mot de passe d’au moins 8 caractères, puis confirmez-le.</div></div>
         </div>
         <button class="btn-ltt-navy mt-4"><i class="bi bi-check2"></i> Enregistrer les modifications</button>
       </form>

@@ -15,14 +15,24 @@ function assertOrder(template: string, firstLabel: string, secondLabel: string) 
 }
 
 describe("bulletin summary indicator order", () => {
-  it("shows Total des points before Moyenne classe on the screen bulletin", () => {
+  it("shows the requested order on the screen bulletin", () => {
     const template = readFileSync(templatePath("templates/bulletin.html"), "utf8");
+    assertOrder(template, "TRAVAIL DE L’ÉLÈVE", "Total des points");
     assertOrder(template, "Total des points", "Moyenne classe");
+    assertOrder(template, "Moyenne trimestrielle", "Moyenne du dernier");
+    assertOrder(template, "Rang", "Moyennes ≥ 10");
+    assertOrder(template, "Éval.{{ data.term_seq_a }}", "Taux de Réussite");
+    assertOrder(template, "Éval.{{ data.term_seq_a }}", "Éval.{{ data.term_seq_b }}");
   });
 
-  it("shows Total des points before Moyenne classe in the quarterly PDF", () => {
+  it("shows the requested order in the quarterly PDF", () => {
     const template = readFileSync(templatePath("templates/pdf/_bulletin_body.html"), "utf8");
+    assertOrder(template, "TRAVAIL DE L’ÉLÈVE", "Total des points");
     assertOrder(template, "Total des points", "Moyenne classe");
+    assertOrder(template, "Moyenne trimestrielle", "Moyenne du dernier");
+    assertOrder(template, "Rang", "Moyennes ≥ 10");
+    assertOrder(template, "Éval.{{ data.term_seq_a }}", "Taux réussite");
+    assertOrder(template, "Éval.{{ data.term_seq_a }}", "Éval.{{ data.term_seq_b }}");
   });
 
   it("keeps total points before the class average in annual summaries", () => {
