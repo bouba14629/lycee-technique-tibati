@@ -69,3 +69,11 @@
 
 - [x] Sauvegarder un nouveau checkpoint après la correction de la prévisualisation d’import des élèves.
 - [x] Livrer explicitement la version contenant la date de naissance dans la prévisualisation d’import.
+
+- [x] Localiser les blocs « Total des points » et « Moyenne classe » dans les bulletins.
+- [x] Afficher « Total des points » avant « Moyenne classe » à l’écran.
+- [x] Appliquer le même ordre aux impressions et exports PDF.
+- [x] Ajouter les tests de non-régression, compiler et publier la correction.
+
+- [x] Sauvegarder un nouveau checkpoint après la permutation « Total des points » / « Moyenne classe ».
+- [x] Livrer explicitement la version publiée contenant cette permutation.
