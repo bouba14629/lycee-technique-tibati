@@ -5,7 +5,10 @@ from io import BytesIO
 
 from openpyxl import Workbook, load_workbook
 
-os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-import-feature.sqlite"
+TEST_DATABASE_PATH = "/tmp/ltt-import-feature.sqlite"
+if os.path.exists(TEST_DATABASE_PATH):
+    os.remove(TEST_DATABASE_PATH)
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DATABASE_PATH}"
 os.environ["LTT_ENV"] = "development"
 os.environ["LTT_INITIAL_ADMIN_PASSWORD"] = "FoundateurTest#2026"
 
@@ -115,7 +118,7 @@ def main():
         }, content_type="multipart/form-data")
         assert semicolon_response.status_code in (302, 303)
 
-        preview_csv = b"Nom complet,Matricule,Sexe\nMarc PHOTO,MAT-PHOTO,M\n"
+        preview_csv = b"Nom complet,Matricule,Sexe,Date de naissance\nMarc PHOTO,MAT-PHOTO,M,2008-09-14\n"
         photo_archive = BytesIO()
         with zipfile.ZipFile(photo_archive, "w") as archive:
             archive.writestr("MAT-PHOTO.jpg", b"\xff\xd8\xff\xd9")
@@ -130,6 +133,40 @@ def main():
         assert preview_response.status_code == 200
         assert b"V\xc3\xa9rifiez avant d\xe2\x80\x99importer" in preview_response.data
         assert b"Reconnue" in preview_response.data
+        assert b"14/09/2008" in preview_response.data
+        confirm_photo_preview = client.post("/eleves/import/confirmer")
+        assert confirm_photo_preview.status_code in (302, 303)
+        import_routes.save_student_photo = original_save_photo
+
+        empty_dob_preview = client.post("/eleves/import/previsualiser", data={
+            "class_id": str(class_id),
+            "import_file": (BytesIO(b"Nom complet,Matricule,Sexe,Date de naissance\nEleve SANS DATE,MAT-EMPTY,M,\n"), "eleve_sans_date.csv"),
+        }, content_type="multipart/form-data")
+        assert empty_dob_preview.status_code == 200, empty_dob_preview.headers.get("Location")
+        assert b">\xe2\x80\x94</td>" in empty_dob_preview.data
+
+        invalid_dob_preview = client.post("/eleves/import/previsualiser", data={
+            "class_id": str(class_id),
+            "import_file": (BytesIO(b"Nom complet,Matricule,Sexe,Date de naissance\nEleve DATE INVALIDE,MAT-BAD,M,31/02/2008\n"), "eleve_date_invalide.csv"),
+        }, content_type="multipart/form-data")
+        assert invalid_dob_preview.status_code == 200
+        assert b"date invalide" in invalid_dob_preview.data
+
+        xlsx_preview_workbook = Workbook()
+        xlsx_preview_workbook.active.append(["Nom complet", "Matricule", "Sexe", "Date de naissance"])
+        xlsx_preview_workbook.active.append(["Eleve XLSX", "MAT-XLSX", "F", "2009-01-22"])
+        xlsx_preview_buffer = BytesIO()
+        xlsx_preview_workbook.save(xlsx_preview_buffer)
+        xlsx_preview_buffer.seek(0)
+        xlsx_preview = client.post("/eleves/import/previsualiser", data={
+            "class_id": str(class_id),
+            "import_file": (xlsx_preview_buffer, "eleve_date.xlsx"),
+        }, content_type="multipart/form-data")
+        assert xlsx_preview.status_code == 200
+        assert b"22/01/2009" in xlsx_preview.data
+        with client.session_transaction() as session:
+            session.pop("pending_student_import", None)
+
         mismatched_preview = client.post("/eleves/import/previsualiser", data={
             "department_id": str(department_id), "class_id": str(other_class_id),
             "import_file": (BytesIO(preview_csv), "eleves_filiere_incoherente.csv"),

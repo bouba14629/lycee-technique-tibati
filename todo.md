@@ -58,3 +58,14 @@
 
 - [x] Sauvegarder un checkpoint après l’ajout du champ « Date de naissance » dans la modification des élèves.
 - [x] Publier ou livrer explicitement la correction de la date de naissance après validation finale.
+
+- [x] Ajouter la date de naissance dans la prévisualisation de l’import élèves.
+- [x] Aligner l’affichage de la date avec la validation et l’enregistrement réels.
+- [x] Tester les dates CSV/XLSX, les dates vides et les dates invalides dans l’aperçu.
+- [x] Compiler et publier la correction de la prévisualisation d’import.
+
+- [x] Ajouter un test de prévisualisation couvrant CSV date vide, CSV date invalide et XLSX avec date affichée.
+- [x] Sauvegarder un checkpoint spécifique après la correction de la prévisualisation et livrer cette version.
+
+- [x] Sauvegarder un nouveau checkpoint après la correction de la prévisualisation d’import des élèves.
+- [x] Livrer explicitement la version contenant la date de naissance dans la prévisualisation d’import.

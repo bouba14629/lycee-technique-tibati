@@ -192,7 +192,7 @@ def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, depart
             errors.append(f"Ligne {line_number} : sexe invalide — utilisez M ou F.")
             continue
         try:
-            parse_date(get_value(row, "date de naissance", "naissance", "date naissance"))
+            dob = parse_date(get_value(row, "date de naissance", "naissance", "date naissance"))
         except ValueError as exc:
             errors.append(f"Ligne {line_number} : {exc}.")
             continue
@@ -207,6 +207,7 @@ def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, depart
                         "matricule": requested_matricule or "Automatique",
                         "class_name": school_class.name,
                         "department_name": school_class.department.name,
+                        "dob": dob.strftime("%d/%m/%Y") if dob else "—",
                         "photo_found": False})
     return preview, errors
 
