@@ -89,3 +89,17 @@
 
 - [x] Sauvegarder un nouveau checkpoint après les permutations de synthèse et l’ouverture du changement de mot de passe à tous les rôles.
 - [x] Livrer explicitement la version publiée contenant ces corrections.
+
+- [x] Remplacer « Moyenne classe » par « Moyenne Générale de la classe » dans les bulletins.
+- [x] Ajouter « PROFIL DE LA CLASSE » au-dessus de cet indicateur sur la même ligne que « TRAVAIL DE L’ÉLÈVE ».
+- [x] Permettre au conseiller d’orientation de consulter les emplois du temps par classe.
+- [x] Garantir que le conseiller reste en lecture seule pour les emplois du temps.
+- [x] Ajouter les tests de libellé, mise en page et permission de consultation.
+- [x] Compiler, sauvegarder et publier les corrections.
+
+- [x] Mettre à jour les deux modèles PDF annuels avec « Moyenne Générale de la classe » et les titres de synthèse demandés.
+- [x] Étendre les tests aux modèles annuels sur le libellé et la structure des titres.
+- [x] Sauvegarder un nouveau checkpoint après ces corrections et livrer la version publiée correspondante.
+
+- [x] Sauvegarder un nouveau checkpoint après la mise à jour des modèles PDF annuels et l’extension des tests.
+- [x] Livrer explicitement la version publiée correspondante avec le nouveau checkpoint.

@@ -107,6 +107,12 @@
       <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement pour l'emploi du temps et les matières — la construction relève des Censeurs de section et du Censeur Enseignements Généraux. Fiche statistique et indicateurs pédagogiques : vue complète de l'établissement.</div>
       {% endif %}
 
+      {% if current_user and current_user.role == 'conseiller_orientation' %}
+      <div class="sidebar-section-title">Consultation scolaire</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_schedule','class_schedule_official','class_schedule_official_pdf','class_schedule_official_xlsx'] }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps par classe</a>
+      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement — la construction des emplois du temps reste réservée aux Censeurs et au Directeur.</div>
+      {% endif %}
+
       {% if current_user and current_user.role == 'surveillant_general' %}
       <div class="sidebar-section-title">Discipline &amp; absences</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_absences' }}" href="{{ url_for('censeur_absences') }}"><i class="bi bi-exclamation-octagon-fill"></i> Absences à justifier</a>

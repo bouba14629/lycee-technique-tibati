@@ -12,14 +12,13 @@ from utils import (roles_required, check_schedule_conflict, DAYS, general_averag
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule():
     import uuid
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    # Le Proviseur supervise l'ensemble de l'établissement et peut aussi construire l'emploi du temps.
-    # Le Censeur CRM conserve un accès de consultation.
-    is_readonly = user.role == "censeur_crm"
+    # Le Proviseur et le Censeur construisent ; le Censeur CRM et le Conseiller d’orientation consultent.
+    is_readonly = user.role in ("censeur_crm", "conseiller_orientation")
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
@@ -329,7 +328,7 @@ def censeur_conseil():
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def class_schedule_official(class_id):
     from models import ScheduleEntry, Course
     from enseignant_routes import DAY_EN
@@ -343,7 +342,7 @@ def class_schedule_official(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.pdf")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def class_schedule_official_pdf(class_id):
     from flask import send_file, abort
     from models import ScheduleEntry, Course
@@ -361,7 +360,7 @@ def class_schedule_official_pdf(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.xlsx")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def class_schedule_official_xlsx(class_id):
     from flask import send_file
     from models import ScheduleEntry, Course
