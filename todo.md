@@ -103,3 +103,23 @@
 
 - [x] Sauvegarder un nouveau checkpoint après la mise à jour des modèles PDF annuels et l’extension des tests.
 - [x] Livrer explicitement la version publiée correspondante avec le nouveau checkpoint.
+
+- [x] Diagnostiquer pourquoi la photo de l’élève ne se charge pas dans Modifier.
+- [x] Corriger le chemin ou l’URL de stockage de la photo élève.
+- [x] Préremplir et afficher correctement la photo existante dans le formulaire Modifier.
+- [x] Vérifier le remplacement, l’absence de photo et les formats acceptés.
+- [x] Ajouter les tests photo, compiler, sauvegarder et publier la correction.
+
+- [x] Diagnostiquer les formats de photo et les chemins réellement stockés pour un élève.
+- [x] Corriger la résolution des URL locales et `/manus-storage/` dans Modifier.
+- [x] Ajouter un aperçu fiable, un remplacement de photo et un repli vers l’image par défaut.
+- [x] Tester les formats JPG, JPEG, PNG et WEBP ainsi que l’absence de photo.
+- [x] Compiler, sauvegarder et publier la correction du chargement photo.
+- [x] Implémenter un endpoint Node persistant pour téléverser les photos élèves vers le stockage S3.
+- [x] Normaliser les URL photo Flask et ajouter un aperçu avec repli dans le formulaire Modifier.
+- [x] Ajouter un test ciblé de l’upload et de la résolution des photos élèves.
+- [x] Vérifier les tests de régression, le type-check et le build après la correction.
+- [x] Enregistrer et publier la correction photo vérifiée.
+- [x] Ajouter des tests explicites pour JPEG, PNG et WEBP, en plus du cas JPG et du cas sans photo.
+- [x] Ajouter un test d’intégration de l’endpoint Node `/api/ltt/media` avec authentification, type et réponse contrôlés.
+- [x] Ajouter des tests de résolution pour les chemins legacy, statiques et `/manus-storage/`.

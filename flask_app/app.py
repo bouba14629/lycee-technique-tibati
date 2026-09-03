@@ -73,16 +73,26 @@ def ltt_url_for(endpoint, **values):
     """Redirige les ressources lourdes vers le stockage WebDev sans toucher aux templates."""
     if endpoint == "static":
         filename = values.get("filename", "")
-        return LTT_ASSETS.get(filename, url_for(endpoint, **values))
+        if filename in LTT_ASSETS:
+            return LTT_ASSETS[filename]
+        return url_for(endpoint, **values)
     return url_for(endpoint, **values)
 
 
 def student_photo_url(photo):
-    if photo and (photo.startswith("/manus-storage/") or photo.startswith("https://")):
-        return photo
-    if photo:
-        return ltt_url_for("static", filename=f"uploads/students/{photo}")
-    return ltt_url_for("static", filename="img/avatar_placeholder.png")
+    """Retourne une URL stable pour une photo élève ou un avatar de repli."""
+    placeholder = ltt_url_for("static", filename="img/avatar_placeholder.png")
+    if not photo:
+        return placeholder
+    value = str(photo).strip()
+    if value.startswith(("/manus-storage/", "https://", "http://", "/static/")):
+        return value
+    if value.startswith("static/"):
+        value = value[len("static/"):]
+    value = value.lstrip("/")
+    if value.startswith("uploads/students/"):
+        return ltt_url_for("static", filename=value)
+    return ltt_url_for("static", filename=f"uploads/students/{value}")
 
 
 def dashboard_calendar_events():

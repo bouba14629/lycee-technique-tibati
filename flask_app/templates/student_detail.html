@@ -20,10 +20,10 @@
       <div class="row g-2">
         <div class="col-12 text-center mb-2">
           <div style="width:90px; height:108px; border:2px solid var(--navy-900); background:var(--cream); margin:0 auto 6px; border-radius:6px; overflow:hidden;">
-            <img src="{{ student_photo_url(student.photo) }}" style="width:100%; height:100%; object-fit:cover;">
+            <img id="studentEditPhotoPreview" src="{{ student_photo_url(student.photo) }}" alt="Photo de {{ student.full_name }}" loading="lazy" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='{{ student_photo_url(None) }}';">
           </div>
           <div class="fw-semibold" style="font-size:12px; color:var(--navy-900);">{{ student.full_name }}</div>
-          <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mt-1">
+          <input type="file" name="photo" id="studentEditPhoto" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mt-1">
         </div>
         <div class="col-6"><label>Prénom</label><input type="text" name="first_name" class="form-control" value="{{ student.first_name }}"></div>
         <div class="col-6"><label>Nom</label><input type="text" name="last_name" class="form-control" value="{{ student.last_name }}"></div>
@@ -145,4 +145,18 @@
     </div>
   </div>
 </div>
+<script>
+document.getElementById('studentEditPhoto')?.addEventListener('change', function () {
+  const file = this.files?.[0];
+  const preview = document.getElementById('studentEditPhotoPreview');
+  if (!file || !preview) return;
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    this.value = '';
+    return;
+  }
+  const nextUrl = URL.createObjectURL(file);
+  preview.onload = () => URL.revokeObjectURL(nextUrl);
+  preview.src = nextUrl;
+});
+</script>
 {% endblock %}

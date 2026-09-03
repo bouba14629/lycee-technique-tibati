@@ -8,7 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { configureFlaskGateway } from "../lttFlaskProxy";
+import { configureFlaskGateway, registerLttMediaUpload } from "../lttFlaskProxy";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,6 +32,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  registerLttMediaUpload(app);
   // Flask est le point d’entrée par défaut ; React reste disponible avec
   // LTT_FLASK_ENABLED=0.
   const flaskGatewayEnabled = await configureFlaskGateway(app);

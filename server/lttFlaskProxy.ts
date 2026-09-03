@@ -1,6 +1,44 @@
 import type { Express, RequestHandler } from "express";
+import express from "express";
 import { spawn, type ChildProcess } from "child_process";
+import crypto from "crypto";
 import http from "http";
+import { storagePut } from "./storage";
+
+const PHOTO_EXTENSIONS = new Map([
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+]);
+
+export function registerLttMediaUpload(app: Express) {
+  app.post("/api/ltt/media", express.raw({ type: "application/octet-stream", limit: "16mb" }), async (req, res) => {
+    const expectedToken = process.env.JWT_SECRET || "";
+    const suppliedToken = req.header("X-LTT-Internal-Token") || "";
+    if (!expectedToken || suppliedToken !== expectedToken) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const originalName = (req.header("X-File-Name") || "photo.jpg").trim();
+    const extension = originalName.split(".").pop()?.toLowerCase() || "";
+    const contentType = PHOTO_EXTENSIONS.get(extension);
+    const requestedType = req.header("X-File-Type") || contentType;
+    if (!contentType || requestedType !== contentType || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: "Invalid image upload" });
+      return;
+    }
+    try {
+      const safeName = `students/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${extension}`;
+      const stored = await storagePut(safeName, req.body, contentType);
+      res.status(201).json({ key: stored.key, url: stored.url });
+    } catch (error) {
+      console.error("Student photo upload failed", error);
+      res.status(502).json({ error: "Photo storage unavailable" });
+    }
+  });
+}
+
 
 export function getFlaskPort(environment: NodeJS.ProcessEnv = process.env) {
   const configuredPort = Number.parseInt(environment.LTT_FLASK_PORT || "5053", 10);
