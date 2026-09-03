@@ -2,7 +2,7 @@ from datetime import date, datetime
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from app import app, db
 from models import Course, Grade, Attendance, Student, Availability, ActivityLog, PlannedAssessment, User
-from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIODS, build_official_grid, DAYS
+from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIODS, build_official_grid, DAYS, is_timetable_only_subject
 
 DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi": "THURSDAY",
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
@@ -19,7 +19,8 @@ def teacher_courses():
     teacher = current_teacher()
     if not teacher:
         abort(403)
-    return render_template("teacher_courses.html", teacher=teacher, courses=teacher.courses)
+    courses = [course for course in teacher.courses if not is_timetable_only_subject(course.subject)]
+    return render_template("teacher_courses.html", teacher=teacher, courses=courses)
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")
@@ -30,7 +31,7 @@ def teacher_devoir_list(course_id, student_id):
     on ne peut plus simplement 'écraser' une valeur, il faut pouvoir retirer l'entrée fautive."""
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
-    if course.teacher_id != teacher.id:
+    if course.teacher_id != teacher.id or is_timetable_only_subject(course.subject):
         abort(403)
     term = request.args.get("term", TERMS[0])
     student = Student.query.get_or_404(student_id)
@@ -44,7 +45,7 @@ def teacher_devoir_list(course_id, student_id):
 def teacher_devoir_delete(course_id, grade_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
-    if course.teacher_id != teacher.id:
+    if course.teacher_id != teacher.id or is_timetable_only_subject(course.subject):
         abort(403)
     g = Grade.query.get_or_404(grade_id)
     if g.course_id != course.id or g.type != "Devoir":
@@ -62,7 +63,7 @@ def teacher_devoir_delete(course_id, grade_id):
 def teacher_grades(course_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
-    if course.teacher_id != teacher.id:
+    if course.teacher_id != teacher.id or is_timetable_only_subject(course.subject):
         abort(403)
     term = request.args.get("term", TERMS[0])
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
@@ -168,7 +169,7 @@ def teacher_grades(course_id):
 def teacher_attendance(course_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
-    if course.teacher_id != teacher.id:
+    if course.teacher_id != teacher.id or is_timetable_only_subject(course.subject):
         abort(403)
 
     if request.method == "POST":

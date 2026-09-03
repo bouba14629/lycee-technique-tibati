@@ -121,8 +121,9 @@ SUBJECT_CATEGORIES = [
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    coefficient = db.Column(db.Integer, default=1)
-    category = db.Column(db.String(60), default="Enseignements Généraux")
+    coefficient = db.Column(db.Integer, nullable=True, default=1)
+    category = db.Column(db.String(60), nullable=True, default="Enseignements Généraux")
+    timetable_only = db.Column(db.Boolean, nullable=False, default=False)  # matière planifiable sans notes ni bulletin
     department_id = db.Column(db.Integer, db.ForeignKey("department.id"), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"))
     courses = db.relationship("Course", backref="subject", cascade="all, delete-orphan")

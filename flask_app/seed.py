@@ -70,6 +70,29 @@ TECH_EXTRA_SUBJECTS = {
 }
 LEVELS = ["1A", "2A", "3A", "4A", "2nde", "P", "Tle"]
 
+
+def ensure_co_subjects():
+    """Garantit une matière CO par classe, réservée à la programmation horaire."""
+    created = 0
+    for school_class in SchoolClass.query.all():
+        co = Subject.query.filter(Subject.class_id == school_class.id,
+                                  db.func.upper(Subject.name) == "CO").first()
+        if co:
+            co.timetable_only = True
+            co.coefficient = None
+            co.category = None
+            continue
+        co = Subject(name="CO", timetable_only=True, department_id=school_class.department_id,
+                     class_id=school_class.id)
+        db.session.add(co)
+        db.session.flush()
+        co.coefficient = None
+        co.category = None
+        created += 1
+    if created:
+        db.session.commit()
+    return created
+
 FIRST_NAMES_M = ["Jean", "Paul", "Emmanuel", "Samuel", "David", "Aristide", "Boris", "Cédric", "Franck", "Hervé", "Junior", "Landry", "Merlin", "Nathan", "Olivier", "Patrick"]
 FIRST_NAMES_F = ["Marie", "Grace", "Chantal", "Estelle", "Florence", "Huguette", "Ines", "Judith", "Laure", "Nadège", "Odile", "Pauline", "Raissa", "Sandrine", "Vanessa", "Yvette"]
 LAST_NAMES = ["Mbarga", "Ndjock", "Fouda", "Abena", "Tchoumi", "Mvondo", "Ateba", "Belinga", "Essomba", "Ngo Bassong", "Kamga", "Talla", "Njoya", "Fotso", "Bello", "Douteme", "Amadou", "Bouba"]

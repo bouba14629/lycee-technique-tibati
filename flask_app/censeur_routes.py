@@ -8,7 +8,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year)
+                    bulletin_data, get_current_school_year, is_timetable_only_subject)
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
@@ -945,7 +945,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         courses_q = courses_q.filter(Course.subject_id.in_(subject_ids))
     if courses_q is not None and course_id:
         courses_q = courses_q.filter(Course.id == course_id)
-    courses = courses_q.all() if courses_q is not None else []
+    courses = [course for course in (courses_q.all() if courses_q is not None else [])
+               if not is_timetable_only_subject(course.subject)]
     if user.role == "censeur" and user.section_id is None:
         # Censeur Enseignements Généraux : uniquement ses propres matières, quelle que soit la section
         courses = [c for c in courses if c.subject.category == "Enseignements Généraux"]
@@ -1031,7 +1032,7 @@ def censeur_indicators():
         subjects_q = subjects_q.filter(Subject.department_id.in_(scoped_dept_ids))
     if department_id:
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
-    available_subjects = subjects_q.all()
+    available_subjects = [subject for subject in subjects_q.all() if not is_timetable_only_subject(subject)]
     if any(item_id not in {item.id for item in available_subjects} for item_id in subject_ids):
         abort(403)
     courses_q = Course.query.join(SchoolClass)
@@ -1045,7 +1046,8 @@ def censeur_indicators():
         courses_q = courses_q.filter(Course.subject_id.in_(subject_ids))
     if course_id:
         courses_q = courses_q.filter(Course.id == course_id)
-    scoped_courses = courses_q.order_by(SchoolClass.name).all()
+    scoped_courses = [course for course in courses_q.order_by(SchoolClass.name).all()
+                      if not is_timetable_only_subject(course.subject)]
     if course_id and not scoped_courses:
         abort(403)
     rows, totals, missing, custom_types = _compute_indicators(
@@ -1068,6 +1070,8 @@ def censeur_indicators():
         assessments_q = assessments_q.filter(PlannedAssessment.id == assessment_id)
     evaluation_rows = []
     for assessment in assessments_q.order_by(PlannedAssessment.scheduled_date).all():
+        if is_timetable_only_subject(assessment.course.subject):
+            continue
         grades = Grade.query.filter_by(course_id=assessment.course_id, term=assessment.term,
                                        type="Évaluation", sequence=assessment.sequence).all()
         values = [grade.value / grade.max_value * 20 if grade.max_value else grade.value for grade in grades]
@@ -1097,7 +1101,8 @@ def censeur_indicators():
         available_assessments_q = available_assessments_q.filter(Course.id == course_id)
     if sequence:
         available_assessments_q = available_assessments_q.filter(PlannedAssessment.sequence == sequence)
-    available_assessments = available_assessments_q.order_by(PlannedAssessment.scheduled_date).all()
+    available_assessments = [assessment for assessment in available_assessments_q.order_by(PlannedAssessment.scheduled_date).all()
+                             if not is_timetable_only_subject(assessment.course.subject)]
     by_dept = None
     if view == "departement":
         by_dept = {}
@@ -1222,7 +1227,7 @@ def censeur_council_stats():
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
     if class_ids:
         subjects_q = subjects_q.join(Course).filter(Course.class_id.in_(class_ids)).distinct()
-    available_subjects = subjects_q.all()
+    available_subjects = [subject for subject in subjects_q.all() if not is_timetable_only_subject(subject)]
     if any(item_id not in {item.id for item in available_subjects} for item_id in subject_ids):
         abort(403)
     courses_q = Course.query.join(SchoolClass)
@@ -1232,13 +1237,15 @@ def censeur_council_stats():
         courses_q = courses_q.filter(SchoolClass.department_id == department_id)
     if class_ids:
         courses_q = courses_q.filter(Course.class_id.in_(class_ids))
-    subject_courses = courses_q.all()
+    subject_courses = [course for course in courses_q.all()
+                       if not is_timetable_only_subject(course.subject)]
     subject_class_ids = {}
     for item in subject_courses:
         subject_class_ids.setdefault(item.subject_id, set()).add(item.class_id)
     if subject_ids:
         courses_q = courses_q.filter(Course.subject_id.in_(subject_ids))
-    available_courses = courses_q.order_by(SchoolClass.name).all()
+    available_courses = [course for course in courses_q.order_by(SchoolClass.name).all()
+                         if not is_timetable_only_subject(course.subject)]
     if course_id:
         selected_course = next((item for item in available_courses if item.id == course_id), None)
         if not selected_course:
@@ -1297,7 +1304,7 @@ def censeur_council_stats_export():
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
     if class_ids:
         subjects_q = subjects_q.join(Course).filter(Course.class_id.in_(class_ids)).distinct()
-    available_subjects = subjects_q.all()
+    available_subjects = [subject for subject in subjects_q.all() if not is_timetable_only_subject(subject)]
     if any(item_id not in {item.id for item in available_subjects} for item_id in subject_ids):
         abort(403)
     courses_q = Course.query.join(SchoolClass)
