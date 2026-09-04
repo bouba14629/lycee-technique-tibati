@@ -178,7 +178,6 @@ with app.app_context():
         seed_module.seed()
     else:
         seed_module.bootstrap_founder()
-    seed_module.ensure_co_subjects()
 
 
 # ---------------------------------------------------------------- context ---
@@ -491,9 +490,7 @@ def dashboard():
     if role == "eleve":
         student = user.student_profile
         avg = general_average(student.id) if student else None
-        from utils import is_timetable_only_subject
-        recent_grades = [grade for grade in Grade.query.filter_by(student_id=student.id).order_by(Grade.date.desc()).all()
-                         if not is_timetable_only_subject(grade.course.subject)][:6] if student else []
+        recent_grades = Grade.query.filter_by(student_id=student.id).order_by(Grade.date.desc()).limit(6).all() if student else []
         announcements = Announcement.query.filter(Announcement.target_role.in_(["tous", "eleve"])).order_by(Announcement.date.desc()).limit(5).all()
         return render_template("dashboard_eleve.html", student=student, avg=avg,
                                 recent_grades=recent_grades, announcements=announcements)

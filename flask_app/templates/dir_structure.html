@@ -138,13 +138,11 @@
         <div class="mb-2" style="font-size:11px; max-height:140px; overflow-y:auto;">
           {% for subj in dept.subjects %}
           <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
-            <span>{{ subj.name }} <span class="text-muted">({% if subj.timetable_only %}emploi du temps uniquement · Classe : {{ subj.school_class.name }}{% else %}coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }}{% endif %})</span></span>
-            {% if not subj.timetable_only %}
+            <span>{{ subj.name }} <span class="text-muted">(coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }})</span></span>
             <span class="d-flex gap-1">
               <a href="#" data-bs-toggle="modal" data-bs-target="#subjEdit{{ subj.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a>
               <a href="{{ url_for('dir_subject_delete', subject_id=subj.id) }}" class="text-danger" onclick="return confirm('Supprimer la matière {{ subj.name }} ?')"><i class="bi bi-trash"></i></a>
             </span>
-            {% endif %}
           </div>
           <div class="modal fade" id="subjEdit{{ subj.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
             <div class="modal-header"><h5 class="modal-title">Modifier {{ subj.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>

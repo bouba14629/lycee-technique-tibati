@@ -929,17 +929,10 @@ def dir_class_new():
     elif SchoolClass.query.filter_by(code=class_code).first():
         flash("Ce code de classe est déjà utilisé.", "warning")
     elif not SchoolClass.query.filter_by(name=name, department_id=dept_id).first():
-        new_class = SchoolClass(name=name, code=class_code, level=level, specialty=specialty or None, department_id=dept_id,
-                                capacity=request.form.get("capacity", 48, type=int))
-        db.session.add(new_class)
-        db.session.flush()
-        co_subject = Subject(name="CO", timetable_only=True, department_id=dept_id, class_id=new_class.id)
-        db.session.add(co_subject)
-        db.session.flush()
-        co_subject.coefficient = None
-        co_subject.category = None
+        db.session.add(SchoolClass(name=name, code=class_code, level=level, specialty=specialty or None, department_id=dept_id,
+                                    capacity=request.form.get("capacity", 48, type=int)))
         db.session.commit()
-        flash(f"Classe {name} créée avec la matière CO disponible pour l’emploi du temps.", "success")
+        flash(f"Classe {name} créée.", "success")
     else:
         flash("Cette classe existe déjà.", "warning")
     return redirect(url_for("dir_structure"))
@@ -1011,9 +1004,8 @@ def dir_class_delete(class_id):
 def dir_subject_new():
     from utils import user_scoped_department_ids
     name = request.form.get("name", "").strip()
-    is_co = name.upper() == "CO"
-    coef = None if is_co else request.form.get("coefficient", 1, type=int)
-    category = None if is_co else request.form.get("category", "Enseignements Généraux")
+    coef = request.form.get("coefficient", 1, type=int)
+    category = request.form.get("category", "Enseignements Généraux")
     user = User.query.get(session["user_id"])
     target_scope = request.form.get("target_scope", "")
     scope_type, _, scope_id = target_scope.partition(":")
@@ -1035,22 +1027,11 @@ def dir_subject_new():
             return redirect(url_for("dir_structure"))
     else:
         # Censeur Enseignements Généraux (portée transversale) : uniquement des matières générales, dans n'importe quelle filière
-        if not is_co:
-            category = "Enseignements Généraux"
+        category = "Enseignements Généraux"
 
     session["last_subject_class_id"] = target_class.id
-    existing_co = Subject.query.filter(Subject.class_id == target_class.id,
-                                       db.func.upper(Subject.name) == "CO").first() if is_co else None
-    if existing_co:
-        flash(f"La matière CO existe déjà pour la classe {target_class.name}.", "info")
-        return redirect(url_for("dir_structure"))
-    subject = Subject(name="CO" if is_co else name, coefficient=coef, category=category,
-                     timetable_only=is_co, department_id=dept.id, class_id=target_class.id)
-    db.session.add(subject)
-    db.session.flush()
-    if is_co:
-        subject.coefficient = None
-        subject.category = None
+    db.session.add(Subject(name=name, coefficient=coef, category=category, department_id=dept.id,
+                           class_id=target_class.id))
     db.session.commit()
     flash(f"Matière ajoutée à la classe {target_class.name}.", "success")
     return redirect(url_for("dir_structure"))
@@ -1076,16 +1057,9 @@ def dir_subject_edit(subject_id):
     user = User.query.get(session["user_id"])
     if not _subject_in_scope(subject, user):
         abort(403)
-    requested_name = request.form.get("name", subject.name).strip()
-    if subject.timetable_only or requested_name.upper() == "CO" or (subject.name or "").strip().upper() == "CO":
-        subject.name = "CO"
-        subject.coefficient = None
-        subject.category = None
-        subject.timetable_only = True
-    else:
-        subject.name = requested_name
-        subject.coefficient = request.form.get("coefficient", subject.coefficient, type=int)
-        subject.category = request.form.get("category", subject.category)
+    subject.name = request.form.get("name", subject.name).strip()
+    subject.coefficient = request.form.get("coefficient", subject.coefficient, type=int)
+    subject.category = request.form.get("category", subject.category)
     db.session.commit()
     flash("Matière modifiée.", "success")
     return redirect(url_for("dir_structure"))

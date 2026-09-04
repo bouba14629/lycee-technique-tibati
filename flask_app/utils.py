@@ -81,11 +81,6 @@ def student_average(student_id, course_id=None, term=None):
     return round(total / len(grades), 2)
 
 
-def is_timetable_only_subject(subject):
-    """Vrai pour une matière planifiable mais exclue des notes, moyennes et bulletins."""
-    return bool(getattr(subject, "timetable_only", False)) or (subject.name or "").strip().upper() == "CO"
-
-
 def subject_averages(student_id, term=None):
     """Retourne liste (course, moyenne, coefficient) pour un élève."""
     student = Student.query.get(student_id)
@@ -94,8 +89,6 @@ def subject_averages(student_id, term=None):
     courses = Course.query.filter_by(class_id=student.class_id).all()
     result = []
     for c in courses:
-        if is_timetable_only_subject(c.subject):
-            continue
         avg = student_average(student_id, course_id=c.id, term=term)
         if avg is not None:
             result.append({"course": c, "average": avg, "coef": c.subject.coefficient})
@@ -190,8 +183,7 @@ def bulletin_data(student, term=None):
     term = term or TERMS[0]
     if not student.class_id:
         return None
-    courses = [c for c in Course.query.filter_by(class_id=student.class_id).all()
-               if not is_timetable_only_subject(c.subject)]
+    courses = Course.query.filter_by(class_id=student.class_id).all()
     classmates = student.school_class.students
 
     # moyenne + rang par matière, groupés par catégorie
@@ -363,7 +355,7 @@ def annual_bulletin_data(student):
     for category in SUBJECT_CATEGORIES:
         rows = []
         for course in Course.query.filter_by(class_id=student.class_id).all():
-            if is_timetable_only_subject(course.subject) or course.subject.category != category:
+            if course.subject.category != category:
                 continue
             term_values = []
             for term in terms:
@@ -524,7 +516,7 @@ def dashboard_rates(class_ids=None):
     grade_q = Grade.query
     if class_ids is not None:
         grade_q = grade_q.filter(Grade.student_id.in_(student_ids))
-    grades = [grade for grade in grade_q.all() if not is_timetable_only_subject(grade.course.subject)]
+    grades = grade_q.all()
     if grades:
         passing = sum(1 for g in grades if g.max_value and (g.value / g.max_value * 20) >= 10)
         success_rate = round(passing / len(grades) * 100)
@@ -555,7 +547,7 @@ def dashboard_rates(class_ids=None):
 
 def department_success_rates(dept_ids=None):
     """% d'élèves avec moyenne >= 10 (simple, toutes notes confondues), par filière — pour le graphique."""
-    from models import Department, Grade, Course, Subject
+    from models import Department, Grade
 
     q = Department.query
     if dept_ids is not None:
@@ -567,9 +559,8 @@ def department_success_rates(dept_ids=None):
         if not student_ids:
             results.append((d.code, 0))
             continue
-        rows = (Grade.query.join(Course).with_entities(Grade.student_id, Grade.value, Grade.max_value)
-                .filter(Grade.student_id.in_(student_ids))
-                .filter(Course.subject.has(Subject.timetable_only.is_(False))).all())
+        rows = (Grade.query.with_entities(Grade.student_id, Grade.value, Grade.max_value)
+                .filter(Grade.student_id.in_(student_ids)).all())
         per_student = {}
         for sid, val, maxval in rows:
             per_student.setdefault(sid, []).append(val / maxval * 20 if maxval else 0)
@@ -596,8 +587,7 @@ def evolution_series(class_ids=None, term=None):
         q = Grade.query.filter(Grade.student_id.in_(student_ids), Grade.term == term, Grade.type == gtype)
         if seq is not None:
             q = q.filter(Grade.sequence == seq)
-        vals = [(g.value / g.max_value * 20 if g.max_value else 0) for g in q.all()
-                if not is_timetable_only_subject(g.course.subject)]
+        vals = [(g.value / g.max_value * 20 if g.max_value else 0) for g in q.all()]
         return round(sum(vals) / len(vals), 1) if vals else 0
 
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
@@ -646,7 +636,7 @@ def dashboard_alerts(class_ids=None, department_ids=None):
     if department_ids is not None:
         course_q = course_q.join(SchoolClass).filter(SchoolClass.department_id.in_(department_ids))
         class_q = class_q.filter(SchoolClass.department_id.in_(department_ids))
-    courses = [course for course in course_q.all() if not is_timetable_only_subject(course.subject)]
+    courses = course_q.all()
     courses_without_grades = sum(1 for c in courses if not Grade.query.filter_by(course_id=c.id).first())
     if courses_without_grades:
         alerts.append(("warning", "bi-journal-x", "Évaluations",
@@ -657,9 +647,8 @@ def dashboard_alerts(class_ids=None, department_ids=None):
         assessment_q = assessment_q.filter(Course.class_id.in_(class_ids))
     elif department_ids is not None:
         assessment_q = assessment_q.filter(SchoolClass.department_id.in_(department_ids))
-    overdue_assessments = sum(1 for assessment in assessment_q.filter(
-        PlannedAssessment.scheduled_date <= date.today(), PlannedAssessment.status != "Saisie complète").all()
-        if not is_timetable_only_subject(assessment.course.subject))
+    overdue_assessments = assessment_q.filter(PlannedAssessment.scheduled_date <= date.today(),
+                                               PlannedAssessment.status != "Saisie complète").count()
     if overdue_assessments:
         alerts.append(("danger", "bi-clipboard2-x-fill", "Évaluations à finaliser",
                        f"{overdue_assessments} évaluation(s) arrivée(s) à échéance sans saisie complète", "evaluation_plan"))
