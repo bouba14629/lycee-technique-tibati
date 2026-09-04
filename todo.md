@@ -129,4 +129,4 @@
 
 - [x] Conserver le nouveau compte proviseur confirmé par l’utilisateur sans supprimer les données scolaires.
 - [x] Vérifier la connexion du compte proviseur et enregistrer la mise à jour ciblée.
-- [ ] Sauvegarder un checkpoint et publier la conservation du nouveau compte proviseur.
+- [x] Sauvegarder un checkpoint et publier la conservation du nouveau compte proviseur.
