@@ -123,3 +123,10 @@
 - [x] Ajouter des tests explicites pour JPEG, PNG et WEBP, en plus du cas JPG et du cas sans photo.
 - [x] Ajouter un test d’intégration de l’endpoint Node `/api/ltt/media` avec authentification, type et réponse contrôlés.
 - [x] Ajouter des tests de résolution pour les chemins legacy, statiques et `/manus-storage/`.
+
+- [x] Réinitialiser uniquement le mot de passe du compte proviseur avec la valeur fournie, sans modifier les données ni les autres comptes.
+- [x] Vérifier la connexion du proviseur et publier la mise à jour ciblée.
+
+- [x] Conserver le nouveau compte proviseur confirmé par l’utilisateur sans supprimer les données scolaires.
+- [x] Vérifier la connexion du compte proviseur et enregistrer la mise à jour ciblée.
+- [ ] Sauvegarder un checkpoint et publier la conservation du nouveau compte proviseur.
