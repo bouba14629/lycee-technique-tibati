@@ -130,3 +130,7 @@
 - [x] Conserver le nouveau compte proviseur confirmé par l’utilisateur sans supprimer les données scolaires.
 - [x] Vérifier la connexion du compte proviseur et enregistrer la mise à jour ciblée.
 - [x] Sauvegarder un checkpoint et publier la conservation du nouveau compte proviseur.
+
+- [x] Réinitialiser complètement les données et comptes de l’instance.
+- [x] Recréer uniquement le compte proviseur avec son mot de passe actuel.
+- [x] Vérifier que la base est vide hors compte proviseur et publier la version réinitialisée.
