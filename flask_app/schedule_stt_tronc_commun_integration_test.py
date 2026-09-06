@@ -18,7 +18,9 @@ def main():
             db.session.flush()
             principal = User(username="censeur.test", role="censeur", full_name="Censeur Test", section_id=section_stt.id)
             principal.set_password("Lyttib")
-            db.session.add(principal)
+            transversal = User(username="censeur.transversal", role="censeur", full_name="Censeur Transversal")
+            transversal.set_password("Lyttib")
+            db.session.add_all([principal, transversal])
             db.session.flush()
             dept_a = Department(name="Gestion A", code="G-A", section_id=section_stt.id)
             dept_b = Department(name="Gestion B", code="G-B", section_id=section_stt.id)
@@ -30,19 +32,22 @@ def main():
             class_other_level = SchoolClass(name="1ere STT", level="1ere", department_id=dept_b.id)
             class_ind = SchoolClass(name="2nde IND", level="2nde", department_id=dept_ind.id)
             shared_subject = Subject(name="Français commun", coefficient=2, category="Enseignements Généraux", department_id=dept_a.id, class_id=None)
+            b_shared_subject = Subject(name="Français commun", coefficient=2, category="Enseignements Généraux", department_id=dept_b.id, class_id=None)
+            ind_shared_subject = Subject(name="Français commun", coefficient=2, category="Enseignements Généraux", department_id=dept_ind.id, class_id=None)
             class_subject = Subject(name="Matière de 2nde A", coefficient=1, category="Enseignements Généraux", department_id=dept_a.id, class_id=None)
+            missing_subject = Subject(name="Économie locale", coefficient=2, category="Enseignements Généraux", department_id=dept_a.id, class_id=None)
             teacher_user = User(username="enseignant.test", role="enseignant", full_name="Enseignant Test")
             teacher_user.set_password("Lyttib")
-            db.session.add_all([class_a, class_b, class_other_level, class_ind, shared_subject, class_subject, teacher_user])
+            db.session.add_all([class_a, class_b, class_other_level, class_ind, shared_subject, b_shared_subject, ind_shared_subject, class_subject, missing_subject, teacher_user])
             db.session.flush()
             class_subject.class_id = class_a.id
             teacher = Teacher(user_id=teacher_user.id, department_id=dept_a.id, specialty="Français")
             room = Room(name="Salle STT", type="Salle", capacity=40, department_id=dept_a.id)
             db.session.add_all([teacher, room])
             db.session.commit()
-            ids = class_a.id, class_b.id, class_other_level.id, class_ind.id, shared_subject.id, class_subject.id, teacher.id, room.id
+            ids = class_a.id, class_b.id, class_other_level.id, class_ind.id, shared_subject.id, class_subject.id, missing_subject.id, teacher.id, room.id
 
-        class_a_id, class_b_id, other_level_id, ind_id, shared_subject_id, class_subject_id, teacher_id, room_id = ids
+        class_a_id, class_b_id, other_level_id, ind_id, shared_subject_id, class_subject_id, missing_subject_id, teacher_id, room_id = ids
         with app.test_client() as client:
             assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302
             valid = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
@@ -68,6 +73,30 @@ def main():
             with app.app_context():
                 assert ScheduleEntry.query.count() == 2
 
+            client.get("/logout")
+            assert client.post("/login", data={"username": "censeur.transversal", "password": "Lyttib"}).status_code == 302
+            cross_section = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
+                "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
+                "day": "Mardi", "start_time": "08:00", "end_time": "10:00",
+                "tronc_commun_class_ids": [str(ind_id)],
+            }, follow_redirects=True)
+            assert cross_section.status_code == 200
+            assert b"Tronc commun" in cross_section.data
+            with app.app_context():
+                assert ScheduleEntry.query.count() == 4
+
+            incompatible = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
+                "subject_id": missing_subject_id, "teacher_id": teacher_id, "room_id": room_id,
+                "day": "Mercredi", "start_time": "08:00", "end_time": "10:00",
+                "tronc_commun_class_ids": [str(ind_id)],
+            }, follow_redirects=True)
+            assert incompatible.status_code == 200
+            assert "matière sélectionnée n’est pas compatible".encode("utf-8") in incompatible.data
+            with app.app_context():
+                assert ScheduleEntry.query.count() == 4
+
+            client.get("/logout")
+            assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302
             for invalid_id, expected_status in ((other_level_id, 200), (ind_id, 403)):
                 rejected = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                     "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
@@ -76,7 +105,7 @@ def main():
                 }, follow_redirects=True)
                 assert rejected.status_code == expected_status
                 if expected_status == 200:
-                    assert b"tronc commun STT" in rejected.data
+                    assert b"tronc commun" in rejected.data
 
             subject_rejected = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                 "subject_id": class_subject_id, "teacher_id": teacher_id, "room_id": room_id,
@@ -86,7 +115,7 @@ def main():
             assert subject_rejected.status_code == 200
             assert "rattachée à une seule classe".encode("utf-8") in subject_rejected.data
             with app.app_context():
-                assert ScheduleEntry.query.count() == 2
+                assert ScheduleEntry.query.count() == 4
 
     print("SCHEDULE_STT_TRONC_COMMUN_INTEGRATION_TEST_OK")
 

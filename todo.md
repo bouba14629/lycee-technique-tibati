@@ -163,4 +163,14 @@
 - [x] Contrôler les sections, niveaux, matières, salles, enseignants et créneaux pour les censeurs.
 - [x] Ajouter un test Flask d’intégration de création de tronc commun côté censeur.
 - [x] Compiler, sauvegarder et publier la correction pour les censeurs.
-- [ ] Sauvegarder et publier explicitement la correction des troncs communs côté censeur.
+- [x] Sauvegarder et publier explicitement la correction des troncs communs côté censeur.
+
+- [x] Analyser la règle actuelle des troncs communs et les contraintes de niveau et de section.
+- [x] Permettre la création de troncs communs entre classes compatibles de même niveau.
+- [x] Valider la compatibilité de la matière avec chaque classe cible d’un tronc commun inter-sections.
+- [x] Ajouter un test intégré de matière incompatible et de matière partagée compatible entre classes cibles.
+- [ ] Sauvegarder et publier la généralisation après validation finale.
+- [x] Adapter l’interface de sélection et les messages de validation.
+- [x] Tester les classes de même section et de sections différentes, ainsi que les conflits.
+- [x] Compiler, sauvegarder et publier la généralisation des troncs communs.
+- [x] Mettre à jour le test statique des troncs communs pour refléter la règle générale du même niveau.

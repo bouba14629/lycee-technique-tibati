@@ -19,6 +19,13 @@ def _is_stt_class(school_class):
     return any((value or "").strip().upper() == "STT" for value in values)
 
 
+def _subject_compatible_with_class(subject, school_class):
+    """Une matière partagée est globale ou rattachée au département de la classe cible."""
+    if not subject or not school_class or subject.class_id is not None:
+        return False
+    return subject.department_id is None or subject.department_id == school_class.department_id
+
+
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
 @roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule():
@@ -36,23 +43,22 @@ def censeur_schedule():
         abort(403)
     rooms = Room.query.order_by(Room.name).all()
     current_class = SchoolClass.query.get(class_id) if class_id else None
-    can_create_tronc_commun = bool(current_class and _is_stt_class(current_class))
+    can_create_tronc_commun = bool(current_class)
     if current_class:
         subjects_q = Subject.query.filter(or_(
             Subject.class_id == current_class.id,
-            and_(Subject.class_id.is_(None), Subject.department_id == current_class.department_id),
+            and_(Subject.class_id.is_(None), or_(Subject.department_id == current_class.department_id, Subject.department_id.is_(None))),
         ))
         subjects = subjects_q.order_by(Subject.name).all()
     else:
         subjects = []
     all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
-    # Les troncs communs sont limités à STT et aux classes du même niveau de cette section.
+    # Les troncs communs réunissent des classes du même niveau ; le périmètre du censeur reste appliqué.
     tronc_commun_classes = []
     if can_create_tronc_commun:
         tc_q = (SchoolClass.query.join(Department)
                 .filter(SchoolClass.level == current_class.level,
-                        SchoolClass.id != current_class.id,
-                        Department.section_id == current_class.department.section_id))
+                        SchoolClass.id != current_class.id))
         if scoped_class_ids is not None:
             tc_q = tc_q.filter(SchoolClass.id.in_(scoped_class_ids))
         tronc_commun_classes = tc_q.order_by(Department.name, SchoolClass.name).all()
@@ -77,7 +83,7 @@ def censeur_schedule():
         if not current_class or not subject or not teacher or (room_id and not room):
             flash("Sélectionnez une classe, une matière et un enseignant valides. La salle est facultative.", "danger")
             return redirect(url_for("censeur_schedule", class_id=class_id))
-        subject_matches_class = subject.department_id == current_class.department_id and subject.class_id in (None, current_class.id)
+        subject_matches_class = subject.class_id == current_class.id or _subject_compatible_with_class(subject, current_class)
         if not subject_matches_class:
             flash("La matière sélectionnée ne relève pas de cette classe.", "danger")
             return redirect(url_for("censeur_schedule", class_id=class_id))
@@ -86,24 +92,31 @@ def censeur_schedule():
             return redirect(url_for("censeur_schedule", class_id=class_id))
 
         target_class_ids = [class_id]
+        target_subjects = {class_id: subject}
         if tronc_commun_ids:
             if not can_create_tronc_commun:
-                flash("Les troncs communs sont disponibles uniquement pour les classes STT.", "danger")
+                flash("Les troncs communs sont disponibles uniquement depuis une classe valide.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             if subject.category != "Enseignements Généraux":
                 flash("Le tronc commun n'est possible que pour les matières d'enseignement général.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             if subject.class_id is not None:
-                flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée de section.", "danger")
+                flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée compatible.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             for cid in tronc_commun_ids:
                 if scoped_class_ids is not None and cid not in scoped_class_ids:
                     abort(403)
                 other = SchoolClass.query.get(cid)
-                if (not other or other.id == current_class.id or other.level != current_class.level or
-                        not _is_stt_class(other) or other.department.section_id != current_class.department.section_id):
-                    flash("Le tronc commun STT ne peut réunir que des classes STT du même niveau et de la même section.", "danger")
+                if not other or other.id == current_class.id or other.level != current_class.level:
+                    flash("Le tronc commun ne peut réunir que des classes du même niveau.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))
+                target_subject = subject if subject.department_id == other.department_id else Subject.query.filter_by(
+                    name=subject.name, category=subject.category, department_id=other.department_id, class_id=None
+                ).first()
+                if not target_subject or not _subject_compatible_with_class(target_subject, other):
+                    flash("La matière sélectionnée n’est pas compatible avec toutes les classes ciblées. Créez la même matière partagée dans chaque département concerné.", "danger")
+                    return redirect(url_for("censeur_schedule", class_id=class_id))
+                target_subjects[cid] = target_subject
             target_class_ids += tronc_commun_ids
 
         group_key = str(uuid.uuid4()) if len(target_class_ids) > 1 else None
@@ -117,9 +130,10 @@ def censeur_schedule():
             flash("Conflit détecté : " + " | ".join(all_conflicts), "danger")
         else:
             for cid in target_class_ids:
-                course = Course.query.filter_by(subject_id=subject_id, teacher_id=teacher_id, class_id=cid).first()
+                selected_subject = target_subjects.get(cid, subject)
+                course = Course.query.filter_by(subject_id=selected_subject.id, teacher_id=teacher_id, class_id=cid).first()
                 if not course:
-                    course = Course(subject_id=subject_id, teacher_id=teacher_id, class_id=cid)
+                    course = Course(subject_id=selected_subject.id, teacher_id=teacher_id, class_id=cid)
                     db.session.add(course)
                     db.session.flush()
                 db.session.add(ScheduleEntry(course_id=course.id, room_id=room.id if room else None, day=day,

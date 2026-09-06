@@ -26,10 +26,10 @@ assert ind_2nde.department.section.code != stt_2nde.department.section.code
 
 route_source = open(os.path.join(BASE_DIR, "censeur_routes.py"), encoding="utf-8").read()
 template_source = open(os.path.join(BASE_DIR, "templates/censeur_schedule.html"), encoding="utf-8").read()
-assert "_is_stt_class" in route_source
-assert "Department.section_id == current_class.department.section_id" in route_source
-assert "not _is_stt_class(other)" in route_source
+assert "SchoolClass.level == current_class.level" in route_source
+assert "other.level != current_class.level" in route_source
+assert "not _is_stt_class(other)" not in route_source
 assert "can_create_tronc_commun and tronc_commun_classes" in template_source
-assert "Tronc commun STT" in template_source
+assert "Tronc commun — réunir des classes du même niveau" in template_source
 
 print("SCHEDULE_STT_TRONC_COMMUN_FEATURE_TEST_OK")
