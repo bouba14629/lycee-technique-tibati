@@ -1,5 +1,6 @@
 from datetime import date
 from flask import render_template, request, redirect, url_for, flash, session, abort
+from sqlalchemy import and_, or_
 from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
@@ -9,6 +10,13 @@ from utils import (roles_required, check_schedule_conflict, DAYS, general_averag
                     OFFICIAL_PERIODS, build_official_grid, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
                     bulletin_data, get_current_school_year)
+
+
+def _is_stt_class(school_class):
+    """Retourne vrai uniquement pour les classes rattachées à la section STT."""
+    section = school_class.department.section if school_class and school_class.department else None
+    values = ((section.code if section else ""), (section.name if section else ""))
+    return any((value or "").strip().upper() == "STT" for value in values)
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
@@ -28,15 +36,26 @@ def censeur_schedule():
         abort(403)
     rooms = Room.query.order_by(Room.name).all()
     current_class = SchoolClass.query.get(class_id) if class_id else None
-    subjects = Subject.query.filter_by(class_id=current_class.id).order_by(Subject.name).all() if current_class else []
-    all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
-    # Classes du même niveau pouvant être réunies en tronc commun (matières générales uniquement)
-    tronc_commun_classes = []
+    can_create_tronc_commun = bool(current_class and _is_stt_class(current_class))
     if current_class:
-        tc_q = SchoolClass.query.filter(SchoolClass.level == current_class.level, SchoolClass.id != current_class.id)
+        subjects_q = Subject.query.filter(or_(
+            Subject.class_id == current_class.id,
+            and_(Subject.class_id.is_(None), Subject.department_id == current_class.department_id),
+        ))
+        subjects = subjects_q.order_by(Subject.name).all()
+    else:
+        subjects = []
+    all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
+    # Les troncs communs sont limités à STT et aux classes du même niveau de cette section.
+    tronc_commun_classes = []
+    if can_create_tronc_commun:
+        tc_q = (SchoolClass.query.join(Department)
+                .filter(SchoolClass.level == current_class.level,
+                        SchoolClass.id != current_class.id,
+                        Department.section_id == current_class.department.section_id))
         if scoped_class_ids is not None:
             tc_q = tc_q.filter(SchoolClass.id.in_(scoped_class_ids))
-        tronc_commun_classes = tc_q.join(Department).order_by(Department.name).all()
+        tronc_commun_classes = tc_q.order_by(Department.name, SchoolClass.name).all()
     conflicts = None
 
     if request.method == "POST":
@@ -50,7 +69,7 @@ def censeur_schedule():
         day = request.form.get("day")
         start = request.form.get("start_time")
         end = request.form.get("end_time")
-        tronc_commun_ids = request.form.getlist("tronc_commun_class_ids", type=int)
+        tronc_commun_ids = sorted(set(request.form.getlist("tronc_commun_class_ids", type=int)))
         subject = Subject.query.get(subject_id)
         teacher = Teacher.query.get(teacher_id)
         room = Room.query.get(room_id) if room_id else None
@@ -58,7 +77,8 @@ def censeur_schedule():
         if not current_class or not subject or not teacher or (room_id and not room):
             flash("Sélectionnez une classe, une matière et un enseignant valides. La salle est facultative.", "danger")
             return redirect(url_for("censeur_schedule", class_id=class_id))
-        if subject.class_id != current_class.id:
+        subject_matches_class = subject.department_id == current_class.department_id and subject.class_id in (None, current_class.id)
+        if not subject_matches_class:
             flash("La matière sélectionnée ne relève pas de cette classe.", "danger")
             return redirect(url_for("censeur_schedule", class_id=class_id))
         if day not in DAYS or not start or not end or len(start) != 5 or len(end) != 5 or start >= end:
@@ -67,18 +87,22 @@ def censeur_schedule():
 
         target_class_ids = [class_id]
         if tronc_commun_ids:
+            if not can_create_tronc_commun:
+                flash("Les troncs communs sont disponibles uniquement pour les classes STT.", "danger")
+                return redirect(url_for("censeur_schedule", class_id=class_id))
             if subject.category != "Enseignements Généraux":
                 flash("Le tronc commun n'est possible que pour les matières d'enseignement général.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
-            if subject.class_id:
-                flash("Une matière rattachée à une classe ne peut pas être utilisée en tronc commun.", "danger")
+            if subject.class_id is not None:
+                flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée de section.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             for cid in tronc_commun_ids:
                 if scoped_class_ids is not None and cid not in scoped_class_ids:
                     abort(403)
                 other = SchoolClass.query.get(cid)
-                if not other or other.level != current_class.level:
-                    flash("Le tronc commun ne peut réunir que des classes du même niveau.", "danger")
+                if (not other or other.id == current_class.id or other.level != current_class.level or
+                        not _is_stt_class(other) or other.department.section_id != current_class.department.section_id):
+                    flash("Le tronc commun STT ne peut réunir que des classes STT du même niveau et de la même section.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))
             target_class_ids += tronc_commun_ids
 
@@ -115,8 +139,8 @@ def censeur_schedule():
         grid[d].sort(key=lambda e: e.start_time)
 
     return render_template("censeur_schedule.html", classes=classes, class_id=class_id, is_readonly=is_readonly,
-                            rooms=rooms, all_teachers=all_teachers, subjects=subjects, grid=grid, days=DAYS,
-                            tronc_commun_classes=tronc_commun_classes)
+                           rooms=rooms, all_teachers=all_teachers, subjects=subjects, grid=grid, days=DAYS,
+                           tronc_commun_classes=tronc_commun_classes, can_create_tronc_commun=can_create_tronc_commun)
 
 
 def _censeur_teacher_schedule_in_scope(teacher, user):

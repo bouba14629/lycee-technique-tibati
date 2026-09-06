@@ -134,3 +134,20 @@
 - [x] Réinitialiser complètement les données et comptes de l’instance.
 - [x] Recréer uniquement le compte proviseur avec son mot de passe actuel.
 - [x] Vérifier que la base est vide hors compte proviseur et publier la version réinitialisée.
+
+- [ ] Analyser le flux d’importation des enseignants et le rapport actuel des erreurs.
+- [ ] Afficher les problèmes d’importation par ligne, champ, cause et correction recommandée.
+- [ ] Gérer clairement doublons, classes/filières introuvables, champs obligatoires et formats invalides.
+- [ ] Ajouter les tests du rapport d’importation des enseignants et vérifier l’interface.
+- [ ] Compiler, sauvegarder et publier la correction du rapport d’importation.
+
+- [x] Analyser la construction actuelle des emplois du temps et les classes STT par niveau.
+- [x] Ajouter les troncs communs aux classes STT de même niveau.
+- [x] Valider les conflits de salle, enseignant et créneau pour les troncs communs.
+- [x] Afficher clairement les troncs communs dans les emplois du temps concernés.
+- [x] Ajouter les tests STT, compiler, sauvegarder et publier la correction.
+- [x] Corriger la fixture du test de regroupement d’emploi du temps pour fournir le code attendu des classes.
+- [x] Ajouter un test Flask intégré d’un POST de tronc commun STT valide entre deux classes du même niveau.
+- [x] Refuser les matières rattachées à une seule classe dans un tronc commun multi-classes, ou résoudre une matière compatible par classe cible.
+- [x] Tester le refus des groupes hors STT, hors niveau et les conflits enseignant/salle/créneau.
+- [ ] Sauvegarder et publier un checkpoint après validation intégrée complète.

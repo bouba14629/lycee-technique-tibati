@@ -41,10 +41,10 @@
           <div><label>Début</label><input type="time" name="start_time" class="form-control" value="07:30" required></div>
           <div><label>Fin</label><input type="time" name="end_time" class="form-control" value="09:30" required></div>
         </div>
-        {% if tronc_commun_classes %}
+        {% if can_create_tronc_commun and tronc_commun_classes %}
         <div class="mb-3 no-print" id="troncCommunBlock" style="display:none; background:var(--cream); border-radius:10px; padding:10px;">
-          <label class="fw-semibold" style="font-size:12.5px;"><i class="bi bi-people-fill"></i> Tronc commun — réunir d'autres classes du même niveau</label>
-          <div class="text-muted mb-2" style="font-size:10.5px;">Réservé aux matières d'enseignement général. Les notes et l'appel restent saisis séparément pour chaque classe.</div>
+          <label class="fw-semibold" style="font-size:12.5px;"><i class="bi bi-people-fill"></i> Tronc commun STT — réunir des classes du même niveau</label>
+          <div class="text-muted mb-2" style="font-size:10.5px;">Réservé aux classes STT et aux matières d'enseignement général. Les notes et l'appel restent saisis séparément pour chaque classe.</div>
           {% for c in tronc_commun_classes %}
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="tronc_commun_class_ids" value="{{ c.id }}" id="tc{{ c.id }}">

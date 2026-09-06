@@ -1,3 +1,4 @@
+import os
 from types import SimpleNamespace
 
 from utils import schedule_group_labels
@@ -6,7 +7,7 @@ from utils import schedule_group_labels
 def entry(entry_id, group_key, level, section_code, class_name):
     section = SimpleNamespace(code=section_code)
     department = SimpleNamespace(section=section)
-    school_class = SimpleNamespace(level=level, name=class_name, department=department)
+    school_class = SimpleNamespace(level=level, name=class_name, code=class_name, department=department)
     return SimpleNamespace(id=entry_id, group_key=group_key, course=SimpleNamespace(school_class=school_class))
 
 
@@ -15,12 +16,12 @@ ind_entries = [entry(3, "ind", "Tles", "IND", "Tles F1"), entry(4, "ind", "Tles"
 joint_entries = [entry(5, "both", "Tles", "STT", "Tles A"), entry(6, "both", "Tles", "IND", "Tles F1")]
 single_entry = [entry(7, None, "Tles", "STT", "Tles ACA")]
 
-assert set(schedule_group_labels(stt_entries).values()) == {"Tles (STT)"}
-assert set(schedule_group_labels(ind_entries).values()) == {"Tles (IND)"}
-assert set(schedule_group_labels(joint_entries).values()) == {"Tles"}
+assert set(schedule_group_labels(stt_entries).values()) == {"Tles A + Tles B"}
+assert set(schedule_group_labels(ind_entries).values()) == {"Tles F1 + Tles F2"}
+assert set(schedule_group_labels(joint_entries).values()) == {"Tles A + Tles F1"}
 assert schedule_group_labels(single_entry)[7] == "Tles ACA"
 
-schedule_pdf = open("templates/pdf/schedule_official_pdf.html", encoding="utf-8").read()
+schedule_pdf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/pdf/schedule_official_pdf.html"), encoding="utf-8").read()
 assert "font-size: 9pt; height: 46pt" in schedule_pdf
 assert ".subj { font-weight: bold; font-size: 9pt" in schedule_pdf
 assert ".teach { font-style: italic; color: #666; font-size: 7.4pt" in schedule_pdf
