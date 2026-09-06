@@ -144,8 +144,8 @@
 - [x] Tester les doublons enseignants par email et par identifiant généré.
 - [x] Ajouter un test Flask de doublon d’email avec rapport détaillé ligne/champ/cause/correction.
 - [x] Tester la collision de nom et la génération d’un identifiant enseignant suffixé.
-- [ ] Enregistrer le checkpoint après validation réelle des doublons enseignants.
-- [ ] Enregistrer un checkpoint après la correction complète du rapport enseignants.
+- [x] Enregistrer le checkpoint après validation réelle des doublons enseignants.
+- [x] Enregistrer un checkpoint après la correction complète du rapport enseignants.
 
 - [x] Analyser la construction actuelle des emplois du temps et les classes STT par niveau.
 - [x] Ajouter les troncs communs aux classes STT de même niveau.
@@ -157,3 +157,10 @@
 - [x] Refuser les matières rattachées à une seule classe dans un tronc commun multi-classes, ou résoudre une matière compatible par classe cible.
 - [x] Tester le refus des groupes hors STT, hors niveau et les conflits enseignant/salle/créneau.
 - [x] Sauvegarder et publier un checkpoint après validation intégrée complète.
+
+- [x] Vérifier l’interface censeur d’élaboration des emplois du temps et le bloc des troncs communs.
+- [x] Permettre aux censeurs de sélectionner et créer un tronc commun entre classes compatibles.
+- [x] Contrôler les sections, niveaux, matières, salles, enseignants et créneaux pour les censeurs.
+- [x] Ajouter un test Flask d’intégration de création de tronc commun côté censeur.
+- [x] Compiler, sauvegarder et publier la correction pour les censeurs.
+- [ ] Sauvegarder et publier explicitement la correction des troncs communs côté censeur.

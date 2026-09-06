@@ -12,11 +12,13 @@ def main():
         app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
         with app.app_context():
             db.create_all()
-            principal = User(username="proviseur.test", role="directeur", full_name="Proviseur Test")
-            principal.set_password("Lyttib")
             section_stt = Section(name="Section STT", code="STT")
             section_ind = Section(name="Section IND", code="IND")
-            db.session.add_all([principal, section_stt, section_ind])
+            db.session.add_all([section_stt, section_ind])
+            db.session.flush()
+            principal = User(username="censeur.test", role="censeur", full_name="Censeur Test", section_id=section_stt.id)
+            principal.set_password("Lyttib")
+            db.session.add(principal)
             db.session.flush()
             dept_a = Department(name="Gestion A", code="G-A", section_id=section_stt.id)
             dept_b = Department(name="Gestion B", code="G-B", section_id=section_stt.id)
@@ -42,7 +44,7 @@ def main():
 
         class_a_id, class_b_id, other_level_id, ind_id, shared_subject_id, class_subject_id, teacher_id, room_id = ids
         with app.test_client() as client:
-            assert client.post("/login", data={"username": "proviseur.test", "password": "Lyttib"}).status_code == 302
+            assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302
             valid = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                 "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
                 "day": "Lundi", "start_time": "08:00", "end_time": "10:00",
@@ -66,14 +68,15 @@ def main():
             with app.app_context():
                 assert ScheduleEntry.query.count() == 2
 
-            for invalid_id in (other_level_id, ind_id):
+            for invalid_id, expected_status in ((other_level_id, 200), (ind_id, 403)):
                 rejected = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                     "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
                     "day": "Mardi", "start_time": "08:00", "end_time": "10:00",
                     "tronc_commun_class_ids": [str(invalid_id)],
                 }, follow_redirects=True)
-                assert rejected.status_code == 200
-                assert b"tronc commun STT" in rejected.data
+                assert rejected.status_code == expected_status
+                if expected_status == 200:
+                    assert b"tronc commun STT" in rejected.data
 
             subject_rejected = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                 "subject_id": class_subject_id, "teacher_id": teacher_id, "room_id": room_id,
