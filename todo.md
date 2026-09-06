@@ -135,11 +135,17 @@
 - [x] Recréer uniquement le compte proviseur avec son mot de passe actuel.
 - [x] Vérifier que la base est vide hors compte proviseur et publier la version réinitialisée.
 
-- [ ] Analyser le flux d’importation des enseignants et le rapport actuel des erreurs.
-- [ ] Afficher les problèmes d’importation par ligne, champ, cause et correction recommandée.
-- [ ] Gérer clairement doublons, classes/filières introuvables, champs obligatoires et formats invalides.
-- [ ] Ajouter les tests du rapport d’importation des enseignants et vérifier l’interface.
-- [ ] Compiler, sauvegarder et publier la correction du rapport d’importation.
+- [x] Analyser le flux d’importation des enseignants et le rapport actuel des erreurs.
+- [x] Afficher les problèmes d’importation par ligne, champ, cause et correction recommandée.
+- [x] Gérer clairement doublons, classes/filières introuvables, champs obligatoires et formats invalides.
+- [x] Ajouter les tests du rapport d’importation des enseignants et vérifier l’interface.
+- [x] Compiler, sauvegarder et publier la correction du rapport d’importation.
+- [x] Ajouter les erreurs de fichier CSV/XLSX invalide ou non pris en charge au rapport des enseignants.
+- [x] Tester les doublons enseignants par email et par identifiant généré.
+- [x] Ajouter un test Flask de doublon d’email avec rapport détaillé ligne/champ/cause/correction.
+- [x] Tester la collision de nom et la génération d’un identifiant enseignant suffixé.
+- [ ] Enregistrer le checkpoint après validation réelle des doublons enseignants.
+- [ ] Enregistrer un checkpoint après la correction complète du rapport enseignants.
 
 - [x] Analyser la construction actuelle des emplois du temps et les classes STT par niveau.
 - [x] Ajouter les troncs communs aux classes STT de même niveau.
@@ -150,4 +156,4 @@
 - [x] Ajouter un test Flask intégré d’un POST de tronc commun STT valide entre deux classes du même niveau.
 - [x] Refuser les matières rattachées à une seule classe dans un tronc commun multi-classes, ou résoudre une matière compatible par classe cible.
 - [x] Tester le refus des groupes hors STT, hors niveau et les conflits enseignant/salle/créneau.
-- [ ] Sauvegarder et publier un checkpoint après validation intégrée complète.
+- [x] Sauvegarder et publier un checkpoint après validation intégrée complète.

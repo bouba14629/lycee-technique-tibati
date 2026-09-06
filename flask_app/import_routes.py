@@ -74,6 +74,10 @@ def import_report_pdf():
                      mimetype="application/pdf")
 
 
+def _teacher_import_error(line, field, cause, correction):
+    return {"line": line, "field": field, "cause": cause, "correction": correction}
+
+
 def _store_report(kind, created, skipped, errors):
     session["last_import_report"] = {
         "kind": kind,
@@ -215,11 +219,13 @@ def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, depart
 def teachers_import_v2():
     file = request.files.get("import_file")
     if not file or not file.filename:
+        _store_report("enseignants", 0, 0, [_teacher_import_error("—", "Fichier", "Aucun fichier n’a été sélectionné.", "Sélectionnez un fichier CSV ou XLSX avant de lancer l’import.")])
         flash("Veuillez sélectionner un fichier CSV ou XLSX.", "warning")
         return redirect(url_for("dir_users"))
     try:
         rows = read_tabular_rows(file)
     except ValueError as exc:
+        _store_report("enseignants", 0, 0, [_teacher_import_error("—", "Fichier", str(exc), "Utilisez le modèle enseignants.xlsx ou un CSV correctement encodé, avec une ligne d’en-têtes valide.")])
         flash(f"Import impossible : {exc}.", "danger")
         return redirect(url_for("dir_users"))
 
@@ -231,20 +237,24 @@ def teachers_import_v2():
     for line_number, row in rows:
         full_name = _teacher_full_name(row)
         if not full_name:
-            skipped += 1; errors.append(f"Ligne {line_number} : renseignez « Nom complet » ou les colonnes « Nom » et « Prénom »."); continue
+            skipped += 1; errors.append(_teacher_import_error(line_number, "Nom / Prénom", "Le nom de l’enseignant est manquant.", "Renseignez « Nom complet » ou les colonnes « Nom » et « Prénom ».")); continue
         email = get_value(row, "email")
         phone = get_value(row, "téléphone", "telephone", "tel", "phone")
         department_code = get_value(row, "département", "departement", "filiere")
         department = departments_by_code.get(department_code.lower()) if department_code else default_department
         if not department:
-            skipped += 1; errors.append(f"Ligne {line_number} : département requis ou introuvable."); continue
+            skipped += 1; errors.append(_teacher_import_error(line_number, "Département", "Le département est absent ou introuvable.", "Indiquez le code exact d’un département existant ou choisissez un département par défaut.")); continue
         if email and User.query.filter_by(email=email).first():
-            skipped += 1; errors.append(f"Ligne {line_number} : email déjà utilisé ({email})."); continue
+            skipped += 1; errors.append(_teacher_import_error(line_number, "Email", f"L’adresse est déjà utilisée ({email}).", "Utilisez une adresse différente ou laissez la cellule vide si l’email est facultatif.")); continue
         try:
             hours_due = int(get_value(row, "heures dues", "heures") or 18)
         except ValueError:
-            skipped += 1; errors.append(f"Ligne {line_number} : heures dues invalides."); continue
+            skipped += 1; errors.append(_teacher_import_error(line_number, "Heures dues", "La valeur n’est pas un nombre entier.", "Saisissez uniquement un nombre entier, par exemple 18.")); continue
         username = gen_username(full_name)
+        if User.query.filter_by(username=username).first():
+            skipped += 1
+            errors.append(_teacher_import_error(line_number, "Identifiant", f"L’identifiant généré est déjà utilisé ({username}).", "Modifiez le nom complet pour générer un identifiant distinct, puis relancez l’import."))
+            continue
         password = generate_account_password(full_name, "enseignant")
         user = User(username=username, role="enseignant", full_name=full_name, email=email, phone=phone,
                     must_change_password=True)

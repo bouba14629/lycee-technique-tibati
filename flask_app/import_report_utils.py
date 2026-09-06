@@ -16,9 +16,14 @@ def import_report_workbook(report):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Rapport d’import"
-    sheet.column_dimensions["A"].width = 26
-    sheet.column_dimensions["B"].width = 88
-    sheet.merge_cells("A1:B1")
+    detailed = any(isinstance(error, dict) for error in report.get("errors", []))
+    if detailed:
+        widths = {"A": 12, "B": 24, "C": 54, "D": 68}
+    else:
+        widths = {"A": 26, "B": 88}
+    for column, width in widths.items():
+        sheet.column_dimensions[column].width = width
+    sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(widths))
     title = sheet["A1"]
     title.value = "LYCÉE TECHNIQUE DE TIBATI — RAPPORT D’IMPORT"
     title.font = Font(bold=True, size=13, color="FFFFFF")
@@ -29,19 +34,26 @@ def import_report_workbook(report):
     sheet["A5"] = "Lignes ignorées"; sheet["B5"] = report.get("skipped", 0)
     for row in range(3, 6):
         sheet.cell(row=row, column=1).font = Font(bold=True, color=NAVY)
-    sheet["A7"] = "Statut"; sheet["B7"] = "Détail"
-    for cell in sheet[7]:
+    if detailed:
+        headers = ["Ligne", "Champ", "Problème", "Correction recommandée"]
+    else:
+        headers = ["Statut", "Détail"]
+    for index, header in enumerate(headers, start=1):
+        sheet.cell(row=7, column=index, value=header)
+    for cell in sheet[7][:len(headers)]:
         cell.font = Font(bold=True, color=NAVY)
         cell.fill = PatternFill("solid", fgColor=CREAM)
         cell.border = BORDER
     errors = report.get("errors", [])
     if errors:
         for row_number, error in enumerate(errors, start=8):
-            sheet.cell(row=row_number, column=1, value="À corriger").border = BORDER
-            sheet.cell(row=row_number, column=2, value=error).border = BORDER
+            values = ([error.get("line", "—"), error.get("field", "—"), error.get("cause", "—"), error.get("correction", "—")]
+                      if isinstance(error, dict) else ["—", "—", error, ""])
+            for column, value in enumerate(values, start=1):
+                sheet.cell(row=row_number, column=column, value=value).border = BORDER
     else:
-        sheet["A8"] = "Conforme"; sheet["B8"] = "Aucune ligne à corriger."
-        sheet["A8"].border = BORDER; sheet["B8"].border = BORDER
+        sheet.cell(row=8, column=1, value="Conforme").border = BORDER
+        sheet.cell(row=8, column=2, value="Aucune ligne à corriger.").border = BORDER
     output = BytesIO()
     workbook.save(output)
     output.seek(0)

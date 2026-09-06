@@ -7,7 +7,12 @@
   {% if report %}
   <div class="chart-title-row"><div><span class="chart-kicker">Import {{ report.kind }} · {{ report.generated_at }}</span><h2>{{ report.created }} ligne(s) importée(s)</h2></div><span class="chart-pill">{{ report.skipped }} ignorée(s)</span></div>
   <div class="d-flex gap-2 flex-wrap mt-3"><a href="{{ url_for('import_report_excel') }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Télécharger Excel</a><a href="{{ url_for('import_report_pdf') }}" class="btn-ltt-navy"><i class="bi bi-file-earmark-pdf-fill"></i> Télécharger PDF</a></div>
-  {% if report.errors %}<div class="alert alert-warning mt-3"><strong>Lignes à corriger</strong><ul class="mb-0 mt-2">{% for error in report.errors %}<li>{{ error }}</li>{% endfor %}{% if report.has_more %}<li>Autres erreurs non affichées : corrigez le fichier puis relancez l’import.</li>{% endif %}</ul></div>{% else %}<div class="alert alert-success mt-3 mb-0">Toutes les lignes ont été importées avec succès.</div>{% endif %}
+  {% if report.errors %}
+  <div class="alert alert-warning mt-3"><strong>{{ report.errors|length }} anomalie(s) détaillée(s)</strong>{% if report.has_more %} — d’autres erreurs existent dans le fichier{% endif %}</div>
+  <div class="table-responsive mt-3"><table class="table-ltt align-middle"><thead><tr><th>Ligne</th><th>Champ</th><th>Problème</th><th>Correction recommandée</th></tr></thead><tbody>
+  {% for error in report.errors %}<tr>{% if error is mapping %}<td>{{ error.line }}</td><td><strong>{{ error.field }}</strong></td><td>{{ error.cause }}</td><td>{{ error.correction }}</td>{% else %}<td>—</td><td>—</td><td colspan="2">{{ error }}</td>{% endif %}</tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="alert alert-success mt-3 mb-0">Toutes les lignes ont été importées avec succès.</div>{% endif %}
   {% else %}<p class="text-muted mb-0">Aucun rapport d’import disponible pour cette session.</p>{% endif %}
 </div>
 {% endblock %}

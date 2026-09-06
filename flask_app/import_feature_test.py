@@ -54,6 +54,15 @@ def main():
     with app.test_client() as client:
         login_founder(client)
 
+        invalid_teacher_file = client.post("/directeur/utilisateurs/import", data={
+            "import_file": (BytesIO(b"format invalide"), "enseignants.txt"),
+        }, content_type="multipart/form-data", follow_redirects=True)
+        assert invalid_teacher_file.status_code == 200
+        teacher_error_report = client.get("/directeur/imports/rapport")
+        assert teacher_error_report.status_code == 200
+        assert b"Fichier" in teacher_error_report.data
+        assert b"Correction recommand" in teacher_error_report.data
+
         teacher_csv = (
             "Nom complet,Email,Téléphone,Département,Spécialité,Grade,Heures dues\n"
             "Alice TCHUENTE,alice@example.cm,699000000,FT,Informatique,Grade local personnalisé,18\n"
@@ -63,6 +72,25 @@ def main():
             "import_file": (BytesIO(teacher_csv), "enseignants.csv"),
         }, content_type="multipart/form-data")
         assert teacher_response.status_code in (302, 303)
+
+        duplicate_email_response = client.post("/directeur/utilisateurs/import", data={
+            "import_file": (BytesIO("Nom complet,Email,Département\nAutre ENSEIGNANT,alice@example.cm,FT\n".encode("utf-8")), "enseignant_email_duplique.csv"),
+        }, content_type="multipart/form-data")
+        assert duplicate_email_response.status_code in (302, 303)
+        duplicate_email_report = client.get("/directeur/imports/rapport")
+        assert b"Email" in duplicate_email_report.data
+        assert b"d\xc3\xa9j\xc3\xa0 utilis\xc3\xa9e" in duplicate_email_report.data
+        assert b"Correction recommand" in duplicate_email_report.data
+
+        collision_response = client.post("/directeur/utilisateurs/import", data={
+            "import_file": (BytesIO("Nom complet,Email,Département\nAlice TCHUENTE,alice2@example.cm,FT\n".encode("utf-8")), "enseignant_nom_collision.csv"),
+        }, content_type="multipart/form-data")
+        assert collision_response.status_code in (302, 303)
+        with app.app_context():
+            collision_users = User.query.filter_by(full_name="Alice TCHUENTE", role="enseignant").all()
+            assert len(collision_users) == 2
+            assert len({user.username for user in collision_users}) == 2
+            assert "alice.tchuente2" in {user.username for user in collision_users}
 
         teacher_split_name_csv = (
             "NOM,Prénom,Email,Téléphone,Département,Spécialité\n"
@@ -194,7 +222,7 @@ def main():
         assert b"fichier XLSX illisible ou corrompu" in corrupt_xlsx_response.data
         report = client.get("/directeur/imports/rapport")
         assert report.status_code == 200
-        assert b"Lignes" in report.data
+        assert b"ligne(s)" in report.data or b"anomalie(s)" in report.data
         report_excel = client.get("/directeur/imports/rapport.xlsx")
         assert report_excel.status_code == 200
         assert report_excel.data[:2] == b"PK"
@@ -240,7 +268,7 @@ def main():
         assert b"Pr\xc3\xa9visualiser avant l\xe2\x80\x99import" in enrollment_screen.data
         assert b"\xc3\x89l\xc3\xa8ves inscrits" in dashboard.data
         assert b'>4</div><div class="kpi-label">\xc3\x89l\xc3\xa8ves inscrits' in dashboard.data
-        assert b">3</div><div class=\"kpi-label\">Enseignants" in dashboard.data
+        assert b">4</div><div class=\"kpi-label\">Enseignants" in dashboard.data
         assert b"Absences" in dashboard.data
         assert b"\xc3\x89valuations" in dashboard.data
         assert b"Alerte critique" in dashboard.data
@@ -254,10 +282,10 @@ def main():
         assert custom_grade_update.status_code in (302, 303)
 
     with app.app_context():
-        assert Teacher.query.count() == 3
+        assert Teacher.query.count() == 4
         assert Teacher.query.filter(Teacher.specialty == "Informatique").one().grade == "Grade saisi librement"
         assert Student.query.count() == 4
-        assert User.query.filter_by(role="enseignant").count() == 3
+        assert User.query.filter_by(role="enseignant").count() == 4
         assert User.query.filter_by(full_name="NGO Natacha", role="enseignant").count() == 1
         assert User.query.filter_by(full_name="MBOG André", role="enseignant").count() == 1
         assert User.query.filter_by(full_name="Natacha NKOA", role="eleve").count() == 1
