@@ -125,6 +125,7 @@ class Subject(db.Model):
     category = db.Column(db.String(60), default="Enseignements Généraux")
     department_id = db.Column(db.Integer, db.ForeignKey("department.id"), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"))
+    is_tronc_commun = db.Column(db.Boolean, default=False, nullable=False)
     courses = db.relationship("Course", backref="subject", cascade="all, delete-orphan")
     school_class = db.relationship("SchoolClass", backref="subjects")
 

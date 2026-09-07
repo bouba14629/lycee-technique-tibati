@@ -169,8 +169,16 @@
 - [x] Permettre la création de troncs communs entre classes compatibles de même niveau.
 - [x] Valider la compatibilité de la matière avec chaque classe cible d’un tronc commun inter-sections.
 - [x] Ajouter un test intégré de matière incompatible et de matière partagée compatible entre classes cibles.
-- [ ] Sauvegarder et publier la généralisation après validation finale.
+- [x] Sauvegarder et publier la généralisation après validation finale.
 - [x] Adapter l’interface de sélection et les messages de validation.
 - [x] Tester les classes de même section et de sections différentes, ainsi que les conflits.
 - [x] Compiler, sauvegarder et publier la généralisation des troncs communs.
 - [x] Mettre à jour le test statique des troncs communs pour refléter la règle générale du même niveau.
+
+- [x] Vérifier le mode Autoscale et les conditions du déploiement permanent.
+- [x] Ajouter dans Matières et filières côté censeur l’option Tronc commun.
+- [x] Afficher une liste multi-sélectionnée des classes de même niveau.
+- [x] Autoriser une matière de tronc commun à être programmée simultanément dans les classes choisies sans conflit.
+- [x] Tester les matières partagées, les classes de niveaux différents et les conflits de créneau, salle et enseignant.
+- [x] Compiler, sauvegarder et publier la correction.
+- [ ] Enregistrer et publier explicitement la correction Tronc commun de Matières et filières.

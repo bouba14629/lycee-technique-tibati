@@ -831,8 +831,11 @@ def dir_structure():
             last_subject_class_id = saved_class_id
         elif saved_class_id is not None:
             session.pop("last_subject_class_id", None)
+    available_classes = [school_class for section in sections for department in section.departments for school_class in department.classes]
+    available_levels = sorted({school_class.level for school_class in available_classes if school_class.level})
     return render_template("dir_structure.html", sections=sections, scoped_dept_ids=scoped_dept_ids,
-                           last_subject_class_id=last_subject_class_id)
+                           last_subject_class_id=last_subject_class_id, available_classes=available_classes,
+                           available_levels=available_levels)
 
 
 @app.route("/directeur/structure/section/nouvelle", methods=["POST"])
@@ -1007,6 +1010,41 @@ def dir_subject_new():
     coef = request.form.get("coefficient", 1, type=int)
     category = request.form.get("category", "Enseignements Généraux")
     user = User.query.get(session["user_id"])
+    creation_mode = request.form.get("creation_mode", "classe")
+    scoped_dept_ids = user_scoped_department_ids(user)
+    if not name:
+        flash("Le nom de la matière est requis.", "warning")
+        return redirect(url_for("dir_structure"))
+    if scoped_dept_ids is None:
+        category = "Enseignements Généraux"
+
+    if creation_mode == "tronc_commun":
+        class_ids = list(dict.fromkeys(request.form.getlist("tronc_class_ids", type=int)))
+        classes = SchoolClass.query.filter(SchoolClass.id.in_(class_ids)).all() if class_ids else []
+        if len(classes) < 2:
+            flash("Sélectionnez au moins deux classes pour créer un tronc commun.", "warning")
+            return redirect(url_for("dir_structure"))
+        levels = {school_class.level for school_class in classes}
+        if len(levels) != 1:
+            flash("Les classes d’un tronc commun doivent être du même niveau.", "danger")
+            return redirect(url_for("dir_structure"))
+        if scoped_dept_ids is not None and any(school_class.department_id not in scoped_dept_ids for school_class in classes):
+            flash("Vous ne pouvez créer un tronc commun qu’entre les classes de votre périmètre.", "danger")
+            return redirect(url_for("dir_structure"))
+        existing = Subject.query.filter(
+            Subject.name == name, Subject.is_tronc_commun.is_(True), Subject.class_id.in_(class_ids)
+        ).count()
+        if existing:
+            flash("Cette matière de tronc commun existe déjà pour au moins une classe sélectionnée.", "warning")
+            return redirect(url_for("dir_structure"))
+        for school_class in classes:
+            db.session.add(Subject(name=name, coefficient=max(1, coef), category=category,
+                                   department_id=school_class.department_id, class_id=school_class.id,
+                                   is_tronc_commun=True))
+        db.session.commit()
+        flash(f"Tronc commun « {name} » créé pour {len(classes)} classes de niveau {next(iter(levels))}.", "success")
+        return redirect(url_for("dir_structure"))
+
     target_scope = request.form.get("target_scope", "")
     scope_type, _, scope_id = target_scope.partition(":")
     if scope_type == "classe" and scope_id.isdigit():
@@ -1015,23 +1053,12 @@ def dir_subject_new():
     else:
         flash("Choisissez une classe avant d’ajouter la matière.", "warning")
         return redirect(url_for("dir_structure"))
-    if not name:
-        flash("Le nom de la matière est requis.", "warning")
+    if scoped_dept_ids is not None and dept.id not in scoped_dept_ids:
+        flash("Vous ne pouvez ajouter une matière que dans les filières de votre section.", "danger")
         return redirect(url_for("dir_structure"))
-
-    scoped_dept_ids = user_scoped_department_ids(user)
-    if scoped_dept_ids is not None:
-        # Censeur STT ou Industriel : uniquement les départements de sa section
-        if dept.id not in scoped_dept_ids:
-            flash("Vous ne pouvez ajouter une matière que dans les filières de votre section.", "danger")
-            return redirect(url_for("dir_structure"))
-    else:
-        # Censeur Enseignements Généraux (portée transversale) : uniquement des matières générales, dans n'importe quelle filière
-        category = "Enseignements Généraux"
-
     session["last_subject_class_id"] = target_class.id
-    db.session.add(Subject(name=name, coefficient=coef, category=category, department_id=dept.id,
-                           class_id=target_class.id))
+    db.session.add(Subject(name=name, coefficient=max(1, coef), category=category, department_id=dept.id,
+                           class_id=target_class.id, is_tronc_commun=False))
     db.session.commit()
     flash(f"Matière ajoutée à la classe {target_class.name}.", "success")
     return redirect(url_for("dir_structure"))

@@ -20,8 +20,12 @@ def _is_stt_class(school_class):
 
 
 def _subject_compatible_with_class(subject, school_class):
-    """Une matière partagée est globale ou rattachée au département de la classe cible."""
-    if not subject or not school_class or subject.class_id is not None:
+    """Vérifie qu’une matière partagée ou un tronc commun correspond à la classe cible."""
+    if not subject or not school_class:
+        return False
+    if subject.is_tronc_commun:
+        return subject.class_id == school_class.id
+    if subject.class_id is not None:
         return False
     return subject.department_id is None or subject.department_id == school_class.department_id
 
@@ -100,7 +104,7 @@ def censeur_schedule():
             if subject.category != "Enseignements Généraux":
                 flash("Le tronc commun n'est possible que pour les matières d'enseignement général.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
-            if subject.class_id is not None:
+            if subject.class_id is not None and not subject.is_tronc_commun:
                 flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée compatible.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             for cid in tronc_commun_ids:
@@ -110,9 +114,11 @@ def censeur_schedule():
                 if not other or other.id == current_class.id or other.level != current_class.level:
                     flash("Le tronc commun ne peut réunir que des classes du même niveau.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))
-                target_subject = subject if subject.department_id == other.department_id else Subject.query.filter_by(
+                target_subject = Subject.query.filter_by(
+                    name=subject.name, category=subject.category, class_id=other.id, is_tronc_commun=True
+                ).first() if subject.is_tronc_commun else (subject if subject.department_id == other.department_id else Subject.query.filter_by(
                     name=subject.name, category=subject.category, department_id=other.department_id, class_id=None
-                ).first()
+                ).first())
                 if not target_subject or not _subject_compatible_with_class(target_subject, other):
                     flash("La matière sélectionnée n’est pas compatible avec toutes les classes ciblées. Créez la même matière partagée dans chaque département concerné.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))

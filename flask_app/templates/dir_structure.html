@@ -27,20 +27,51 @@
 </div>
 {% endif %}
 {% if current_user.role == 'censeur' %}
-<div class="card-ltt">
-  <div class="section-title"><h2><i class="bi bi-book-fill me-1" style="color:var(--gold-500);"></i> Ajouter une matière</h2></div>
-  <p class="text-muted mb-2" style="font-size:12px;">Chaque matière est rattachée à une classe et sera proposée uniquement dans l’emploi du temps de cette classe.</p>
-  <form method="POST" action="{{ url_for('dir_subject_new') }}" class="form-ltt row g-3 align-items-end">
-    <div class="col-md-4"><label>Rattacher à</label><select name="target_scope" class="form-select" required>
-      <option value="" selected disabled>— Choisir une classe —</option>
-      {% for section in sections %}<optgroup label="Classes — {{ section.name }}">{% for dept in section.departments %}{% for c in dept.classes %}<option value="classe:{{ c.id }}" {{ 'selected' if last_subject_class_id == c.id }}>Classe : {{ c.code or c.name }}</option>{% endfor %}{% endfor %}</optgroup>{% endfor %}
-    </select></div>
-    <div class="col-md-3"><label>Nom de la matière</label><input type="text" name="name" class="form-control" required></div>
-    <div class="col-md-2"><label>Coefficient</label><input type="number" name="coefficient" class="form-control" value="2" min="1" required></div>
-    <div class="col-md-2"><label>Catégorie</label><select name="category" class="form-select"><option>Enseignements Généraux</option><option>Enseignements Professionnels Théoriques</option><option>Enseignements Professionnels Pratiques</option><option>Enseignements Divers</option></select></div>
-    <div class="col-md-1"><button class="btn-ltt-gold w-100 justify-content-center" title="Ajouter"><i class="bi bi-plus-lg"></i></button></div>
-  </form>
-</div>
+  <div class="card-ltt">
+    <div class="section-title"><h2><i class="bi bi-book-fill me-1" style="color:var(--gold-500);"></i> Ajouter une matière ou un tronc commun</h2></div>
+    <p class="text-muted mb-2" style="font-size:12px;">Choisissez « Tronc commun » pour créer la même matière dans plusieurs classes de même niveau. Elle pourra ensuite être programmée simultanément dans l’emploi du temps.</p>
+    <form method="POST" action="{{ url_for('dir_subject_new') }}" class="form-ltt row g-3 align-items-end" id="subjectCreationForm">
+      <div class="col-md-3"><label>Type de création</label><select name="creation_mode" id="subjectCreationMode" class="form-select" required>
+        <option value="classe">Matière d’une classe</option><option value="tronc_commun">Tronc commun</option>
+      </select></div>
+      <div class="col-md-3" id="singleClassField"><label>Rattacher à</label><select name="target_scope" class="form-select">
+        <option value="" selected disabled>— Choisir une classe —</option>
+        {% for section in sections %}<optgroup label="Classes — {{ section.name }}">{% for dept in section.departments %}{% for c in dept.classes %}<option value="classe:{{ c.id }}" {{ 'selected' if last_subject_class_id == c.id }}>Classe : {{ c.code or c.name }}</option>{% endfor %}{% endfor %}</optgroup>{% endfor %}
+      </select></div>
+      <div class="col-md-3 d-none" id="commonClassesField"><label>Classes du même niveau</label><select name="tronc_class_ids" id="troncClassIds" class="form-select" multiple size="4">
+        {% for level in available_levels %}<optgroup label="Niveau {{ level }}">{% for c in available_classes if c.level == level %}<option value="{{ c.id }}" data-level="{{ c.level }}">{{ c.code or c.name }} — {{ c.department.name }}</option>{% endfor %}</optgroup>{% endfor %}
+      </select><small class="text-muted">Maintenez Ctrl/Cmd pour choisir au moins deux classes.</small></div>
+      <div class="col-md-3"><label>Nom de la matière</label><input type="text" name="name" class="form-control" required></div>
+      <div class="col-md-1"><label>Coef.</label><input type="number" name="coefficient" class="form-control" value="2" min="1" required></div>
+      <div class="col-md-2"><label>Catégorie</label><select name="category" class="form-select"><option>Enseignements Généraux</option><option>Enseignements Professionnels Théoriques</option><option>Enseignements Professionnels Pratiques</option><option>Enseignements Divers</option></select></div>
+      <div class="col-md-1"><button class="btn-ltt-gold w-100 justify-content-center" title="Ajouter"><i class="bi bi-plus-lg"></i></button></div>
+    </form>
+    <script>
+      (() => {
+        const form = document.getElementById('subjectCreationForm');
+        const mode = document.getElementById('subjectCreationMode');
+        const single = document.getElementById('singleClassField');
+        const common = document.getElementById('commonClassesField');
+        const target = form?.querySelector('[name="target_scope"]');
+        const classes = document.getElementById('troncClassIds');
+        const sync = () => {
+          const isCommon = mode.value === 'tronc_commun';
+          single.classList.toggle('d-none', isCommon); common.classList.toggle('d-none', !isCommon);
+          target.required = !isCommon; classes.required = isCommon;
+        };
+        mode.addEventListener('change', sync); sync();
+        form.addEventListener('submit', (event) => {
+          if (mode.value !== 'tronc_commun') return;
+          const selected = [...classes.selected];
+          const levels = new Set(selected.map(option => option.dataset.level));
+          if (selected.length < 2 || levels.size !== 1) {
+            event.preventDefault(); alert('Sélectionnez au moins deux classes du même niveau.');
+          }
+        });
+      })();
+    </script>
+  </div>
+
 {% endif %}
 {% for section in sections %}
 <div class="card-ltt">
@@ -138,7 +169,7 @@
         <div class="mb-2" style="font-size:11px; max-height:140px; overflow-y:auto;">
           {% for subj in dept.subjects %}
           <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
-            <span>{{ subj.name }} <span class="text-muted">(coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }})</span></span>
+            <span>{{ subj.name }} {% if subj.is_tronc_commun %}<span class="badge-ltt badge-gold">Tronc commun</span>{% endif %}<span class="text-muted">(coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }})</span></span>
             <span class="d-flex gap-1">
               <a href="#" data-bs-toggle="modal" data-bs-target="#subjEdit{{ subj.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a>
               <a href="{{ url_for('dir_subject_delete', subject_id=subj.id) }}" class="text-danger" onclick="return confirm('Supprimer la matière {{ subj.name }} ?')"><i class="bi bi-trash"></i></a>
