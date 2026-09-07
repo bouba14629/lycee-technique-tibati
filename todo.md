@@ -181,4 +181,14 @@
 - [x] Autoriser une matière de tronc commun à être programmée simultanément dans les classes choisies sans conflit.
 - [x] Tester les matières partagées, les classes de niveaux différents et les conflits de créneau, salle et enseignant.
 - [x] Compiler, sauvegarder et publier la correction.
-- [ ] Enregistrer et publier explicitement la correction Tronc commun de Matières et filières.
+- [x] Enregistrer et publier explicitement la correction Tronc commun de Matières et filières.
+
+- [x] Diagnostiquer l’échec de connexion des identifiants existants après le dernier déploiement.
+- [x] Vérifier l’instance de base et les comptes sans modifier les données ni les mots de passe.
+- [x] Corriger uniquement la cause technique confirmée et tester les connexions.
+- [ ] Publier la correction d’accès après validation.
+- [x] Isoler schedule_conflict_feature_test.py sur une base SQLite temporaire pour empêcher toute suppression de la base de production.
+- [x] Rétablir l’accès au compte administrateur après confirmation de l’origine de l’échec, sans prétendre récupérer les comptes déjà supprimés.
+- [x] Rétablir uniquement le compte proviseur avec le mot de passe confirmé.
+- [x] Vérifier sa connexion et conserver les autres lignes existantes sans nouvelle suppression.
+- [ ] Publier la correction qui isole les tests de la base de production.

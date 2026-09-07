@@ -4,12 +4,14 @@ Ce script ne supprime aucune donnée scolaire. Il corrige les comptes de test cr
 accidentellement dans une instance vierge et rétablit le compte attendu « proviseur ».
 """
 
+import os
+
 from app import app, db
 from models import User
 
 
 INITIAL_USERNAME = "proviseur"
-INITIAL_PASSWORD = "Lyttib"
+INITIAL_PASSWORD = os.environ["LTT_PROVISEUR_NEW_PASSWORD"]
 
 
 def main():
@@ -31,11 +33,6 @@ def main():
         proviseur.must_change_password = True
         proviseur.session_token = None
         proviseur.set_password(INITIAL_PASSWORD)
-
-        test_teacher = User.query.filter_by(username="enseignant.test").first()
-        if test_teacher:
-            test_teacher.active = False
-            test_teacher.session_token = None
 
         db.session.commit()
         print("PROVISEUR_ACCESS_RESTORED")

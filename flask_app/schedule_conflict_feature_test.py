@@ -1,6 +1,10 @@
 import os
 import sys
 
+# Ce test destructif doit toujours utiliser une base jetable, jamais la base de production.
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-schedule-conflict.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app import app
