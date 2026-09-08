@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-facilities_enhancements_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 import sys
 from datetime import date
 

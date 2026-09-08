@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-class_level_labels_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -26,7 +29,7 @@ def main():
 
     created = client.post(
         "/directeur/structure/classe/nouvelle",
-        data={"department_id": department_id, "level": "1A", "specialty": "ELEQ"},
+        data={"department_id": department_id, "level": "1A", "specialty": "ELEQ", "code": "1A-ELEQ"},
     )
     assert created.status_code in (302, 303)
 
@@ -38,7 +41,7 @@ def main():
 
     edited = client.post(
         f"/directeur/structure/classe/{class_id}/modifier",
-        data={"level": "Tle", "specialty": "ELEQ"},
+        data={"level": "Tle", "specialty": "ELEQ", "code": "TLE-ELEQ"},
     )
     assert edited.status_code in (302, 303)
 

@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-absence_exports_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 from datetime import date
 
 os.environ.setdefault("LTT_ENV", "development")

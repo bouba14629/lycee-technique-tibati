@@ -2,7 +2,7 @@ from datetime import date, datetime
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from app import app, db
 from models import Course, Grade, Attendance, Student, Availability, ActivityLog, PlannedAssessment, User
-from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIODS, build_official_grid, DAYS
+from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIODS, build_official_grid, DAYS, schedule_extra_hours
 
 DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi": "THURSDAY",
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
@@ -287,10 +287,11 @@ def teacher_schedule_official():
     entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
+    extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
     classes_tenues = ", ".join(sorted({c.school_class.code or c.school_class.name for c in teacher.courses}))
     return render_template("schedule_official.html", mode="individuel", teacher=teacher, grid=grid,
                             periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
-                            hours_faites=hours_faites, classes_tenues=classes_tenues,
+                            hours_faites=hours_faites, extra_hours=extra_hours, classes_tenues=classes_tenues,
                             pdf_url=url_for("teacher_schedule_official_pdf"),
                             xlsx_url=url_for("teacher_schedule_official_xlsx"))
 
@@ -306,10 +307,11 @@ def teacher_schedule_official_pdf():
     entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
+    extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
     classes_tenues = ", ".join(sorted({c.school_class.code or c.school_class.name for c in teacher.courses}))
     pdf = render_pdf("pdf/schedule_official_pdf.html", mode="individuel", teacher=teacher, grid=grid,
                       periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
-                      hours_faites=hours_faites, classes_tenues=classes_tenues)
+                      hours_faites=hours_faites, extra_hours=extra_hours, classes_tenues=classes_tenues)
     if not pdf:
         abort(500)
     filename = f"Emploi_du_temps_{teacher.user.full_name}.pdf".replace(" ", "_")
@@ -328,7 +330,9 @@ def teacher_schedule_official_xlsx():
     for e in entries:
         if e.day in grid_raw:
             grid_raw[e.day].append(e)
-    wb_io = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS)
+    planned_slots = filled_official_slots(build_official_grid(entries))
+    extra_hours = schedule_extra_hours(planned_slots, teacher.hours_due)
+    wb_io = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS, planned_slots=planned_slots, extra_hours=extra_hours)
     filename = f"Emploi_du_temps_{teacher.user.full_name}.xlsx".replace(" ", "_")
     return send_file(wb_io, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                       as_attachment=True, download_name=filename)

@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-bulletin_twenty_subjects_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 from datetime import datetime
 from pathlib import Path
 

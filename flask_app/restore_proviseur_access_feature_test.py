@@ -1,4 +1,8 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-restore_proviseur_access_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+os.environ.setdefault("LTT_PROVISEUR_NEW_PASSWORD", "TestRestore#2026")
+
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -28,11 +32,11 @@ def main():
         assert proviseur.role == "directeur"
         assert proviseur.active is True
         assert proviseur.must_change_password is True
-        assert proviseur.check_password("Lyttib")
-        assert teacher.active is False
+        assert proviseur.check_password(os.environ["LTT_PROVISEUR_NEW_PASSWORD"])
+        assert teacher.active is True
 
     with app.test_client() as client:
-        response = client.post("/login", data={"username": "proviseur", "password": "Lyttib"})
+        response = client.post("/login", data={"username": "proviseur", "password": os.environ["LTT_PROVISEUR_NEW_PASSWORD"]})
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/premiere-connexion")
 

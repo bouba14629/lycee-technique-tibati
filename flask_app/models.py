@@ -1,8 +1,26 @@
 from datetime import datetime
+import os
+
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
+
+_original_drop_all = db.drop_all
+
+
+def _safe_drop_all(*args, **kwargs):
+    """Refuse toute suppression globale hors base SQLite temporaire de test."""
+    database_url = os.getenv("DATABASE_URL", "")
+    is_temporary_sqlite = database_url.startswith("sqlite:///") and ("/tmp/" in database_url or ":memory:" in database_url)
+    if not is_temporary_sqlite and os.getenv("LTT_ALLOW_DESTRUCTIVE_TEST_DB") != "1":
+        raise RuntimeError(
+            "db.drop_all() est interdit sur la base active. Définissez DATABASE_URL vers une base SQLite temporaire de test."
+        )
+    return _original_drop_all(*args, **kwargs)
+
+
+db.drop_all = _safe_drop_all
 
 ROLES = ["directeur", "censeur", "censeur_crm", "surveillant_general", "conseiller_orientation", "chef_travaux", "chef_crm", "enseignant", "eleve", "parent"]
 STAFF_GRADES = ["Instituteur", "PLEG", "PLET", "PCEG", "PCET", "IGE", "IPR", "CPE"]

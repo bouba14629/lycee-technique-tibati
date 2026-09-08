@@ -12,7 +12,7 @@ from models import (
     User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
     Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation,
 )
-from utils import roles_required, notify, user_scoped_department_ids, generate_account_password, check_schedule_conflict
+from utils import roles_required, notify, user_scoped_department_ids, generate_account_password, check_schedule_conflict, schedule_extra_hours
 
 
 CLASS_LEVEL_LABELS = {
@@ -1448,10 +1448,11 @@ def dir_teacher_schedule_official(teacher_id):
     entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
     grid = build_official_grid(entries)
     planned_slots = filled_official_slots(grid)
+    extra_hours = schedule_extra_hours(planned_slots, teacher.hours_due)
     classes_tenues = ", ".join(sorted({course.school_class.code or course.school_class.name for course in teacher.courses}))
     return render_template("schedule_official.html", mode="individuel", teacher=teacher, grid=grid,
                            periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
-                           hours_faites=planned_slots, planned_slots=planned_slots, classes_tenues=classes_tenues,
+                           hours_faites=planned_slots, planned_slots=planned_slots, extra_hours=extra_hours, classes_tenues=classes_tenues,
                            pdf_url=url_for("dir_teacher_schedule_official_pdf", teacher_id=teacher.id),
                            xlsx_url=url_for("dir_teacher_schedule_official_xlsx", teacher_id=teacher.id))
 
@@ -1467,9 +1468,10 @@ def dir_teacher_schedule_official_pdf(teacher_id):
     entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
     grid = build_official_grid(entries)
     planned_slots = filled_official_slots(grid)
-    pdf = render_pdf("pdf/schedule_official_pdf.html", mode="individuel", teacher=teacher,
-                     grid=grid, periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
-                     hours_faites=planned_slots, planned_slots=planned_slots,
+    extra_hours = schedule_extra_hours(planned_slots, teacher.hours_due)
+    pdf = render_pdf("pdf/schedule_official_pdf.html", mode="individuel", teacher=teacher, grid=grid,
+                     periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
+                     hours_faites=planned_slots, planned_slots=planned_slots, extra_hours=extra_hours,
                      classes_tenues=", ".join(sorted({course.school_class.code or course.school_class.name for course in teacher.courses})))
     if not pdf:
         abort(500)
@@ -1490,7 +1492,8 @@ def dir_teacher_schedule_official_xlsx(teacher_id):
         if entry.day in grid_raw:
             grid_raw[entry.day].append(entry)
     planned_slots = filled_official_slots(build_official_grid(entries))
-    workbook = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS, planned_slots=planned_slots)
+    extra_hours = schedule_extra_hours(planned_slots, teacher.hours_due)
+    workbook = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS, planned_slots=planned_slots, extra_hours=extra_hours)
     filename = f"Emploi_du_temps_{teacher.user.full_name}.xlsx".replace(" ", "_")
     return send_file(workbook, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name=filename)

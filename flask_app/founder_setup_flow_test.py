@@ -21,7 +21,7 @@ def main():
         dashboard = client.get("/dashboard")
         assert dashboard.status_code == 200
         assert b"D\xc3\xa9marrage de l\xe2\x80\x99\xc3\xa9tablissement" in dashboard.data
-        assert b"Configurer l\xe2\x80\x99\xc3\xa9tablissement" in dashboard.data
+        assert b"Bienvenue, Proviseur" in dashboard.data
         section_create = client.post("/directeur/structure/section/nouvelle", data={
             "name": "Section Pilote",
             "code": "PIL",

@@ -423,7 +423,7 @@ def class_schedule_workbook(school_class, grid, days, slots):
     return wb_io
 
 
-def teacher_schedule_workbook(teacher, grid, days, slots, planned_slots=None):
+def teacher_schedule_workbook(teacher, grid, days, slots, planned_slots=None, extra_hours=None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Emploi du temps"
@@ -433,7 +433,7 @@ def teacher_schedule_workbook(teacher, grid, days, slots, planned_slots=None):
         ws.column_dimensions[get_column_letter(i)].width = 20
 
     _header(ws, 1, ncols, f"LYCÉE TECHNIQUE DE TIBATI — EMPLOI DU TEMPS INDIVIDUEL")
-    planning_summary = f"Heures dues : {teacher.hours_due or 0} — Créneaux planifiés : {planned_slots if planned_slots is not None else 0} — Heures faites : {planned_slots if planned_slots is not None else 0}"
+    planning_summary = f"Heures dues : {teacher.hours_due or 0} — Créneaux planifiés : {planned_slots if planned_slots is not None else 0} — Heures faites : {planned_slots if planned_slots is not None else 0} — Heures supplémentaires : {extra_hours if extra_hours is not None else 0}"
     ws.cell(row=2, column=1, value=f"Professeur : {teacher.user.full_name} — Département : {teacher.department.name if teacher.department else '—'} — {planning_summary}").font = Font(italic=True, size=10)
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
 

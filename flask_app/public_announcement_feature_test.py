@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-public_announcement_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))

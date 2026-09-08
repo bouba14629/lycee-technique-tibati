@@ -186,9 +186,32 @@
 - [x] Diagnostiquer l’échec de connexion des identifiants existants après le dernier déploiement.
 - [x] Vérifier l’instance de base et les comptes sans modifier les données ni les mots de passe.
 - [x] Corriger uniquement la cause technique confirmée et tester les connexions.
-- [ ] Publier la correction d’accès après validation.
+- [x] Publier la correction d’accès après validation.
 - [x] Isoler schedule_conflict_feature_test.py sur une base SQLite temporaire pour empêcher toute suppression de la base de production.
 - [x] Rétablir l’accès au compte administrateur après confirmation de l’origine de l’échec, sans prétendre récupérer les comptes déjà supprimés.
 - [x] Rétablir uniquement le compte proviseur avec le mot de passe confirmé.
 - [x] Vérifier sa connexion et conserver les autres lignes existantes sans nouvelle suppression.
-- [ ] Publier la correction qui isole les tests de la base de production.
+- [x] Publier la correction qui isole les tests de la base de production.
+
+- [ ] Auditer les scripts et tests capables de modifier ou supprimer la base active.
+- [ ] Interdire l’exécution des tests destructifs sur une base non locale ou non temporaire.
+- [ ] Ajouter une politique de projet protégeant identifiants, mots de passe et données déjà saisies.
+- [ ] Ajouter une validation locale avant publication avec contrôle de base en lecture seule.
+- [ ] Tester les garde-fous et publier la protection sans modifier les données existantes.
+- [ ] Corriger le runner de prépublication pour exécuter les tests Flask depuis leur répertoire attendu et éviter les faux échecs de chemin relatif.
+- [ ] Corriger la fixture du test export_smoke_test.py afin de créer l’élève requis dans sa base locale temporaire.
+- [ ] Corriger l’assertion obsolète du test founder_setup_flow_test.py pour le libellé actuel du tableau de bord.
+- [ ] Corriger la fixture du test life_school_feature_test.py afin de créer la correspondance attendue dans sa base temporaire.
+- [ ] Corriger la fixture du test module_smoke_test.py afin de créer le profil enseignant requis dans sa base temporaire.
+- [ ] Adapter production_smoke_test.py au mode local isolé et ne plus dépendre des identifiants de démonstration de production.
+- [ ] Mettre à jour l’attente de version du test pwa_feature_test.py pour le shell PWA actuel.
+
+- [ ] Identifier la base active et la méthode d’export sans modifier les données.
+- [ ] Documenter une sauvegarde complète incluant base, identifiants et fichiers stockés.
+- [ ] Documenter une restauration locale vérifiée avant toute remise en production.
+- [ ] Documenter les contrôles de conservation des comptes, mots de passe et données saisies.
+
+- [x] Localiser tous les calculs et affichages des heures dues, faites et supplémentaires.
+- [x] Appliquer max(0, heures faites - heures dues) dans les emplois du temps et exports concernés.
+- [x] Tester les cas heures faites inférieures, égales et supérieures aux heures dues.
+- [x] Vérifier en local puis publier la correction sans modifier les données existantes.

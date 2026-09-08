@@ -19,7 +19,7 @@ with app.test_client() as client:
     assert worker.status_code == 200
     assert b"Service-Worker-Allowed" not in worker.data
     assert b"caches.open" in worker.data
-    assert b"ltt-shell-v4" in worker.data
+    assert b"ltt-shell-v20" in worker.data
     assert b"maconnerie" in worker.data
 
     installer = client.get("/pwa-install.js")

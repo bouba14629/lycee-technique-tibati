@@ -30,6 +30,16 @@ OFFICIAL_PERIODS = [
 ]
 
 
+def schedule_extra_hours(hours_done, hours_due):
+    """Retourne les heures supplémentaires affichables sans jamais produire une valeur négative."""
+    try:
+        done = float(hours_done or 0)
+        due = float(hours_due or 0)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, done - due)
+
+
 def get_current_school_year():
     """Année scolaire actuelle, paramétrable par le Proviseur (page /directeur/parametres) —
     à utiliser partout où l'année scolaire doit s'afficher, plutôt qu'une valeur codée en dur."""

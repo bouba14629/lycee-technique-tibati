@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-honor_roll_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 import subprocess
 from io import BytesIO
 from datetime import date

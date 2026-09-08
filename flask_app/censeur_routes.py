@@ -9,7 +9,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year)
+                    bulletin_data, get_current_school_year, schedule_extra_hours)
 
 
 def _is_stt_class(school_class):
@@ -181,6 +181,7 @@ def _teacher_schedule_context(teacher):
         "days": DAYS[:5],
         "day_en": DAY_EN,
         "hours_faites": filled_official_slots(grid),
+        "extra_hours": schedule_extra_hours(filled_official_slots(grid), teacher.hours_due),
         "classes_tenues": ", ".join(sorted({course.school_class.code or course.school_class.name for course in teacher.courses})),
         "entries": entries,
     }
@@ -246,7 +247,8 @@ def censeur_teacher_schedule_official_xlsx(teacher_id):
     for entry in context["entries"]:
         if entry.day in grid_raw:
             grid_raw[entry.day].append(entry)
-    workbook = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS)
+    workbook = teacher_schedule_workbook(teacher, grid_raw, DAYS[:5], OFFICIAL_PERIODS,
+                                         planned_slots=context["hours_faites"], extra_hours=context["extra_hours"])
     filename = f"Emploi_du_temps_{teacher.user.full_name}.xlsx".replace(" ", "_")
     return send_file(workbook, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name=filename)

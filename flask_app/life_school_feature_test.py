@@ -1,4 +1,7 @@
 import os
+os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-isolated-life_school_feature_test.sqlite"
+os.environ["LTT_ENV"] = "development"
+
 from datetime import date
 
 os.environ.setdefault("LTT_ENV", "development")
@@ -18,10 +21,14 @@ def add_user(username, full_name, role):
 
 
 def switch_user(client, user):
+    user.session_token = f"life-school-session-{user.id}"
+    db.session.commit()
     with client.session_transaction() as session:
         session.clear()
         session["user_id"] = user.id
         session["role"] = user.role
+        session["name"] = user.full_name
+        session["session_token"] = user.session_token
 
 
 with app.app_context():

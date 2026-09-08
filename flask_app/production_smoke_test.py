@@ -1,6 +1,7 @@
 import os
 import sys
 
+os.environ["LTT_BOOTSTRAP_MODE"] = "demo"
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app import app

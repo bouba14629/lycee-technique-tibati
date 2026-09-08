@@ -78,6 +78,9 @@
     <td colspan="3"><strong>CLASSES TENUES :</strong> <span class="red">{{ classes_tenues }}</span></td>
     <td colspan="2"><strong>GRADE :</strong> <span class="red">{{ teacher.grade }}</span></td>
   </tr>
+  <tr>
+    <td colspan="5"><strong>HEURES SUPPLÉMENTAIRES :</strong> <span class="red">{{ extra_hours if extra_hours is defined else 0 }}</span></td>
+  </tr>
 </table>
 {% endif %}
 

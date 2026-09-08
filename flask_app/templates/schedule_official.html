@@ -69,7 +69,7 @@
       <td style="text-align:right;"><strong>GRADE :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.grade }}</span></td>
     </tr>
     <tr>
-      <td colspan="3" style="text-align:right;"><strong>HEURES SUPPLÉMENTAIRES :</strong> <span style="color:#c0392b; font-weight:700;">{{ teacher.extra_hours }}</span></td>
+      <td colspan="3" style="text-align:right;"><strong>HEURES SUPPLÉMENTAIRES :</strong> <span style="color:#c0392b; font-weight:700;">{{ extra_hours if extra_hours is defined else 0 }}</span></td>
     </tr>
   </table>
   {% endif %}
