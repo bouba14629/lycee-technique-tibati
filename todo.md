@@ -193,25 +193,29 @@
 - [x] Vérifier sa connexion et conserver les autres lignes existantes sans nouvelle suppression.
 - [x] Publier la correction qui isole les tests de la base de production.
 
-- [ ] Auditer les scripts et tests capables de modifier ou supprimer la base active.
-- [ ] Interdire l’exécution des tests destructifs sur une base non locale ou non temporaire.
-- [ ] Ajouter une politique de projet protégeant identifiants, mots de passe et données déjà saisies.
-- [ ] Ajouter une validation locale avant publication avec contrôle de base en lecture seule.
-- [ ] Tester les garde-fous et publier la protection sans modifier les données existantes.
-- [ ] Corriger le runner de prépublication pour exécuter les tests Flask depuis leur répertoire attendu et éviter les faux échecs de chemin relatif.
-- [ ] Corriger la fixture du test export_smoke_test.py afin de créer l’élève requis dans sa base locale temporaire.
-- [ ] Corriger l’assertion obsolète du test founder_setup_flow_test.py pour le libellé actuel du tableau de bord.
-- [ ] Corriger la fixture du test life_school_feature_test.py afin de créer la correspondance attendue dans sa base temporaire.
-- [ ] Corriger la fixture du test module_smoke_test.py afin de créer le profil enseignant requis dans sa base temporaire.
-- [ ] Adapter production_smoke_test.py au mode local isolé et ne plus dépendre des identifiants de démonstration de production.
-- [ ] Mettre à jour l’attente de version du test pwa_feature_test.py pour le shell PWA actuel.
+- [x] Auditer les scripts et tests capables de modifier ou supprimer la base active.
+- [x] Interdire l’exécution des tests destructifs sur une base non locale ou non temporaire.
+- [x] Ajouter une politique de projet protégeant identifiants, mots de passe et données déjà saisies.
+- [x] Ajouter une validation locale avant publication avec contrôle de base en lecture seule.
+- [x] Tester les garde-fous et publier la protection sans modifier les données existantes.
+- [x] Corriger le runner de prépublication pour exécuter les tests Flask depuis leur répertoire attendu et éviter les faux échecs de chemin relatif.
+- [x] Corriger la fixture du test export_smoke_test.py afin de créer l’élève requis dans sa base locale temporaire.
+- [x] Corriger l’assertion obsolète du test founder_setup_flow_test.py pour le libellé actuel du tableau de bord.
+- [x] Corriger la fixture du test life_school_feature_test.py afin de créer la correspondance attendue dans sa base temporaire.
+- [x] Corriger la fixture du test module_smoke_test.py afin de créer le profil enseignant requis dans sa base temporaire.
+- [x] Adapter production_smoke_test.py au mode local isolé et ne plus dépendre des identifiants de démonstration de production.
+- [x] Mettre à jour l’attente de version du test pwa_feature_test.py pour le shell PWA actuel.
 
-- [ ] Identifier la base active et la méthode d’export sans modifier les données.
-- [ ] Documenter une sauvegarde complète incluant base, identifiants et fichiers stockés.
-- [ ] Documenter une restauration locale vérifiée avant toute remise en production.
-- [ ] Documenter les contrôles de conservation des comptes, mots de passe et données saisies.
+- [x] Identifier la base active et la méthode d’export sans modifier les données.
+- [x] Documenter une sauvegarde complète incluant base, identifiants et fichiers stockés.
+- [x] Documenter une restauration locale vérifiée avant toute remise en production.
+- [x] Documenter les contrôles de conservation des comptes, mots de passe et données saisies.
 
 - [x] Localiser tous les calculs et affichages des heures dues, faites et supplémentaires.
 - [x] Appliquer max(0, heures faites - heures dues) dans les emplois du temps et exports concernés.
 - [x] Tester les cas heures faites inférieures, égales et supérieures aux heures dues.
 - [x] Vérifier en local puis publier la correction sans modifier les données existantes.
+- [x] Corriger role_smoke_test.py pour utiliser des comptes et mots de passe temporaires compatibles avec la politique actuelle.
+- [x] Corriger smoke_test.py pour initialiser son compte de test dans une SQLite temporaire et respecter l’authentification actuelle.
+- [x] Ajouter un contrôle automatisé strictement en lecture seule de la base active avant publication et son test non destructif.
+- [x] Enregistrer un checkpoint après les garde-fous, le runner local et la documentation de sauvegarde/restauration.
