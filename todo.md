@@ -219,3 +219,11 @@
 - [x] Corriger smoke_test.py pour initialiser son compte de test dans une SQLite temporaire et respecter l’authentification actuelle.
 - [x] Ajouter un contrôle automatisé strictement en lecture seule de la base active avant publication et son test non destructif.
 - [x] Enregistrer un checkpoint après les garde-fous, le runner local et la documentation de sauvegarde/restauration.
+
+- [x] Analyser les permissions censeur pour l’insertion des matières de tronc commun dans les créneaux.
+- [x] Autoriser l’insertion et la programmation simultanée des matières de tronc commun par les censeurs.
+- [x] Contrôler les classes cibles, les créneaux, les salles et les conflits d’enseignants.
+- [x] Ajouter un test local censeur sur l’insertion d’un tronc commun dans un créneau.
+- [x] Exécuter le préflight local, puis enregistrer et publier la correction sans modifier les données existantes.
+- [x] Mettre à jour l’assertion statique du test des troncs communs après le changement de libellé de l’interface.
+- [x] Mettre à jour le test Vitest counselorScheduleAccess pour refléter l’autorisation des censeurs d’insérer les troncs communs.

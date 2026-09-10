@@ -20,7 +20,9 @@ def main():
             principal.set_password("Lyttib")
             transversal = User(username="censeur.transversal", role="censeur", full_name="Censeur Transversal")
             transversal.set_password("Lyttib")
-            db.session.add_all([principal, transversal])
+            crm = User(username="censeur.crm", role="censeur_crm", full_name="Censeur CRM")
+            crm.set_password("Lyttib")
+            db.session.add_all([principal, transversal, crm])
             db.session.flush()
             dept_a = Department(name="Gestion A", code="G-A", section_id=section_stt.id)
             dept_b = Department(name="Gestion B", code="G-B", section_id=section_stt.id)
@@ -116,6 +118,19 @@ def main():
             assert "rattachée à une seule classe".encode("utf-8") in subject_rejected.data
             with app.app_context():
                 assert ScheduleEntry.query.count() == 4
+
+            client.get("/logout")
+            assert client.post("/login", data={"username": "censeur.crm", "password": "Lyttib"}).status_code == 302
+            crm_insert = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
+                "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
+                "day": "Jeudi", "start_time": "08:00", "end_time": "10:00",
+                "tronc_commun_class_ids": [str(class_b_id)],
+            }, follow_redirects=True)
+            assert crm_insert.status_code == 200
+            assert b"Tronc commun" in crm_insert.data
+            with app.app_context():
+                assert ScheduleEntry.query.count() == 6
+                assert len({entry.group_key for entry in ScheduleEntry.query.filter(ScheduleEntry.day == "Jeudi").all()}) == 1
 
     print("SCHEDULE_STT_TRONC_COMMUN_INTEGRATION_TEST_OK")
 

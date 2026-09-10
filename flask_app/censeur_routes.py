@@ -36,8 +36,9 @@ def censeur_schedule():
     import uuid
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    # Le Proviseur et le Censeur construisent ; le Censeur CRM et le Conseiller d’orientation consultent.
-    is_readonly = user.role in ("censeur_crm", "conseiller_orientation")
+    # Les censeurs et le directeur construisent ; seul le conseiller d’orientation consulte.
+    can_build_schedule = user.role in ("censeur", "censeur_crm", "directeur")
+    is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
@@ -47,7 +48,7 @@ def censeur_schedule():
         abort(403)
     rooms = Room.query.order_by(Room.name).all()
     current_class = SchoolClass.query.get(class_id) if class_id else None
-    can_create_tronc_commun = bool(current_class)
+    can_create_tronc_commun = bool(current_class) and can_build_schedule
     if current_class:
         subjects_q = Subject.query.filter(or_(
             Subject.class_id == current_class.id,
@@ -69,7 +70,7 @@ def censeur_schedule():
     conflicts = None
 
     if request.method == "POST":
-        if user.role not in ("censeur", "directeur") or is_readonly:
+        if not can_build_schedule or is_readonly:
             abort(403)
         if scoped_class_ids is not None and class_id not in scoped_class_ids:
             abort(403)
@@ -100,9 +101,6 @@ def censeur_schedule():
         if tronc_commun_ids:
             if not can_create_tronc_commun:
                 flash("Les troncs communs sont disponibles uniquement depuis une classe valide.", "danger")
-                return redirect(url_for("censeur_schedule", class_id=class_id))
-            if subject.category != "Enseignements Généraux":
-                flash("Le tronc commun n'est possible que pour les matières d'enseignement général.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
             if subject.class_id is not None and not subject.is_tronc_commun:
                 flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée compatible.", "danger")

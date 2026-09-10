@@ -30,6 +30,7 @@ assert "SchoolClass.level == current_class.level" in route_source
 assert "other.level != current_class.level" in route_source
 assert "not _is_stt_class(other)" not in route_source
 assert "can_create_tronc_commun and tronc_commun_classes" in template_source
-assert "Tronc commun — réunir des classes du même niveau" in template_source
+assert "Insérer en tronc commun" in template_source
+assert "classes du même niveau" in template_source
 
 print("SCHEDULE_STT_TRONC_COMMUN_FEATURE_TEST_OK")
