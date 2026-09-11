@@ -150,6 +150,13 @@ def censeur_schedule():
         return redirect(url_for("censeur_schedule", class_id=class_id))
 
     schedule = ScheduleEntry.query.join(Course).filter(Course.class_id == class_id).all() if class_id else []
+    edit_entry = None
+    edit_entry_id = request.args.get("edit_entry_id", type=int)
+    if edit_entry_id:
+        edit_entry = ScheduleEntry.query.get_or_404(edit_entry_id)
+        if scoped_class_ids is not None and edit_entry.course.class_id not in scoped_class_ids:
+            abort(403)
+
     grid = {d: [] for d in DAYS}
     for e in schedule:
         grid[e.day].append(e)
@@ -158,7 +165,62 @@ def censeur_schedule():
 
     return render_template("censeur_schedule.html", classes=classes, class_id=class_id, is_readonly=is_readonly,
                            rooms=rooms, all_teachers=all_teachers, subjects=subjects, grid=grid, days=DAYS,
-                           tronc_commun_classes=tronc_commun_classes, can_create_tronc_commun=can_create_tronc_commun)
+                           tronc_commun_classes=tronc_commun_classes, can_create_tronc_commun=can_create_tronc_commun,
+                           edit_entry=edit_entry)
+
+
+@app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_schedule_edit(entry_id):
+    user = User.query.get(session["user_id"])
+    entry = ScheduleEntry.query.get_or_404(entry_id)
+    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    if scoped_class_ids is not None and entry.course.class_id not in scoped_class_ids:
+        abort(403)
+
+    group_entries = (ScheduleEntry.query.filter_by(group_key=entry.group_key).all()
+                     if entry.group_key else [entry])
+    if scoped_class_ids is not None and any(item.course.class_id not in scoped_class_ids for item in group_entries):
+        abort(403)
+    teacher_id = request.form.get("teacher_id", type=int)
+    room_id = request.form.get("room_id", type=int)
+    day = request.form.get("day")
+    start = request.form.get("start_time")
+    end = request.form.get("end_time")
+    teacher = Teacher.query.get(teacher_id) if teacher_id else None
+    room = Room.query.get(room_id) if room_id else None
+    if not teacher or (room_id and not room):
+        flash("Sélectionnez un enseignant valide. La salle est facultative.", "danger")
+        return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
+    if day not in DAYS or not start or not end or len(start) != 5 or len(end) != 5 or start >= end:
+        flash("Indiquez un jour et des horaires valides : l’heure de fin doit être postérieure au début.", "danger")
+        return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
+
+    conflicts = []
+    for item in group_entries:
+        conflicts.extend(check_schedule_conflict(day, start, end, room_id=room_id, teacher_id=teacher_id,
+                                                 class_id=item.course.class_id, exclude_id=item.id,
+                                                 group_key=entry.group_key))
+    conflicts = list(dict.fromkeys(conflicts))
+    if conflicts:
+        flash("Conflit détecté : " + " | ".join(conflicts), "danger")
+        return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
+
+    for item in group_entries:
+        course = Course.query.filter_by(subject_id=item.course.subject_id, teacher_id=teacher_id,
+                                        class_id=item.course.class_id).first()
+        if not course:
+            course = Course(subject_id=item.course.subject_id, teacher_id=teacher_id, class_id=item.course.class_id)
+            db.session.add(course)
+            db.session.flush()
+        item.course_id = course.id
+        item.room_id = room.id if room else None
+        item.day = day
+        item.start_time = start
+        item.end_time = end
+    db.session.commit()
+    flash("Créneau modifié" + (" pour tout le tronc commun." if entry.group_key else "."), "success")
+    return redirect(url_for("censeur_schedule", class_id=entry.course.class_id))
 
 
 def _censeur_teacher_schedule_in_scope(teacher, user):

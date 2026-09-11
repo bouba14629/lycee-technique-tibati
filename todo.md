@@ -227,3 +227,9 @@
 - [x] Exécuter le préflight local, puis enregistrer et publier la correction sans modifier les données existantes.
 - [x] Mettre à jour l’assertion statique du test des troncs communs après le changement de libellé de l’interface.
 - [x] Mettre à jour le test Vitest counselorScheduleAccess pour refléter l’autorisation des censeurs d’insérer les troncs communs.
+
+- [x] Analyser les routes et interfaces de modification des créneaux d’emploi du temps.
+- [x] Ajouter l’option Modifier pour les créneaux individuels et les troncs communs.
+- [x] Préserver les permissions censeur et les contrôles de conflits lors de la modification.
+- [x] Ajouter les tests locaux de modification de créneau et vérifier les régressions.
+- [x] Enregistrer et publier la correction Modifier des emplois du temps.

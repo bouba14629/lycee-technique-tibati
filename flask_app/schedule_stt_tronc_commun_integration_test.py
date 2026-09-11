@@ -130,7 +130,25 @@ def main():
             assert b"Tronc commun" in crm_insert.data
             with app.app_context():
                 assert ScheduleEntry.query.count() == 6
-                assert len({entry.group_key for entry in ScheduleEntry.query.filter(ScheduleEntry.day == "Jeudi").all()}) == 1
+                crm_entries = ScheduleEntry.query.filter(ScheduleEntry.day == "Jeudi").order_by(ScheduleEntry.id).all()
+                assert len(crm_entries) == 2
+                crm_entry_id = crm_entries[0].id
+                crm_group_key = crm_entries[0].group_key
+
+            edit_page = client.get(f"/censeur/emplois-du-temps?class_id={class_a_id}&edit_entry_id={crm_entry_id}")
+            assert edit_page.status_code == 200
+            assert "Modifier le créneau".encode("utf-8") in edit_page.data
+            edited = client.post(f"/censeur/emplois-du-temps/{crm_entry_id}/modifier", data={
+                "teacher_id": teacher_id, "room_id": room_id,
+                "day": "Vendredi", "start_time": "09:00", "end_time": "11:00",
+            }, follow_redirects=True)
+            assert edited.status_code == 200
+            assert "Créneau modifié".encode("utf-8") in edited.data
+            with app.app_context():
+                moved = ScheduleEntry.query.filter(ScheduleEntry.day == "Vendredi").all()
+                assert len(moved) == 2
+                assert {item.group_key for item in moved} == {crm_group_key}
+                assert {item.course.class_id for item in moved} == {class_a_id, class_b_id}
 
     print("SCHEDULE_STT_TRONC_COMMUN_INTEGRATION_TEST_OK")
 

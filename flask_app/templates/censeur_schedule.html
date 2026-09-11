@@ -84,6 +84,25 @@
           <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer la semaine</button>
         </div>
       </div>
+      {% if edit_entry and not is_readonly %}
+      <div class="card-ltt mb-3" style="border:1px solid var(--gold-500); background:var(--cream);">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong style="font-size:13px;"><i class="bi bi-pencil-square me-1"></i> Modifier le créneau</strong>
+          <a href="{{ url_for('censeur_schedule', class_id=class_id) }}" class="text-muted" style="font-size:11px;">Annuler</a>
+        </div>
+        <div class="text-muted mb-2" style="font-size:11px;">
+          <strong>{{ edit_entry.course.subject.name }}</strong>
+          {% if edit_entry.group_key %}<span class="badge-ltt badge-gold ms-1">Tronc commun — modification appliquée au groupe</span>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('censeur_schedule_edit', entry_id=edit_entry.id) }}" class="form-ltt">
+          <div class="mb-2"><label>Enseignant</label><select name="teacher_id" class="form-select" required>{% for t in all_teachers %}<option value="{{ t.id }}" {{ 'selected' if t.id == edit_entry.course.teacher_id }}>{{ t.user.full_name }}{% if t.department %} ({{ t.department.code }}){% endif %}</option>{% endfor %}</select></div>
+          <div class="mb-2"><label>Salle <span class="text-muted fw-normal">(facultative)</span></label><select name="room_id" class="form-select"><option value="">— Aucune salle définie —</option>{% for r in rooms %}<option value="{{ r.id }}" {{ 'selected' if edit_entry.room_id == r.id }}>{{ r.name }}</option>{% endfor %}</select></div>
+          <div class="mb-2"><label>Jour</label><select name="day" class="form-select" required>{% for d in days %}<option value="{{ d }}" {{ 'selected' if d == edit_entry.day }}>{{ d }}</option>{% endfor %}</select></div>
+          <div class="d-flex gap-2 mb-3"><div><label>Début</label><input type="time" name="start_time" class="form-control" value="{{ edit_entry.start_time }}" required></div><div><label>Fin</label><input type="time" name="end_time" class="form-control" value="{{ edit_entry.end_time }}" required></div></div>
+          <button class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-check2-circle"></i> Enregistrer la modification</button>
+        </form>
+      </div>
+      {% endif %}
       <div class="schedule-grid">
         {% for day in days %}
         <div class="schedule-day">
@@ -95,8 +114,9 @@
             {% if e.group_key %}<span class="badge-ltt badge-gold" style="font-size:9px;" title="Cours en tronc commun avec d'autres classes"><i class="bi bi-people-fill"></i> Tronc commun</span>{% endif %}
             <br>
             <span class="text-muted">{{ e.course.teacher.user.full_name }} · {{ e.room.name if e.room else 'Salle non définie' }}</span><br>
-            {% if not is_readonly and current_user.role == 'censeur' %}
-            <a href="{{ url_for('censeur_schedule_delete', entry_id=e.id) }}" class="text-danger" style="font-size:10.5px;" onclick="return confirm('Supprimer ce créneau ?')"><i class="bi bi-trash"></i> Supprimer</a>
+            {% if not is_readonly and current_user.role in ['censeur', 'censeur_crm', 'directeur'] %}
+            <a href="{{ url_for('censeur_schedule', class_id=class_id, edit_entry_id=e.id) }}" class="text-primary me-2" style="font-size:10.5px;"><i class="bi bi-pencil-square"></i> Modifier</a>
+            {% if current_user.role == 'censeur' %}<a href="{{ url_for('censeur_schedule_delete', entry_id=e.id) }}" class="text-danger" style="font-size:10.5px;" onclick="return confirm('Supprimer ce créneau ?')"><i class="bi bi-trash"></i> Supprimer</a>{% endif %}
             {% endif %}
           </div>
           {% else %}<span class="text-muted" style="font-size:11.5px;">—</span>{% endfor %}
