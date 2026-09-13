@@ -1002,6 +1002,25 @@ def dir_class_delete(class_id):
     return redirect(url_for("dir_structure"))
 
 
+def _subject_name_key(value):
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+    return " ".join(without_accents.split()).casefold()
+
+
+def _subject_duplicate_for_class(name, school_class, exclude_id=None):
+    """Détecte une matière portant le même nom pour la classe ou sa filière."""
+    candidates = Subject.query.filter(Subject.department_id == school_class.department_id)
+    for subject in candidates.all():
+        if exclude_id is not None and subject.id == exclude_id:
+            continue
+        if subject.class_id not in (None, school_class.id):
+            continue
+        if _subject_name_key(subject.name) == _subject_name_key(name):
+            return subject
+    return None
+
+
 @app.route("/directeur/structure/matiere/nouvelle", methods=["POST"])
 @roles_required("censeur")
 def dir_subject_new():
@@ -1031,11 +1050,9 @@ def dir_subject_new():
         if scoped_dept_ids is not None and any(school_class.department_id not in scoped_dept_ids for school_class in classes):
             flash("Vous ne pouvez créer un tronc commun qu’entre les classes de votre périmètre.", "danger")
             return redirect(url_for("dir_structure"))
-        existing = Subject.query.filter(
-            Subject.name == name, Subject.is_tronc_commun.is_(True), Subject.class_id.in_(class_ids)
-        ).count()
-        if existing:
-            flash("Cette matière de tronc commun existe déjà pour au moins une classe sélectionnée.", "warning")
+        duplicate_class = next((_subject_duplicate_for_class(name, school_class) for school_class in classes), None)
+        if duplicate_class:
+            flash(f"La matière « {name} » existe déjà dans la classe {duplicate_class.name} ou sa filière.", "warning")
             return redirect(url_for("dir_structure"))
         for school_class in classes:
             db.session.add(Subject(name=name, coefficient=max(1, coef), category=category,
@@ -1055,6 +1072,10 @@ def dir_subject_new():
         return redirect(url_for("dir_structure"))
     if scoped_dept_ids is not None and dept.id not in scoped_dept_ids:
         flash("Vous ne pouvez ajouter une matière que dans les filières de votre section.", "danger")
+        return redirect(url_for("dir_structure"))
+    duplicate = _subject_duplicate_for_class(name, target_class)
+    if duplicate:
+        flash(f"La matière « {name} » existe déjà dans la classe {target_class.name} ou sa filière.", "warning")
         return redirect(url_for("dir_structure"))
     session["last_subject_class_id"] = target_class.id
     db.session.add(Subject(name=name, coefficient=max(1, coef), category=category, department_id=dept.id,
@@ -1084,7 +1105,17 @@ def dir_subject_edit(subject_id):
     user = User.query.get(session["user_id"])
     if not _subject_in_scope(subject, user):
         abort(403)
-    subject.name = request.form.get("name", subject.name).strip()
+    new_name = request.form.get("name", subject.name).strip()
+    if not new_name:
+        flash("Le nom de la matière est requis.", "warning")
+        return redirect(url_for("dir_structure"))
+    if subject.class_id:
+        school_class = SchoolClass.query.get(subject.class_id)
+        duplicate = _subject_duplicate_for_class(new_name, school_class, exclude_id=subject.id) if school_class else None
+        if duplicate:
+            flash(f"La matière « {new_name} » existe déjà dans la classe {school_class.name} ou sa filière.", "warning")
+            return redirect(url_for("dir_structure"))
+    subject.name = new_name
     subject.coefficient = request.form.get("coefficient", subject.coefficient, type=int)
     subject.category = request.form.get("category", subject.category)
     db.session.commit()
@@ -1099,6 +1130,12 @@ def dir_subject_delete(subject_id):
     user = User.query.get(session["user_id"])
     if not _subject_in_scope(subject, user):
         abort(403)
+    scheduled = (ScheduleEntry.query.join(Course)
+                 .filter(Course.subject_id == subject.id)
+                 .first())
+    if scheduled:
+        flash(f"Impossible de supprimer « {subject.name} » : elle est déjà programmée dans un emploi du temps.", "danger")
+        return redirect(url_for("dir_structure"))
     name = subject.name
     db.session.delete(subject)
     db.session.commit()

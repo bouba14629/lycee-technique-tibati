@@ -233,3 +233,9 @@
 - [x] Préserver les permissions censeur et les contrôles de conflits lors de la modification.
 - [x] Ajouter les tests locaux de modification de créneau et vérifier les régressions.
 - [x] Enregistrer et publier la correction Modifier des emplois du temps.
+
+- [x] Auditer les routes de suppression et de création des matières.
+- [x] Bloquer la suppression d’une matière utilisée par un emploi du temps.
+- [x] Empêcher les doublons de matière dans une même classe sans bloquer les troncs communs valides.
+- [x] Ajouter les tests locaux de suppression protégée et de doublon de matière.
+- [x] Enregistrer et publier la correction sans modifier les données existantes.
