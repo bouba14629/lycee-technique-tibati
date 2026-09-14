@@ -64,6 +64,8 @@ def main():
                 assert len({entry.group_key for entry in entries}) == 1
                 assert {entry.course.class_id for entry in entries} == {class_a_id, class_b_id}
                 assert Course.query.count() == 2
+                valid_entry_id = entries[0].id
+                valid_group_key = entries[0].group_key
 
             conflict = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                 "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
@@ -126,19 +128,16 @@ def main():
                 "day": "Jeudi", "start_time": "08:00", "end_time": "10:00",
                 "tronc_commun_class_ids": [str(class_b_id)],
             }, follow_redirects=True)
-            assert crm_insert.status_code == 200
-            assert b"Tronc commun" in crm_insert.data
+            assert crm_insert.status_code == 403
             with app.app_context():
-                assert ScheduleEntry.query.count() == 6
-                crm_entries = ScheduleEntry.query.filter(ScheduleEntry.day == "Jeudi").order_by(ScheduleEntry.id).all()
-                assert len(crm_entries) == 2
-                crm_entry_id = crm_entries[0].id
-                crm_group_key = crm_entries[0].group_key
+                assert ScheduleEntry.query.count() == 4
 
-            edit_page = client.get(f"/censeur/emplois-du-temps?class_id={class_a_id}&edit_entry_id={crm_entry_id}")
+            client.get("/logout")
+            assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302
+            edit_page = client.get(f"/censeur/emplois-du-temps?class_id={class_a_id}&edit_entry_id={valid_entry_id}")
             assert edit_page.status_code == 200
             assert "Modifier le créneau".encode("utf-8") in edit_page.data
-            edited = client.post(f"/censeur/emplois-du-temps/{crm_entry_id}/modifier", data={
+            edited = client.post(f"/censeur/emplois-du-temps/{valid_entry_id}/modifier", data={
                 "teacher_id": teacher_id, "room_id": room_id,
                 "day": "Vendredi", "start_time": "09:00", "end_time": "11:00",
             }, follow_redirects=True)
@@ -147,7 +146,7 @@ def main():
             with app.app_context():
                 moved = ScheduleEntry.query.filter(ScheduleEntry.day == "Vendredi").all()
                 assert len(moved) == 2
-                assert {item.group_key for item in moved} == {crm_group_key}
+                assert {item.group_key for item in moved} == {valid_group_key}
                 assert {item.course.class_id for item in moved} == {class_a_id, class_b_id}
 
     print("SCHEDULE_STT_TRONC_COMMUN_INTEGRATION_TEST_OK")

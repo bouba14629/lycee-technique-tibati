@@ -36,8 +36,9 @@ def censeur_schedule():
     import uuid
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    # Les censeurs et le directeur construisent ; seul le conseiller d’orientation consulte.
-    can_build_schedule = user.role in ("censeur", "censeur_crm", "directeur")
+    # Le directeur et les censeurs de section (STT/Industriel) construisent ;
+    # le conseiller d’orientation et le censeur CRM restent en consultation seule.
+    can_build_schedule = user.role in ("censeur", "directeur")
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -48,7 +49,7 @@ def censeur_schedule():
         abort(403)
     rooms = Room.query.order_by(Room.name).all()
     current_class = SchoolClass.query.get(class_id) if class_id else None
-    can_create_tronc_commun = bool(current_class) and can_build_schedule
+    can_create_tronc_commun = bool(current_class) and user.role in ("censeur", "directeur")
     if current_class:
         subjects_q = Subject.query.filter(or_(
             Subject.class_id == current_class.id,
@@ -170,7 +171,7 @@ def censeur_schedule():
 
 
 @app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "directeur")
 def censeur_schedule_edit(entry_id):
     user = User.query.get(session["user_id"])
     entry = ScheduleEntry.query.get_or_404(entry_id)

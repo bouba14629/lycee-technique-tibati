@@ -239,3 +239,13 @@
 - [x] Empêcher les doublons de matière dans une même classe sans bloquer les troncs communs valides.
 - [x] Ajouter les tests locaux de suppression protégée et de doublon de matière.
 - [x] Enregistrer et publier la correction sans modifier les données existantes.
+
+- [x] Auditer les permissions des censeurs STT et Industriel et les styles des emplois du temps.
+- [x] Autoriser les censeurs STT et Industriel à ajouter les matières de tronc commun dans les créneaux.
+- [x] Augmenter de 2 points la police des emplois du temps individuels et par classe.
+- [x] Ajouter les tests locaux de permission et de rendu typographique.
+- [x] Enregistrer et publier la correction sans modifier les données existantes.
+- [x] Vérifier explicitement que les censeurs STT et Industriel peuvent créer un tronc commun et que le censeur CRM reste en lecture seule.
+- [x] Mettre à jour le test intégré des troncs communs pour conserver le censeur CRM en lecture seule.
+- [x] Mettre à jour counselorScheduleAccess.test.ts pour refléter les permissions STT/Industriel et CRM en lecture seule.
+- [x] Mettre à jour schedule_grouping_feature_test.py après l’augmentation de police PDF de 2 points.
