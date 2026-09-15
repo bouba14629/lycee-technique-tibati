@@ -255,7 +255,15 @@
 - [x] Augmenter de 2 points la police des emplois individuels et par classe en conservant une seule page.
 - [x] Remplacer les couleurs rouges des emplois du temps par la couleur automatique noire.
 - [x] Tester les classes cochées, les exports PDF et la mise en page locale avant publication.
-- [ ] Enregistrer et publier la correction validée.
+- [x] Enregistrer et publier la correction validée.
 - [x] Mettre à jour l’assertion de couleur du test director_schedule_consultation_feature_test.py vers le noir automatique.
 - [x] Adapter subject_tronc_commun_creation_test.py aux permissions actuelles des censeurs STT/Industriel sans modifier la logique de production.
 - [x] Aligner counselorScheduleAccess.test.ts sur la condition STT/Industriel et le censeur transversal autorisés.
+
+- [x] Auditer les matières professionnelles et leur compatibilité entre classes de même niveau.
+- [x] Autoriser les troncs communs professionnels pour les censeurs STT et Industriel.
+- [x] Résoudre une matière professionnelle équivalente par classe cible sans accepter les matières incompatibles.
+- [x] Tester les troncs communs professionnels, les niveaux différents et les conflits.
+- [x] Enregistrer et publier la correction validée.
+- [x] Ajouter un scénario de matière professionnelle équivalente par classe dans subject_tronc_commun_creation_test.py.
+- [x] Mettre à jour l’assertion du test intégré pour vérifier le refus d’une matière professionnelle réellement incompatible.

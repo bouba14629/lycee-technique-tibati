@@ -104,9 +104,6 @@ def censeur_schedule():
             if not can_create_tronc_commun:
                 flash("Les troncs communs sont disponibles uniquement depuis une classe valide.", "danger")
                 return redirect(url_for("censeur_schedule", class_id=class_id))
-            if subject.class_id is not None and not subject.is_tronc_commun:
-                flash("Une matière rattachée à une seule classe ne peut pas être utilisée dans un tronc commun. Créez une matière partagée compatible.", "danger")
-                return redirect(url_for("censeur_schedule", class_id=class_id))
             for cid in tronc_commun_ids:
                 if scoped_class_ids is not None and cid not in scoped_class_ids:
                     abort(403)
@@ -114,11 +111,21 @@ def censeur_schedule():
                 if not other or other.id == current_class.id or other.level != current_class.level:
                     flash("Le tronc commun ne peut réunir que des classes du même niveau.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))
-                target_subject = Subject.query.filter_by(
-                    name=subject.name, category=subject.category, class_id=other.id, is_tronc_commun=True
-                ).first() if subject.is_tronc_commun else (subject if subject.department_id == other.department_id else Subject.query.filter_by(
-                    name=subject.name, category=subject.category, department_id=other.department_id, class_id=None
-                ).first())
+                if subject.is_tronc_commun:
+                    target_subject = Subject.query.filter_by(
+                        name=subject.name, category=subject.category, class_id=other.id, is_tronc_commun=True
+                    ).first()
+                elif subject.class_id is not None:
+                    target_subject = Subject.query.filter(
+                        Subject.name == subject.name,
+                        Subject.category == subject.category,
+                        or_(Subject.class_id == other.id,
+                            and_(Subject.class_id.is_(None), Subject.department_id == other.department_id)),
+                    ).first()
+                else:
+                    target_subject = subject if subject.department_id in (None, other.department_id) else Subject.query.filter_by(
+                        name=subject.name, category=subject.category, department_id=other.department_id, class_id=None
+                    ).first()
                 if not target_subject or not _subject_compatible_with_class(target_subject, other):
                     flash("La matière sélectionnée n’est pas compatible avec toutes les classes ciblées. Créez la même matière partagée dans chaque département concerné.", "danger")
                     return redirect(url_for("censeur_schedule", class_id=class_id))

@@ -47,7 +47,7 @@ with app.app_context():
         assert client.post("/login", data={"username": "censeur.tronc", "password": "Test#2026"}).status_code in (302, 303)
         created = client.post("/directeur/structure/matiere/nouvelle", data={
             "creation_mode": "tronc_commun", "name": "Communication", "coefficient": 2,
-            "category": "Enseignements Généraux", "tronc_class_ids": [str(class_a_id), str(class_b_id)],
+            "category": "Enseignements Professionnels Pratiques", "tronc_class_ids": [str(class_a_id), str(class_b_id)],
         })
         assert created.status_code in (302, 303)
         subjects = Subject.query.filter_by(name="Communication", is_tronc_commun=True).order_by(Subject.class_id).all()
@@ -69,7 +69,7 @@ with app.app_context():
 
         invalid = client.post("/directeur/structure/matiere/nouvelle", data={
             "creation_mode": "tronc_commun", "name": "Communication invalide", "coefficient": 2,
-            "category": "Enseignements Généraux", "tronc_class_ids": [str(class_a_id), str(class_other_id)],
+            "category": "Enseignements Professionnels Pratiques", "tronc_class_ids": [str(class_a_id), str(class_other_id)],
         })
         assert invalid.status_code in (302, 303)
         assert Subject.query.filter_by(name="Communication invalide").count() == 0

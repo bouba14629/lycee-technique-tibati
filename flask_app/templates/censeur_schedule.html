@@ -44,7 +44,7 @@
         {% if can_create_tronc_commun and tronc_commun_classes %}
         <div class="mb-3 no-print" id="troncCommunBlock" style="display:none; background:var(--cream); border-radius:10px; padding:10px;">
           <label class="fw-semibold" style="font-size:12.5px;"><i class="bi bi-people-fill"></i> Insérer en tronc commun</label>
-          <div class="text-muted mb-2" style="font-size:10.5px;">Sélectionnez plusieurs classes du même niveau : la matière sera ajoutée au même jour et au même créneau dans leurs emplois du temps. Les notes et l'appel restent saisis séparément pour chaque classe.</div>
+          <div class="text-muted mb-2" style="font-size:10.5px;">Sélectionnez plusieurs classes du même niveau : la matière générale ou professionnelle sera ajoutée au même jour et au même créneau dans leurs emplois du temps. Les notes et l'appel restent saisis séparément pour chaque classe.</div>
           {% for c in tronc_commun_classes %}
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="tronc_commun_class_ids" value="{{ c.id }}" id="tc{{ c.id }}">
@@ -61,9 +61,10 @@
         const block = document.getElementById('troncCommunBlock');
         if (!block) return;
         const opt = sel.options[sel.selectedIndex];
-        const isGeneral = opt && opt.getAttribute('data-category') === 'Enseignements Généraux';
-        block.style.display = isGeneral ? 'block' : 'none';
-        if (!isGeneral) {
+        const category = opt ? (opt.getAttribute('data-category') || '') : '';
+        const isEligible = category === 'Enseignements Généraux' || category.startsWith('Enseignements Professionnels');
+        block.style.display = isEligible ? 'block' : 'none';
+        if (!isEligible) {
           block.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
         }
       }

@@ -117,7 +117,7 @@ def main():
                 "tronc_commun_class_ids": [str(class_b_id)],
             }, follow_redirects=True)
             assert subject_rejected.status_code == 200
-            assert "rattachée à une seule classe".encode("utf-8") in subject_rejected.data
+            assert "matière sélectionnée n’est pas compatible".encode("utf-8") in subject_rejected.data
             with app.app_context():
                 assert ScheduleEntry.query.count() == 4
 
