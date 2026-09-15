@@ -5,7 +5,10 @@
 <style>
   @font-face { font-family: 'Playfair'; src: url('{{ font_bold }}'); }
   @font-face { font-family: 'Inter'; src: url('{{ font_regular }}'); }
-  @page { size: A4 landscape; margin: 0.55cm; }
+  @page { size: A4 landscape; margin: 0.4cm; }
+  html, body { page-break-after: avoid; }
+  body { page-break-inside: avoid; }
+  table, .grid, .footer-table { page-break-inside: avoid; }
   body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 11.5pt; }
   .school { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; font-weight: bold; }
   .subtitle { font-size: 6.8pt; color: #6b7688; }
@@ -14,7 +17,7 @@
   .title { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; text-align:center; text-decoration:none; border:0; }
   .meta-table { width: 100%; margin-bottom: 8pt; font-size: 12pt; }
   .meta-table td { padding: 2pt 7pt; }
-  .red { color: #c0392b; font-weight: bold; }
+  .red { color: #000000; font-weight: bold; }
   table.grid { width: 100%; border-collapse: collapse; border: 1pt solid #0B2545; }
   table.grid th { background-color: #F8F5EC; color: #0B2545; font-size: 10.2pt; text-align: center;
                   padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; }

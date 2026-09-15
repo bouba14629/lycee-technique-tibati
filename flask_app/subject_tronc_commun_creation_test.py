@@ -21,7 +21,7 @@ def make_user(username, section_id=None):
 with app.app_context():
     db.drop_all()
     db.create_all()
-    section = Section(name="Section Tronc", code="TRC")
+    section = Section(name="Section STT", code="STT")
     db.session.add(section)
     db.session.flush()
     department_a = Department(name="Filière A", code="A", section_id=section.id)

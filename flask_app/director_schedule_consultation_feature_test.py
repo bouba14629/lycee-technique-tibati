@@ -132,9 +132,9 @@ def main():
         assert b"EMPLOI DE TEMPS INDIVIDUEL" in teacher_preview.data
         assert b"STT-2N-ELEC" in teacher_preview.data
         assert b"Zeta Classe" not in teacher_preview.data
-        assert b'HEURES DUES :</strong> <span style="color:#c0392b; font-weight:700;">3</span>' in teacher_preview.data
-        assert b'CR\xc3\x89NEAUX PLANIFI\xc3\x89S :</strong> <span style="color:#c0392b; font-weight:700;">3</span>' in teacher_preview.data
-        assert b'HEURES FAITES :</strong> <span style="color:#c0392b; font-weight:700;">3</span>' in teacher_preview.data
+        assert b'HEURES DUES :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
+        assert b'CR\xc3\x89NEAUX PLANIFI\xc3\x89S :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
+        assert b'HEURES FAITES :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
         teacher_pdf = client.get(f"/directeur/emplois-du-temps/enseignants/{teacher_id}/officiel.pdf")
         assert teacher_pdf.status_code == 200
         assert "application/pdf" in teacher_pdf.content_type
@@ -157,7 +157,7 @@ def main():
         assert b"EMPLOI DE TEMPS INDIVIDUEL" in censeur_preview.data
         assert b"STT-2N-ELEC" in censeur_preview.data
         assert b"Zeta Classe" not in censeur_preview.data
-        assert b'HEURES FAITES :</strong> <span style="color:#c0392b; font-weight:700;">3</span>' in censeur_preview.data
+        assert b'HEURES FAITES :</strong> <span style="color:#000; font-weight:700;">3</span>' in censeur_preview.data
         censeur_pdf = client.get(f"/censeur/emplois-du-temps/enseignants/{teacher_id}/officiel.pdf")
         assert censeur_pdf.status_code == 200
         assert "application/pdf" in censeur_pdf.content_type

@@ -14,7 +14,8 @@ describe("conseiller orientation schedule access", () => {
   it("allows class schedule viewing endpoints for the counselor role", () => {
     const source = readProjectFile("flask_app/censeur_routes.py");
     expect(source).toContain('@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")');
-    expect(source).toContain('can_build_schedule = user.role in ("censeur", "directeur")');
+    expect(source).toContain('can_build_schedule = user.role == "directeur" or (user.role == "censeur"');
+    expect(source).toContain('section_code in {"STT", "INDUSTRIEL", "INDUSTRIELLE"}');
     expect(source).toContain('is_readonly = not can_build_schedule');
   });
 

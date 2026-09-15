@@ -249,3 +249,13 @@
 - [x] Mettre à jour le test intégré des troncs communs pour conserver le censeur CRM en lecture seule.
 - [x] Mettre à jour counselorScheduleAccess.test.ts pour refléter les permissions STT/Industriel et CRM en lecture seule.
 - [x] Mettre à jour schedule_grouping_feature_test.py après l’augmentation de police PDF de 2 points.
+
+- [x] Auditer le formulaire de créneau et les styles des emplois du temps écran/PDF.
+- [x] Ajouter une liste de classes de même niveau avec cases à cocher pour les censeurs STT et Industriel.
+- [x] Augmenter de 2 points la police des emplois individuels et par classe en conservant une seule page.
+- [x] Remplacer les couleurs rouges des emplois du temps par la couleur automatique noire.
+- [x] Tester les classes cochées, les exports PDF et la mise en page locale avant publication.
+- [ ] Enregistrer et publier la correction validée.
+- [x] Mettre à jour l’assertion de couleur du test director_schedule_consultation_feature_test.py vers le noir automatique.
+- [x] Adapter subject_tronc_commun_creation_test.py aux permissions actuelles des censeurs STT/Industriel sans modifier la logique de production.
+- [x] Aligner counselorScheduleAccess.test.ts sur la condition STT/Industriel et le censeur transversal autorisés.

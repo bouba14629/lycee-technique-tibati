@@ -38,7 +38,8 @@ def censeur_schedule():
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     # Le directeur et les censeurs de section (STT/Industriel) construisent ;
     # le conseiller d’orientation et le censeur CRM restent en consultation seule.
-    can_build_schedule = user.role in ("censeur", "directeur")
+    section_code = ((user.section.code if user.role == "censeur" and user.section else "") or "").strip().upper()
+    can_build_schedule = user.role == "directeur" or (user.role == "censeur" and (not user.section_id or section_code in {"STT", "INDUSTRIEL", "INDUSTRIELLE"}))
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -49,7 +50,7 @@ def censeur_schedule():
         abort(403)
     rooms = Room.query.order_by(Room.name).all()
     current_class = SchoolClass.query.get(class_id) if class_id else None
-    can_create_tronc_commun = bool(current_class) and user.role in ("censeur", "directeur")
+    can_create_tronc_commun = bool(current_class) and (user.role == "directeur" or (user.role == "censeur" and (not user.section_id or section_code in {"STT", "INDUSTRIEL", "INDUSTRIELLE"})))
     if current_class:
         subjects_q = Subject.query.filter(or_(
             Subject.class_id == current_class.id,
