@@ -13,7 +13,7 @@ def main():
         with app.app_context():
             db.create_all()
             section_stt = Section(name="Section STT", code="STT")
-            section_ind = Section(name="Section IND", code="IND")
+            section_ind = Section(name="Section Industrielle", code="INDUSTRIEL")
             db.session.add_all([section_stt, section_ind])
             db.session.flush()
             principal = User(username="censeur.test", role="censeur", full_name="Censeur Test", section_id=section_stt.id)
@@ -22,7 +22,9 @@ def main():
             transversal.set_password("Lyttib")
             crm = User(username="censeur.crm", role="censeur_crm", full_name="Censeur CRM")
             crm.set_password("Lyttib")
-            db.session.add_all([principal, transversal, crm])
+            industrial = User(username="censeur.ind", role="censeur", full_name="Censeur Industriel", section_id=section_ind.id)
+            industrial.set_password("Lyttib")
+            db.session.add_all([principal, industrial, transversal, crm])
             db.session.flush()
             dept_a = Department(name="Gestion A", code="G-A", section_id=section_stt.id)
             dept_b = Department(name="Gestion B", code="G-B", section_id=section_stt.id)
@@ -133,10 +135,17 @@ def main():
                 assert ScheduleEntry.query.count() == 4
 
             client.get("/logout")
+            assert client.post("/login", data={"username": "censeur.ind", "password": "Lyttib"}).status_code == 302
+            industrial_page = client.get(f"/censeur/emplois-du-temps?class_id={ind_id}")
+            assert industrial_page.status_code == 200
+            assert "Ajouter un créneau".encode("utf-8") in industrial_page.data
+
+            client.get("/logout")
             assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302
             edit_page = client.get(f"/censeur/emplois-du-temps?class_id={class_a_id}&edit_entry_id={valid_entry_id}")
             assert edit_page.status_code == 200
             assert "Modifier le créneau".encode("utf-8") in edit_page.data
+            assert "Ajouter des classes au tronc commun".encode("utf-8") in edit_page.data
             edited = client.post(f"/censeur/emplois-du-temps/{valid_entry_id}/modifier", data={
                 "teacher_id": teacher_id, "room_id": room_id,
                 "day": "Vendredi", "start_time": "09:00", "end_time": "11:00",

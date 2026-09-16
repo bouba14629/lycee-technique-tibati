@@ -181,6 +181,7 @@ def censeur_schedule():
 @app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
 @roles_required("censeur", "directeur")
 def censeur_schedule_edit(entry_id):
+    import uuid
     user = User.query.get(session["user_id"])
     entry = ScheduleEntry.query.get_or_404(entry_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
@@ -189,6 +190,7 @@ def censeur_schedule_edit(entry_id):
 
     group_entries = (ScheduleEntry.query.filter_by(group_key=entry.group_key).all()
                      if entry.group_key else [entry])
+    existing_class_ids = {item.course.class_id for item in group_entries}
     if scoped_class_ids is not None and any(item.course.class_id not in scoped_class_ids for item in group_entries):
         abort(403)
     teacher_id = request.form.get("teacher_id", type=int)
@@ -196,6 +198,7 @@ def censeur_schedule_edit(entry_id):
     day = request.form.get("day")
     start = request.form.get("start_time")
     end = request.form.get("end_time")
+    selected_ids = sorted(set(request.form.getlist("tronc_commun_class_ids", type=int)))
     teacher = Teacher.query.get(teacher_id) if teacher_id else None
     room = Room.query.get(room_id) if room_id else None
     if not teacher or (room_id and not room):
@@ -205,16 +208,35 @@ def censeur_schedule_edit(entry_id):
         flash("Indiquez un jour et des horaires valides : l’heure de fin doit être postérieure au début.", "danger")
         return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
 
+    target_classes = []
+    if selected_ids:
+        if user.role != "directeur" and user.role != "censeur":
+            abort(403)
+        for class_id in selected_ids:
+            if class_id in existing_class_ids:
+                continue
+            if scoped_class_ids is not None and class_id not in scoped_class_ids:
+                abort(403)
+            target = SchoolClass.query.get(class_id)
+            if not target or target.level != entry.course.school_class.level:
+                flash("Les classes ajoutées au tronc commun doivent être du même niveau.", "danger")
+                return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
+            target_classes.append(target)
+
     conflicts = []
     for item in group_entries:
         conflicts.extend(check_schedule_conflict(day, start, end, room_id=room_id, teacher_id=teacher_id,
                                                  class_id=item.course.class_id, exclude_id=item.id,
                                                  group_key=entry.group_key))
+    for target in target_classes:
+        conflicts.extend(check_schedule_conflict(day, start, end, room_id=room_id, teacher_id=teacher_id,
+                                                 class_id=target.id, group_key=entry.group_key))
     conflicts = list(dict.fromkeys(conflicts))
     if conflicts:
         flash("Conflit détecté : " + " | ".join(conflicts), "danger")
         return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
 
+    group_key = entry.group_key or (str(uuid.uuid4()) if target_classes else None)
     for item in group_entries:
         course = Course.query.filter_by(subject_id=item.course.subject_id, teacher_id=teacher_id,
                                         class_id=item.course.class_id).first()
@@ -227,8 +249,28 @@ def censeur_schedule_edit(entry_id):
         item.day = day
         item.start_time = start
         item.end_time = end
+        item.group_key = group_key
+
+    for target in target_classes:
+        subject = Subject.query.filter(
+            Subject.name == entry.course.subject.name,
+            Subject.category == entry.course.subject.category,
+            or_(Subject.class_id == target.id,
+                and_(Subject.class_id.is_(None), or_(Subject.department_id == target.department_id, Subject.department_id.is_(None))))
+        ).first()
+        if not subject or not _subject_compatible_with_class(subject, target):
+            flash("La matière du créneau n’est pas compatible avec toutes les classes sélectionnées.", "danger")
+            db.session.rollback()
+            return redirect(url_for("censeur_schedule", class_id=entry.course.class_id, edit_entry_id=entry.id))
+        course = Course.query.filter_by(subject_id=subject.id, teacher_id=teacher_id, class_id=target.id).first()
+        if not course:
+            course = Course(subject_id=subject.id, teacher_id=teacher_id, class_id=target.id)
+            db.session.add(course)
+            db.session.flush()
+        db.session.add(ScheduleEntry(course_id=course.id, room_id=room.id if room else None,
+                                     day=day, start_time=start, end_time=end, published=True, group_key=group_key))
     db.session.commit()
-    flash("Créneau modifié" + (" pour tout le tronc commun." if entry.group_key else "."), "success")
+    flash("Créneau modifié" + (" et tronc commun étendu." if target_classes else " pour tout le tronc commun." if entry.group_key else "."), "success")
     return redirect(url_for("censeur_schedule", class_id=entry.course.class_id))
 
 

@@ -274,6 +274,8 @@
 - [x] Ajouter Absences quotidiennes chez les surveillants avec les colonnes demandées et un export Excel.
 - [x] Synchroniser Mes classes avec les classes des emplois du temps individuels enseignants.
 - [x] Ajouter les tests locaux, exécuter le préflight, Vitest, le type-check et le build.
-- [ ] Enregistrer et publier la correction validée.
+- [x] Enregistrer et publier la correction validée.
 - [x] Tester l’horaire automatique de l’appel depuis ScheduleEntry, les cumuls sans colonne date et les deux exports Excel surveillants.
 - [x] Tester que Mes classes ne montre que les cours présents dans l’emploi du temps individuel de l’enseignant.
+- [x] Autoriser les censeurs STT et Industriel à modifier les créneaux, y compris les troncs communs, sans modifier les données existantes.
+- [x] Tester les permissions, les conflits et la modification groupée des troncs communs pour STT et Industriel.
