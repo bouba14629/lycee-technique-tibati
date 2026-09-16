@@ -279,3 +279,5 @@
 - [x] Tester que Mes classes ne montre que les cours présents dans l’emploi du temps individuel de l’enseignant.
 - [x] Autoriser les censeurs STT et Industriel à modifier les créneaux, y compris les troncs communs, sans modifier les données existantes.
 - [x] Tester les permissions, les conflits et la modification groupée des troncs communs pour STT et Industriel.
+- [x] Autoriser les censeurs à créer et modifier les emplois du temps sans le message Consultation uniquement.
+- [x] Tester les droits censeur, les conflits, les troncs communs et le maintien de la lecture seule du conseiller d’orientation.

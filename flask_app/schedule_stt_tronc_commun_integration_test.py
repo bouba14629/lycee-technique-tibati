@@ -125,14 +125,18 @@ def main():
 
             client.get("/logout")
             assert client.post("/login", data={"username": "censeur.crm", "password": "Lyttib"}).status_code == 302
+            crm_page = client.get(f"/censeur/emplois-du-temps?class_id={class_a_id}")
+            assert crm_page.status_code == 200
+            assert "Ajouter un créneau".encode("utf-8") in crm_page.data
             crm_insert = client.post(f"/censeur/emplois-du-temps?class_id={class_a_id}", data={
                 "subject_id": shared_subject_id, "teacher_id": teacher_id, "room_id": room_id,
                 "day": "Jeudi", "start_time": "08:00", "end_time": "10:00",
                 "tronc_commun_class_ids": [str(class_b_id)],
             }, follow_redirects=True)
-            assert crm_insert.status_code == 403
+            assert crm_insert.status_code == 200
+            assert "Tronc commun".encode("utf-8") in crm_insert.data
             with app.app_context():
-                assert ScheduleEntry.query.count() == 4
+                assert ScheduleEntry.query.count() == 6
 
             client.get("/logout")
             assert client.post("/login", data={"username": "censeur.ind", "password": "Lyttib"}).status_code == 302

@@ -124,7 +124,7 @@
             {% if e.group_key %}<span class="badge-ltt badge-gold" style="font-size:9px;" title="Cours en tronc commun avec d'autres classes"><i class="bi bi-people-fill"></i> Tronc commun</span>{% endif %}
             <br>
             <span class="text-muted">{{ e.course.teacher.user.full_name }} · {{ e.room.name if e.room else 'Salle non définie' }}</span><br>
-            {% if not is_readonly and current_user.role in ['censeur', 'directeur'] %}
+            {% if not is_readonly and current_user.role in ['censeur', 'censeur_crm', 'directeur'] %}
             <a href="{{ url_for('censeur_schedule', class_id=class_id, edit_entry_id=e.id) }}" class="text-primary me-2" style="font-size:10.5px;"><i class="bi bi-pencil-square"></i> Modifier</a>
             {% if current_user.role == 'censeur' %}<a href="{{ url_for('censeur_schedule_delete', entry_id=e.id) }}" class="text-danger" style="font-size:10.5px;" onclick="return confirm('Supprimer ce créneau ?')"><i class="bi bi-trash"></i> Supprimer</a>{% endif %}
             {% endif %}

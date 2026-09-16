@@ -14,8 +14,7 @@ describe("conseiller orientation schedule access", () => {
   it("allows class schedule viewing endpoints for the counselor role", () => {
     const source = readProjectFile("flask_app/censeur_routes.py");
     expect(source).toContain('@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")');
-    expect(source).toContain('can_build_schedule = user.role == "directeur" or (user.role == "censeur"');
-    expect(source).toContain('section_code in {"STT", "INDUSTRIEL", "INDUSTRIELLE"}');
+    expect(source).toContain('can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm"}');
     expect(source).toContain('is_readonly = not can_build_schedule');
   });
 
@@ -24,7 +23,7 @@ describe("conseiller orientation schedule access", () => {
     expect(source).toContain('if not can_build_schedule or is_readonly:');
     expect(source).toContain('"censeur_crm"');
     expect(source).toContain('"conseiller_orientation"');
-    expect(source).toContain('@roles_required("censeur", "directeur")\ndef censeur_schedule_edit');
+    expect(source).toContain('@roles_required("censeur", "censeur_crm", "directeur")\ndef censeur_schedule_edit');
   });
 
   it("adds a consultation-only menu entry", () => {
