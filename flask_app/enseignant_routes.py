@@ -16,10 +16,16 @@ def current_teacher():
 @app.route("/enseignant/mes-classes")
 @roles_required("enseignant")
 def teacher_courses():
+    from models import ScheduleEntry
     teacher = current_teacher()
     if not teacher:
         abort(403)
-    return render_template("teacher_courses.html", teacher=teacher, courses=teacher.courses)
+    scheduled_courses = (Course.query.join(ScheduleEntry)
+                         .filter(Course.teacher_id == teacher.id)
+                         .order_by(Course.class_id, Course.subject_id)
+                         .all())
+    courses = list({course.id: course for course in scheduled_courses}.values())
+    return render_template("teacher_courses.html", teacher=teacher, courses=courses, schedule_synced=True)
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")
@@ -166,15 +172,21 @@ def teacher_grades(course_id):
 @app.route("/enseignant/appel/<int:course_id>", methods=["GET", "POST"])
 @roles_required("enseignant")
 def teacher_attendance(course_id):
+    from models import ScheduleEntry
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
     if course.teacher_id != teacher.id:
         abort(403)
+    schedule_entry = (ScheduleEntry.query.filter_by(course_id=course.id)
+                      .order_by(ScheduleEntry.day, ScheduleEntry.start_time).first())
+    scheduled_start = schedule_entry.start_time if schedule_entry else "07:30"
+    scheduled_end = schedule_entry.end_time if schedule_entry else "09:30"
+    scheduled_day = schedule_entry.day if schedule_entry else ""
 
     if request.method == "POST":
         session_date = request.form.get("date") or date.today().isoformat()
-        start = request.form.get("start_time", "07:30")
-        end = request.form.get("end_time", "09:30")
+        start = scheduled_start
+        end = scheduled_end
         count = 0
         for student in course.school_class.students:
             status = request.form.get(f"status_{student.id}", "Présent")
@@ -193,7 +205,10 @@ def teacher_attendance(course_id):
         return redirect(url_for("teacher_attendance", course_id=course_id))
 
     students = sorted(course.school_class.students, key=lambda s: (s.last_name, s.first_name))
-    return render_template("teacher_attendance.html", course=course, students=students, today=date.today().isoformat())
+    return render_template("teacher_attendance.html", course=course, students=students,
+                           today=date.today().isoformat(), scheduled_day=scheduled_day,
+                           scheduled_start=scheduled_start, scheduled_end=scheduled_end,
+                           schedule_entry=schedule_entry)
 
 
 @app.route("/enseignant/emploi-du-temps")
@@ -238,8 +253,12 @@ def teacher_attendance_sheet(course_id):
     d = date.fromisoformat(session_date)
     recs = Attendance.query.filter_by(course_id=course.id, date=d).all()
     records = {r.student_id: r for r in recs}
+    schedule_entry = (ScheduleEntry.query.filter_by(course_id=course.id)
+                      .order_by(ScheduleEntry.day, ScheduleEntry.start_time).first())
+    start_time = schedule_entry.start_time if schedule_entry else "07:30"
+    end_time = schedule_entry.end_time if schedule_entry else "09:30"
     return render_template("attendance_sheet.html", course=course, students=students,
-                            session_date=session_date, start_time="07:30", end_time="09:30",
+                            session_date=session_date, start_time=start_time, end_time=end_time,
                             records=records)
 
 
@@ -257,8 +276,12 @@ def teacher_attendance_sheet_pdf(course_id):
     d = date.fromisoformat(session_date)
     recs = Attendance.query.filter_by(course_id=course.id, date=d).all()
     records = {r.student_id: r for r in recs}
+    schedule_entry = (ScheduleEntry.query.filter_by(course_id=course.id)
+                      .order_by(ScheduleEntry.day, ScheduleEntry.start_time).first())
+    start_time = schedule_entry.start_time if schedule_entry else "07:30"
+    end_time = schedule_entry.end_time if schedule_entry else "09:30"
     pdf = render_pdf("pdf/attendance_sheet_pdf.html", course=course, students=students,
-                      session_date=session_date, start_time="07:30", end_time="09:30", records=records)
+                      session_date=session_date, start_time=start_time, end_time=end_time, records=records)
     if not pdf:
         abort(500)
     filename = f"Fiche_appel_{course.school_class.name}_{session_date}.pdf".replace(" ", "_")

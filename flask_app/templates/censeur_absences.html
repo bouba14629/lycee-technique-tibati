@@ -1,30 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Absences{% endblock %}
-{% block page_title %}Absences &amp; retards à traiter{% endblock %}
+{% block page_title %}Absences à justifier{% endblock %}
 {% block content %}
 <div class="card-ltt">
   <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
     <select name="class_id" class="form-select" style="max-width:260px;" onchange="this.form.submit()"><option value="">Toutes les classes autorisées</option>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if class_id==c.id }}>{{ c.name }} — {{ c.department.name }}</option>{% endfor %}</select>
-    {% if class_id and current_user.role == 'surveillant_general' %}<a class="btn-ltt-outline" href="{{ url_for('surveillant_absences_export_xlsx', class_id=class_id) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a><a class="btn-ltt-gold" href="{{ url_for('surveillant_absences_export_pdf', class_id=class_id) }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>{% endif %}
+    {% if current_user.role == 'surveillant_general' %}<a class="btn-ltt-outline" href="{{ url_for('surveillant_absences_export_all_xlsx', class_id=class_id) if class_id else url_for('surveillant_absences_export_all_xlsx') }}"><i class="bi bi-file-earmark-excel"></i> Exporter Excel</a>{% endif %}
+    <a class="btn-ltt-navy" href="{{ url_for('surveillant_daily_absences') }}"><i class="bi bi-calendar-day"></i> Absences quotidiennes</a>
   </form>
+  <p class="text-muted small">Les absences sont regroupées par élève. Le total correspond à la somme de toutes les durées enregistrées ; la colonne Date n’est pas affichée dans cette vue.</p>
   <table class="table-ltt">
-    <thead><tr><th>Élève</th><th>Classe</th><th>Heures cumulées</th><th>Type</th><th>Date</th><th>Motif</th>{% if current_user.role == 'surveillant_general' %}<th></th>{% endif %}</tr></thead>
+    <thead><tr><th>Élève</th><th>Classe</th><th>Heures cumulées</th><th>Nombre</th><th>Type</th><th>Motif(s)</th>{% if current_user.role == 'surveillant_general' %}<th></th>{% endif %}</tr></thead>
     <tbody>
-    {% for a in records %}
+    {% for row in absence_rows %}
       <tr>
-        <td><a href="{{ url_for('student_detail', student_id=a.student.id) }}">{{ a.student.full_name }}</a></td>
-        <td>{{ a.student.school_class.name if a.student.school_class }}</td>
-        <td><strong>{{ student_hours.get(a.student_id, 0) }} h</strong></td>
-        <td><span class="badge-ltt {{ 'badge-danger' if a.type=='Absence' else 'badge-warning' }}">{{ a.type }}</span></td>
-        <td>{{ a.date.strftime('%d/%m/%Y') }}</td>
-        <td>{{ a.reason or '—' }}</td>
-        {% if current_user.role == 'surveillant_general' %}
-        <td class="text-end"><a href="{{ url_for('censeur_absence_justify', att_id=a.id) }}" class="btn-ltt-gold py-1 px-2" style="font-size:11.5px;"><i class="bi bi-check2"></i> Justifier</a></td>
-        {% endif %}
+        <td><a href="{{ url_for('student_detail', student_id=row.student.id) }}">{{ row.student.full_name }}</a></td>
+        <td>{{ row.student.school_class.name if row.student.school_class }}</td>
+        <td><strong>{{ row.hours }} h</strong></td>
+        <td>{{ row.count }}</td><td>{{ row.types }}</td><td>{{ row.reasons }}</td>
+        {% if current_user.role == 'surveillant_general' %}<td class="text-end">{% for a in row.records %}<a href="{{ url_for('censeur_absence_justify', att_id=a.id) }}" class="btn-ltt-gold py-1 px-2 mb-1" style="font-size:11.5px;"><i class="bi bi-check2"></i> Justifier</a>{% endfor %}</td>{% endif %}
       </tr>
-    {% else %}
-      <tr><td colspan="7" class="text-muted text-center py-4">Aucune absence enregistrée pour ce périmètre.</td></tr>
-    {% endfor %}
+    {% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucune absence enregistrée pour ce périmètre.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

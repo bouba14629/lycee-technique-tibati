@@ -3,6 +3,7 @@
 {% block page_title %}Mes classes &amp; matières{% endblock %}
 {% block page_subtitle %}{{ teacher.department.name if teacher.department }}{% endblock %}
 {% block content %}
+{% if schedule_synced %}<div class="alert alert-info mb-3"><i class="bi bi-calendar2-check"></i> Cette liste est synchronisée avec les cours présents dans votre emploi du temps individuel.</div>{% endif %}
 <div class="row g-3">
 {% for c in courses %}
 <div class="col-md-6 col-lg-4">
@@ -17,7 +18,7 @@
   </div>
 </div>
 {% else %}
-<div class="col-12"><div class="card-ltt text-center text-muted py-4">Aucun cours affecté pour le moment.</div></div>
+<div class="col-12"><div class="card-ltt text-center text-muted py-4">Aucun cours n’est actuellement programmé dans votre emploi du temps.</div></div>
 {% endfor %}
 </div>
 {% endblock %}

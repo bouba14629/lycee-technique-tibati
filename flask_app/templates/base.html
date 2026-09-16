@@ -116,6 +116,7 @@
       {% if current_user and current_user.role == 'surveillant_general' %}
       <div class="sidebar-section-title">Discipline &amp; absences</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_absences' }}" href="{{ url_for('censeur_absences') }}"><i class="bi bi-exclamation-octagon-fill"></i> Absences à justifier</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='surveillant_daily_absences' }}" href="{{ url_for('surveillant_daily_absences') }}"><i class="bi bi-calendar-day"></i> Absences quotidiennes</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='surveillant_sanctions' }}" href="{{ url_for('surveillant_sanctions') }}"><i class="bi bi-shield-exclamation"></i> Élèves sanctionnés</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves (sanctions/récompenses)</a>
       {% endif %}

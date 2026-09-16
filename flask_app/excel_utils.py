@@ -351,6 +351,59 @@ def absence_hours_workbook(school_class, rows):
     return output
 
 
+
+def absence_justification_workbook(rows, title="Absences à justifier"):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "À justifier"
+    widths = [16, 30, 24, 18, 16, 42]
+    for i, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    _header(ws, 1, len(widths), f"LYCÉE TECHNIQUE DE TIBATI — {title.upper()}")
+    headers = ["Matricule", "Élève", "Classe", "Heures cumulées", "Nombre", "Motif(s)"]
+    for i, header in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=i, value=header)
+        cell.font = Font(bold=True, color=NAVY)
+        cell.fill = PatternFill("solid", fgColor=CREAM)
+        cell.border = BORDER
+    for row_index, row in enumerate(rows, start=4):
+        student = row["student"]
+        values = [student.matricule, student.full_name, student.school_class.name if student.school_class else "—",
+                  row.get("hours", 0), row.get("count", 0), row.get("reasons", "—")]
+        for col, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_index, column=col, value=value)
+            cell.border = BORDER
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+def daily_absences_workbook(rows, title="Absences quotidiennes"):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Absences quotidiennes"
+    widths = [30, 22, 18, 16, 14, 28, 28]
+    for i, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    _header(ws, 1, len(widths), f"LYCÉE TECHNIQUE DE TIBATI — {title.upper()}")
+    headers = ["ELEVE", "CLASSE", "HEURES D'ABSENCES", "TYPE", "DATE", "ENSEIGNANTS", "MATIERES"]
+    for i, header in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=i, value=header)
+        cell.font = Font(bold=True, color=NAVY)
+        cell.fill = PatternFill("solid", fgColor=CREAM)
+        cell.border = BORDER
+    for row_index, row in enumerate(rows, start=4):
+        values = [row["student"].full_name, row["class_name"], row["hours"], row["type"], row["date"], row["teacher"], row["subject"]]
+        for col, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_index, column=col, value=value)
+            cell.border = BORDER
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
 def students_workbook(students, title):
     wb = Workbook()
     ws = wb.active

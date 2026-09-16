@@ -358,11 +358,89 @@ def censeur_absences():
     elif scoped_class_ids is not None:
         records_q = records_q.filter(Student.class_id.in_(scoped_class_ids))
     records = records_q.order_by(Attendance.date.desc()).all()
-    student_hours = {}
+    grouped = {}
     for record in records:
-        student_hours.setdefault(record.student_id, _absence_hours(record.student_id))
-    return render_template("censeur_absences.html", records=records, classes=classes, class_id=class_id,
-                           student_hours=student_hours)
+        grouped.setdefault(record.student_id, []).append(record)
+    absence_rows = []
+    for student_id, student_records in grouped.items():
+        student = student_records[0].student
+        absence_rows.append({
+            "student": student,
+            "records": student_records,
+            "hours": _absence_hours(student_id),
+            "count": len(student_records),
+            "types": ", ".join(sorted({r.type for r in student_records})),
+            "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
+        })
+    absence_rows.sort(key=lambda row: (row["student"].school_class.name if row["student"].school_class else "", row["student"].last_name, row["student"].first_name))
+    return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id)
+
+
+def _attendance_duration(record):
+    try:
+        h1, m1 = map(int, (record.start_time or "00:00").split(":"))
+        h2, m2 = map(int, (record.end_time or record.start_time or "00:00").split(":"))
+        return max(0, round((h2 * 60 + m2 - h1 * 60 - m1) / 60, 2))
+    except Exception:
+        return 0
+
+
+def _daily_absence_rows(user, selected_date=None, class_id=None):
+    scoped = user_scoped_class_ids(user) if user.role == "surveillant_general" else None
+    if class_id and scoped is not None and class_id not in scoped:
+        abort(403)
+    q = (Attendance.query.join(Student).join(Course)
+         .filter(Attendance.type == "Absence"))
+    if selected_date:
+        q = q.filter(Attendance.date == selected_date)
+    if class_id:
+        q = q.filter(Student.class_id == class_id)
+    elif scoped is not None:
+        q = q.filter(Student.class_id.in_(scoped))
+    rows = []
+    for record in q.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all():
+        teacher_name = record.course.teacher.user.full_name if record.course and record.course.teacher and record.course.teacher.user else "—"
+        rows.append({"record": record, "student": record.student,
+                     "class_name": record.student.school_class.name if record.student.school_class else "—",
+                     "hours": _attendance_duration(record), "type": record.type,
+                     "date": record.date.strftime("%d/%m/%Y") if record.date else "—",
+                     "teacher": teacher_name,
+                     "subject": record.course.subject.name if record.course and record.course.subject else "—"})
+    return rows
+
+
+@app.route("/surveillant/absences-quotidiennes")
+@roles_required("surveillant_general")
+def surveillant_daily_absences():
+    user = User.query.get(session["user_id"])
+    raw_date = request.args.get("date") or date.today().isoformat()
+    try:
+        selected_date = date.fromisoformat(raw_date)
+    except ValueError:
+        selected_date = date.today()
+        raw_date = selected_date.isoformat()
+    class_id = request.args.get("class_id", type=int)
+    scoped = user_scoped_class_ids(user)
+    classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
+    rows = _daily_absence_rows(user, selected_date, class_id)
+    return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date)
+
+
+@app.route("/surveillant/absences-quotidiennes/export.xlsx")
+@roles_required("surveillant_general")
+def surveillant_daily_absences_export_xlsx():
+    from flask import send_file
+    from excel_utils import daily_absences_workbook
+    user = User.query.get(session["user_id"])
+    raw_date = request.args.get("date") or date.today().isoformat()
+    try:
+        selected_date = date.fromisoformat(raw_date)
+    except ValueError:
+        selected_date = date.today()
+    rows = _daily_absence_rows(user, selected_date, request.args.get("class_id", type=int))
+    return send_file(daily_absences_workbook(rows, f"Absences quotidiennes — {selected_date.strftime('%d/%m/%Y')}"),
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name=f"Absences_quotidiennes_{selected_date.isoformat()}.xlsx")
 
 
 def _absence_class_rows(user, class_id):
@@ -377,14 +455,39 @@ def _absence_class_rows(user, class_id):
     return school_class, rows
 
 
+@app.route("/surveillant/absences/export.xlsx")
+@roles_required("surveillant_general")
+def surveillant_absences_export_all_xlsx():
+    from flask import send_file
+    from excel_utils import absence_justification_workbook
+    user = User.query.get(session["user_id"])
+    class_id = request.args.get("class_id", type=int)
+    scoped = user_scoped_class_ids(user)
+    q = Attendance.query.join(Student).filter(Attendance.type == "Absence")
+    if class_id:
+        if scoped is not None and class_id not in scoped:
+            abort(403)
+        q = q.filter(Student.class_id == class_id)
+    elif scoped is not None:
+        q = q.filter(Student.class_id.in_(scoped))
+    grouped = {}
+    for record in q.order_by(Attendance.date.desc()).all():
+        grouped.setdefault(record.student_id, []).append(record)
+    rows = []
+    for records in grouped.values():
+        student = records[0].student
+        rows.append({"student": student, "records": records, "hours": _absence_hours(student.id), "count": len(records),
+                     "types": ", ".join(sorted({r.type for r in records})),
+                     "reasons": ", ".join(sorted({r.reason for r in records if r.reason})) or "—"})
+    title = "Absences à justifier" + (f" — {rows[0]['student'].school_class.name}" if class_id and rows else "")
+    return send_file(absence_justification_workbook(rows, title), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name="Absences_a_justifier.xlsx")
+
+
 @app.route("/surveillant/absences/classe/<int:class_id>/export.xlsx")
 @roles_required("surveillant_general")
 def surveillant_absences_export_xlsx(class_id):
-    from flask import send_file
-    from excel_utils import absence_hours_workbook
-    school_class, rows = _absence_class_rows(User.query.get(session["user_id"]), class_id)
-    return send_file(absence_hours_workbook(school_class, rows), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                     as_attachment=True, download_name=f"Absences_{school_class.name}.xlsx".replace(" ", "_"))
+    return redirect(url_for("surveillant_absences_export_all_xlsx", class_id=class_id))
 
 
 @app.route("/surveillant/absences/classe/<int:class_id>/export.pdf")

@@ -267,3 +267,13 @@
 - [x] Enregistrer et publier la correction validée.
 - [x] Ajouter un scénario de matière professionnelle équivalente par classe dans subject_tronc_commun_creation_test.py.
 - [x] Mettre à jour l’assertion du test intégré pour vérifier le refus d’une matière professionnelle réellement incompatible.
+
+- [x] Auditer les routes et modèles d’appel, d’absences surveillants et de classes enseignants.
+- [x] Récupérer automatiquement la plage horaire de la matière dans l’appel en classe enseignant.
+- [x] Ajouter le cumul des heures d’absence par élève et l’export Excel dans Absence à justifier.
+- [x] Ajouter Absences quotidiennes chez les surveillants avec les colonnes demandées et un export Excel.
+- [x] Synchroniser Mes classes avec les classes des emplois du temps individuels enseignants.
+- [x] Ajouter les tests locaux, exécuter le préflight, Vitest, le type-check et le build.
+- [ ] Enregistrer et publier la correction validée.
+- [x] Tester l’horaire automatique de l’appel depuis ScheduleEntry, les cumuls sans colonne date et les deux exports Excel surveillants.
+- [x] Tester que Mes classes ne montre que les cours présents dans l’emploi du temps individuel de l’enseignant.
