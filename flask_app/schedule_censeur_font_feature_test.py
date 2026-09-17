@@ -13,7 +13,7 @@ assert 'font-size:12.5px; max-width:100%;' in screen
 assert 'font-size:14px;' in screen
 assert 'font-size:11.5px;' in screen
 assert 'font-size:10.5px; font-style:italic;' in screen
-assert 'body { font-family: \'Inter\', Helvetica, sans-serif; color: #1c2733; font-size: 11.5pt; }' in pdf
+assert 'body { font-family: \'Inter\', Helvetica, sans-serif; color: #1c2733; font-size: 11.5pt; line-height:1; }' in pdf
 assert '.red { color: #000000; font-weight: bold; }' in pdf
 assert 'page-break-inside: avoid' in pdf
 assert 'color:#c0392b' not in screen

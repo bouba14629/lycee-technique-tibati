@@ -133,7 +133,7 @@ def main():
         assert b"STT-2N-ELEC" in teacher_preview.data
         assert b"Zeta Classe" not in teacher_preview.data
         assert b'HEURES DUES :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
-        assert b'CR\xc3\x89NEAUX PLANIFI\xc3\x89S :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
+        assert b'CR\xc3\x89NEAUX PLANIFI\xc3\x89S' not in teacher_preview.data
         assert b'HEURES FAITES :</strong> <span style="color:#000; font-weight:700;">3</span>' in teacher_preview.data
         teacher_pdf = client.get(f"/directeur/emplois-du-temps/enseignants/{teacher_id}/officiel.pdf")
         assert teacher_pdf.status_code == 200
@@ -143,7 +143,7 @@ def main():
         assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in teacher_export.content_type
         workbook = load_workbook(BytesIO(teacher_export.data))
         assert any("STT-2N-ELEC" in str(cell.value or "") for row in workbook.active.iter_rows() for cell in row)
-        assert any("Heures dues : 3 — Créneaux planifiés : 3 — Heures faites : 3" in str(cell.value or "") for row in workbook.active.iter_rows() for cell in row)
+        assert any("Heures faites : 3 — Heures supplémentaires : 0" in str(cell.value or "") for row in workbook.active.iter_rows() for cell in row)
 
         client.get("/logout")
         assert client.post("/login", data={"username": "censeur.test", "password": "Lyttib"}).status_code == 302

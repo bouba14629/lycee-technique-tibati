@@ -9,14 +9,14 @@
   html, body { page-break-after: avoid; }
   body { page-break-inside: avoid; }
   table, .grid, .footer-table { page-break-inside: avoid; }
-  body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 11.5pt; }
+  body { font-family: 'Inter', Helvetica, sans-serif; color: #1c2733; font-size: 11.5pt; line-height:1; }
   .school { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; font-weight: bold; }
   .subtitle { font-size: 6.8pt; color: #6b7688; }
   .title-table { width: 100%; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; margin: 6pt 0 8pt; }
   .title-table td { border: 0; border-top: 0; border-bottom: 0; }
   .title { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; text-align:center; text-decoration:none; border:0; }
-  .meta-table { width: 100%; margin-bottom: 8pt; font-size: 12pt; }
-  .meta-table td { padding: 2pt 7pt; }
+  .meta-table { width: 100%; margin-bottom: 5pt; font-size: 12pt; line-height:1; }
+  .meta-table td { padding: 1pt 7pt; line-height:1; }
   .red { color: #000000; font-weight: bold; }
   table.grid { width: 100%; border-collapse: collapse; border: 1pt solid #0B2545; }
   table.grid th { background-color: #F8F5EC; color: #0B2545; font-size: 10.2pt; text-align: center;
@@ -29,13 +29,13 @@
   .recess { width: 7%; font-size: 10.4pt; line-height: 1.9; vertical-align: middle; text-align: center; }
   table.grid th.recess { background: #0B2545 !important; color: #fff !important; border: 0.5pt solid #0B2545; }
   .period-th { width: 8.8%; }
-  .footer-table { width: 100%; margin-top: 16pt; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; }
+  .footer-table { width: 100%; margin-top: 8pt; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; line-height:1; }
   .footer-table tr, .footer-table td { border: 0; border-top: 0; border-bottom: 0; text-align: center; font-size: 7.5pt; color: #6b7688; padding-top: 18pt; }
 </style>
 </head>
 <body>
 {% set section_label = school_class.department.section.name|upper|replace('SECTION ', '') if mode == 'classe' else (teacher.department.section.name|upper|replace('SECTION ', '') if teacher.department and teacher.department.section else '') %}
-{% set censeur_label = 'INDUSTRIEL' if section_label == 'INDUSTRIELLE' else section_label %}
+{% set censeur_label = 'DES ENSEIGNEMENTS GÉNÉRAUX' if mode != 'classe' and (not teacher.department or not teacher.department.section) else ('INDUSTRIEL' if section_label == 'INDUSTRIELLE' else section_label) %}
 
 <table style="width:100%;">
   <tr>
@@ -72,9 +72,8 @@
 <table class="meta-table">
   <tr>
     <td><strong>PROFESSEUR :</strong> <span class="red">{{ teacher.user.full_name.upper() }}</span></td>
-    <td><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department }}</span></td>
+    <td><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department else (teacher.specialty or 'Enseignements généraux') }}</span></td>
     <td><strong>H. DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>
-    <td><strong>CRÉNEAUX :</strong> <span class="red">{{ planned_slots if planned_slots is defined else hours_faites }}</span></td>
     <td><strong>H. FAITES :</strong> <span class="red">{{ hours_faites }}</span></td>
   </tr>
   <tr>

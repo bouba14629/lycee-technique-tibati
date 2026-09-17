@@ -13,7 +13,7 @@
         {% set entries = teacher.courses|map(attribute='schedule_entries')|sum(start=[]) %}
         <tr>
           <td class="fw-semibold">{{ teacher.user.full_name }}</td>
-          <td>{{ teacher.department.name if teacher.department else 'Enseignements généraux' }}</td>
+          <td>{{ teacher.department.name if teacher.department else (teacher.specialty or 'Enseignements généraux') }}</td>
           <td>{{ entries|length }}</td>
           <td class="text-end">
             <a href="{{ url_for('censeur_teacher_schedule_official', teacher_id=teacher.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-eye"></i> Voir</a>

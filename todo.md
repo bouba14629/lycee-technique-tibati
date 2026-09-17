@@ -281,3 +281,6 @@
 - [x] Tester les permissions, les conflits et la modification groupée des troncs communs pour STT et Industriel.
 - [x] Autoriser les censeurs à créer et modifier les emplois du temps sans le message Consultation uniquement.
 - [x] Tester les droits censeur, les conflits, les troncs communs et le maintien de la lecture seule du conseiller d’orientation.
+- [x] Supprimer « CRÉNEAUX PLANIFIÉS » et resserrer la mise en forme des emplois du temps individuels écran/PDF.
+- [x] Faire correspondre le département d’enseignement général à la spécialité et remplacer « LE CENSEUR » par « LE CENSEUR DES ENSEIGNEMENTS GÉNÉRAUX ».
+- [x] Tester les modèles individuels, les exports PDF/Excel et le préflight sans modifier les données existantes.
