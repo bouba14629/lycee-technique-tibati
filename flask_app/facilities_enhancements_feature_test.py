@@ -74,7 +74,9 @@ def main():
             assert Reservation.query.filter_by(purpose="Créneau impossible").count() == 0
         schedule_page = client.get(f"/censeur/emplois-du-temps?class_id={class_id}")
         assert schedule_page.status_code == 200
-        assert b"PDF hebdomadaire" in schedule_page.data
+        assert b"PDF hebdomadaire" not in schedule_page.data
+        assert "Aperçu global".encode() not in schedule_page.data
+        assert b"Imprimer la semaine" not in schedule_page.data
     print("FACILITIES_ENHANCEMENTS_FEATURE_TEST_OK")
 
 

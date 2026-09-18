@@ -80,10 +80,7 @@
     <div class="card-ltt">
       <div class="section-title"><h2><i class="bi bi-calendar2-week-fill me-1" style="color:var(--gold-500);"></i> Grille hebdomadaire</h2>
         <div class="d-flex gap-2 no-print">
-          <a href="{{ url_for('censeur_global_schedule_preview', mode='classe') }}" class="btn-ltt-gold"><i class="bi bi-collection-fill"></i> Aperçu global / Imprimer toutes les classes</a>
           {% if class_id %}<a href="{{ url_for('class_schedule_official', class_id=class_id) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-file-earmark-text-fill"></i> Aperçu officiel</a>{% endif %}
-          {% if class_id %}<a href="{{ url_for('class_schedule_official_pdf', class_id=class_id) }}" class="btn-ltt-outline"><i class="bi bi-printer-fill"></i> PDF hebdomadaire</a>{% endif %}
-          <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer la semaine</button>
         </div>
       </div>
       {% if edit_entry and not is_readonly %}

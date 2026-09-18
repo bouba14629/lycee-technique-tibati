@@ -150,7 +150,7 @@ def main():
         censeur_overview = client.get("/censeur/emplois-du-temps/enseignants")
         assert censeur_overview.status_code == 200
         assert b"Emplois du temps individuels" in censeur_overview.data
-        assert b"Imprimer (PDF)" in censeur_overview.data
+        assert b"Imprimer (PDF)" not in censeur_overview.data
         assert b"Enseignant Test" in censeur_overview.data
         censeur_preview = client.get(f"/censeur/emplois-du-temps/enseignants/{teacher_id}")
         assert censeur_preview.status_code == 200
