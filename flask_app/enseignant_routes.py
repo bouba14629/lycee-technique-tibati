@@ -391,9 +391,16 @@ def teacher_indicators():
         if not ind:
             ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
             db.session.add(ind)
-        for field in ["hours_due", "hours_done", "lessons_planned", "lessons_done",
-                      "digital_lessons_planned", "digital_lessons_done",
-                      "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done"]:
+        # Les objectifs pédagogiques sont fixés au premier enregistrement du
+        # trimestre et ne peuvent plus être remplacés par une soumission ultérieure.
+        planned_fields = {"hours_due", "lessons_planned", "digital_lessons_planned",
+                          "tp_planned", "digital_tp_planned"}
+        editable_fields = ["hours_done", "lessons_done", "digital_lessons_done",
+                           "tp_done", "digital_tp_done"]
+        if not ind.id:
+            for field in sorted(planned_fields):
+                setattr(ind, field, request.form.get(field, 0, type=int))
+        for field in editable_fields:
             setattr(ind, field, request.form.get(field, 0, type=int))
         for ct in custom_types:
             cv = CustomIndicatorValue.query.filter_by(indicator_type_id=ct.id, course_id=course.id, term=term).first()

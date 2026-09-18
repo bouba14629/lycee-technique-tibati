@@ -8,8 +8,10 @@ excel = (ROOT / "excel_utils.py").read_text(encoding="utf-8")
 assert "CRÉNEAUX PLANIFIÉS" not in preview
 assert "CRÉNEAUX PLANIFIÉS" not in pdf
 assert "Créneaux planifiés" not in excel
-assert ".schedule-compact { line-height:1; }" in preview
-assert "line-height:1;" in pdf
+assert ".schedule-compact { line-height:1.25; color:#000; }" in preview
+assert "line-height:1.25;" in pdf
+assert "table-layout:fixed" in preview
+assert "ANNÉE SCOLAIRE" in preview
 assert "teacher.specialty or 'Enseignements généraux'" in preview
 assert "teacher.specialty or 'Enseignements généraux'" in pdf
 assert "DES ENSEIGNEMENTS GÉNÉRAUX" in preview

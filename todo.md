@@ -287,3 +287,8 @@
 - [x] Augmenter de 2 points la police des tableaux d’emplois du temps écran/PDF et uniformiser les cellules avec leur texte.
 - [x] Mettre HEURES DUES, HEURES FAITES et ANNÉE SCOLAIRE 2026-2027 sur une même ligne dans l’emploi individuel.
 - [x] Tester le rendu, les exports et le préflight sans modifier les données existantes.
+
+- [x] Passer les emplois du temps individuels et par classe en noir automatique avec interligne 1,25.
+- [x] Diminuer d’un point la police, élargir légèrement les cellules et conserver chaque emploi sur une page.
+- [x] Verrouiller après le premier enregistrement les objectifs pédagogiques prévus des enseignants, sans modifier les valeurs existantes.
+- [x] Tester le verrouillage serveur, le rendu écran/PDF, le préflight, le type-check et le build avant checkpoint.

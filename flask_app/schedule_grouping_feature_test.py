@@ -22,8 +22,8 @@ assert set(schedule_group_labels(joint_entries).values()) == {"Tles A + Tles F1"
 assert schedule_group_labels(single_entry)[7] == "Tles ACA"
 
 schedule_pdf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/pdf/schedule_official_pdf.html"), encoding="utf-8").read()
-assert "font-size: 13pt; height: 50pt" in schedule_pdf
-assert ".subj { font-weight: bold; font-size: 13pt" in schedule_pdf
-assert ".teach { font-style: italic; color: #666; font-size: 11.4pt" in schedule_pdf
+assert "font-size: 12pt; height: 48pt" in schedule_pdf
+assert ".subj { font-weight: bold; font-size: 12pt" in schedule_pdf
+assert ".teach { font-style: italic; color: #666; font-size: 10.4pt" in schedule_pdf
 
 print("SCHEDULE_GROUPING_FEATURE_TEST_OK")
