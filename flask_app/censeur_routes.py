@@ -585,6 +585,38 @@ def censeur_conseil():
     return render_template("censeur_conseil.html", classes=classes, class_id=class_id, cls=cls, report=report)
 
 
+@app.route("/censeur/emplois-du-temps/apercu-global")
+@roles_required("censeur", "censeur_crm")
+def censeur_global_schedule_preview():
+    """Aperçu imprimable unique de tous les emplois accessibles au censeur."""
+    from models import ScheduleEntry, Course
+    from enseignant_routes import DAY_EN
+    user = User.query.get(session["user_id"])
+    mode = request.args.get("mode", "classe")
+    scoped_class_ids = user_scoped_class_ids(user)
+    classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level, SchoolClass.name)
+    if scoped_class_ids is not None:
+        classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
+    classes = classes_q.all()
+    schedules = []
+    if mode == "individuel":
+        teachers_q = Teacher.query.join(User)
+        scoped_dept_ids = user_scoped_department_ids(user)
+        if scoped_dept_ids is not None:
+            teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
+        for teacher in teachers_q.order_by(db.func.lower(User.full_name)).all():
+            context = _teacher_schedule_context(teacher)
+            schedules.append({"kind": "individuel", "teacher": teacher, **context})
+    else:
+        for school_class in classes:
+            entries = ScheduleEntry.query.join(Course).filter(Course.class_id == school_class.id).all()
+            schedules.append({"kind": "classe", "school_class": school_class, "grid": build_official_grid(entries),
+                              "entries": entries, "censeur_label": school_class.department.section.code if school_class.department and school_class.department.section else ""})
+    return render_template("censeur_global_schedule_preview.html", mode=mode, schedules=schedules,
+                           periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
+                           school_year=get_current_school_year())
+
+
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel")
 @roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def class_schedule_official(class_id):

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Aperçu global des emplois du temps{% endblock %}
+{% block page_title %}Aperçu global des emplois du temps{% endblock %}
+{% block page_subtitle %}Tous les emplois accessibles dans votre périmètre, regroupés pour une impression unique.{% endblock %}
+{% block head_extra %}<style>
+.global-schedule-page { page-break-after:always; break-after:page; color:#000; line-height:1.25; }
+.global-schedule-page:last-child { page-break-after:auto; break-after:auto; }
+.global-schedule-page table { width:100%; border-collapse:collapse; table-layout:fixed; color:#000; }
+.global-schedule-page td, .global-schedule-page th { border:1px solid #777; padding:3px; text-align:center; vertical-align:middle; color:#000; }
+.global-schedule-page .meta td { border:0; text-align:left; white-space:nowrap; font-size:12px; }
+.global-schedule-page .meta td:last-child { text-align:right; }
+.global-schedule-page .schedule-grid th { background:#f8f5ec; font-size:11px; }
+.global-schedule-page .schedule-grid td { height:44px; font-size:11px; overflow-wrap:break-word; }
+.global-schedule-page .schedule-grid .day { width:9%; background:#f8f5ec; font-weight:bold; }
+.global-schedule-page .schedule-grid .recess { width:6%; background:#0b2545; color:#fff; font-size:10px; line-height:1.25; }
+.global-schedule-page .schedule-grid .subject { font-weight:bold; font-size:11px; }
+.global-schedule-page .schedule-grid .detail { display:block; font-size:10px; font-style:italic; }
+@media print {
+  .no-print, nav, header, footer, .sidebar, .app-sidebar { display:none !important; }
+  .container, .container-fluid { max-width:none !important; width:100% !important; padding:0 !important; }
+  .global-schedule-page { margin:0; min-height:18.5cm; }
+}
+</style>{% endblock %}
+{% block content %}
+<div class="no-print d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2">
+    <a class="btn-ltt-outline" href="{{ url_for('censeur_global_schedule_preview', mode='classe' if mode == 'individuel' else 'individuel') }}"><i class="bi bi-arrow-repeat"></i> Afficher l’autre mode</a>
+  </div>
+  <button class="btn-ltt-gold" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer tout</button>
+</div>
+<div class="no-print alert alert-info py-2">{{ schedules|length }} emploi(s) regroupé(s) — mode {{ 'individuel' if mode == 'individuel' else 'par classe' }}. Chaque emploi commence sur une nouvelle page.</div>
+{% for item in schedules %}
+<section class="global-schedule-page">
+  {% if item.kind == 'classe' %}
+  <table class="meta"><tr><td><strong>{{ item.school_class.department.section.code if item.school_class.department and item.school_class.department.section else '' }}</strong></td><td style="text-align:center;"><strong>CLASSE :</strong> {{ item.school_class.name }}</td><td><strong>ANNÉE SCOLAIRE :</strong> {{ school_year }}</td></tr></table>
+  {% else %}
+  <table class="meta"><tr><td colspan="2"><strong>NOM DU PROFESSEUR :</strong> {{ item.teacher.user.full_name.upper() }}</td><td colspan="2"><strong>DÉPARTEMENT :</strong> {{ item.teacher.department.code if item.teacher.department else (item.teacher.specialty or 'Enseignements généraux') }}</td></tr><tr><td><strong>HEURES DUES :</strong> {{ item.teacher.hours_due }}</td><td><strong>HEURES FAITES :</strong> {{ item.hours_faites }}</td><td colspan="2"><strong>ANNÉE SCOLAIRE :</strong> {{ school_year }}</td></tr><tr><td colspan="3"><strong>CLASSES TENUES :</strong> {{ item.classes_tenues }}</td><td><strong>GRADE :</strong> {{ item.teacher.grade }}</td></tr><tr><td colspan="4"><strong>HEURES SUPPLÉMENTAIRES :</strong> {{ item.extra_hours }}</td></tr></table>
+  {% endif %}
+  <h2 class="text-center" style="font-size:16px; color:#000; margin:8px 0;">EMPLOI DE TEMPS {{ 'PAR CLASSE' if item.kind == 'classe' else 'INDIVIDUEL' }}</h2>
+  <table class="schedule-grid"><tr><th class="day"></th>{% for idx in [0,1,2] %}<th>{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}<th class="recess">RÉ<br>C.<br>R.<br>É.<br>A.<br>T.<br>I.<br>O.<br>N.</th>{% for idx in [3,4,5] %}<th>{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}<th class="recess">D.<br>É.<br>J.<br>E.<br>U.<br>N.<br>E.<br>R.</th>{% for idx in [6,7,8] %}<th>{{ idx+1 }}<br>{{ periods[idx][0] }}–{{ periods[idx][1] }}</th>{% endfor %}</tr>
+  {% for day in days %}<tr><td class="day">{{ day.upper() }}<br><span class="detail">{{ day_en[day] }}</span></td>
+    {% for idx in [0,1,2] %}<td>{% if item.grid[day][idx] %}<span class="subject">{{ item.grid[day][idx].course.subject.name }}</span><span class="detail">{{ item.grid[day][idx].course.teacher.user.full_name if item.kind == 'classe' else item.grid[day][idx].display_class_label }}</span>{% endif %}</td>{% endfor %}<td class="recess"></td>{% for idx in [3,4,5] %}<td>{% if item.grid[day][idx] %}<span class="subject">{{ item.grid[day][idx].course.subject.name }}</span><span class="detail">{{ item.grid[day][idx].course.teacher.user.full_name if item.kind == 'classe' else item.grid[day][idx].display_class_label }}</span>{% endif %}</td>{% endfor %}<td class="recess"></td>{% for idx in [6,7,8] %}<td>{% if item.grid[day][idx] %}<span class="subject">{{ item.grid[day][idx].course.subject.name }}</span><span class="detail">{{ item.grid[day][idx].course.teacher.user.full_name if item.kind == 'classe' else item.grid[day][idx].display_class_label }}</span>{% endif %}</td>{% endfor %}</tr>{% endfor %}</table>
+</section>
+{% else %}<div class="card-ltt">Aucun emploi du temps disponible.</div>{% endfor %}
+{% endblock %}

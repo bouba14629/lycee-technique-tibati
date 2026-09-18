@@ -292,3 +292,8 @@
 - [x] Diminuer d’un point la police, élargir légèrement les cellules et conserver chaque emploi sur une page.
 - [x] Verrouiller après le premier enregistrement les objectifs pédagogiques prévus des enseignants, sans modifier les valeurs existantes.
 - [x] Tester le verrouillage serveur, le rendu écran/PDF, le préflight, le type-check et le build avant checkpoint.
+
+- [x] Ajouter chez les censeurs un aperçu global imprimable de tous les emplois par classe.
+- [x] Ajouter chez les censeurs un aperçu global imprimable de tous les emplois individuels.
+- [x] Appliquer l’interligne 1,25 et les sauts de page entre emplois dans l’aperçu global.
+- [x] Tester les deux modes, le préflight, Vitest, le type-check et le build.

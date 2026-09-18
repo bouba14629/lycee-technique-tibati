@@ -158,6 +158,15 @@ def main():
         assert b"STT-2N-ELEC" in censeur_preview.data
         assert b"Zeta Classe" not in censeur_preview.data
         assert b'HEURES FAITES :</strong> <span style="color:#000; font-weight:700;">3</span>' in censeur_preview.data
+        global_classes = client.get("/censeur/emplois-du-temps/apercu-global?mode=classe")
+        assert global_classes.status_code == 200
+        assert b"Apercu global" in global_classes.data or b"Aper\xc3\xa7u global" in global_classes.data
+        assert b"Zeta Classe" in global_classes.data
+        assert b"Imprimer tout" in global_classes.data
+        global_teachers = client.get("/censeur/emplois-du-temps/apercu-global?mode=individuel")
+        assert global_teachers.status_code == 200
+        assert b"ENSEIGNANT TEST" in global_teachers.data
+        assert b"ANN\xc3\x89E SCOLAIRE" in global_teachers.data
         censeur_pdf = client.get(f"/censeur/emplois-du-temps/enseignants/{teacher_id}/officiel.pdf")
         assert censeur_pdf.status_code == 200
         assert "application/pdf" in censeur_pdf.content_type
