@@ -1464,10 +1464,13 @@ def censeur_indicator_edit(course_id):
     if not ind:
         ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
         db.session.add(ind)
-    values = {field: request.form.get(field, 0, type=int) for field in [
-        "hours_due", "hours_done", "lessons_planned", "lessons_done",
-        "digital_lessons_planned", "digital_lessons_done",
-        "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done"]}
+    planned_fields = ["hours_due", "lessons_planned", "digital_lessons_planned", "tp_planned", "digital_tp_planned"]
+    done_fields = ["hours_done", "lessons_done", "digital_lessons_done", "tp_done", "digital_tp_done"]
+    unlock_planned = request.form.get("unlock_planned") == "1"
+    values = {field: request.form.get(field, 0, type=int) for field in planned_fields + done_fields}
+    if ind.id and not unlock_planned:
+        for field in planned_fields:
+            values[field] = getattr(ind, field)
     pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
              ("digital_lessons_planned", "digital_lessons_done"),
              ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]

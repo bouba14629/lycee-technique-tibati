@@ -34,23 +34,23 @@
 
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des heures</h3>
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="{{ indicator.hours_due if indicator else teacher.hours_due }}"></div>
+      <div class="col-md-6"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="{{ indicator.hours_due if indicator else teacher.hours_due }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>Heures faites</label><input type="number" name="hours_done" class="form-control" value="{{ indicator.hours_done if indicator else 0 }}"></div>
     </div>
 
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des programmes</h3>
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Nombre de leçons prévues</label><input type="number" name="lessons_planned" class="form-control" value="{{ indicator.lessons_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Nombre de leçons prévues</label><input type="number" name="lessons_planned" class="form-control" value="{{ indicator.lessons_planned if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>Nombre de leçons faites</label><input type="number" name="lessons_done" class="form-control" value="{{ indicator.lessons_done if indicator else 0 }}"></div>
-      <div class="col-md-6"><label>Leçons digitalisées prévues</label><input type="number" name="digital_lessons_planned" class="form-control" value="{{ indicator.digital_lessons_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Leçons digitalisées prévues</label><input type="number" name="digital_lessons_planned" class="form-control" value="{{ indicator.digital_lessons_planned if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>Leçons digitalisées faites</label><input type="number" name="digital_lessons_done" class="form-control" value="{{ indicator.digital_lessons_done if indicator else 0 }}"></div>
     </div>
 
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Nombre de TP prévus</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>Nombre de TP prévus</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>Nombre de TP réalisés</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done if indicator else 0 }}"></div>
-      <div class="col-md-6"><label>TP digitalisés prévus</label><input type="number" name="digital_tp_planned" class="form-control" value="{{ indicator.digital_tp_planned if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>TP digitalisés prévus</label><input type="number" name="digital_tp_planned" class="form-control" value="{{ indicator.digital_tp_planned if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>TP digitalisés réalisés</label><input type="number" name="digital_tp_done" class="form-control" value="{{ indicator.digital_tp_done if indicator else 0 }}"></div>
     </div>
 
@@ -68,6 +68,6 @@
     <button class="btn-ltt-navy"><i class="bi bi-save-fill"></i> Enregistrer</button>
   </form>
   {% endif %}
-  <div class="text-muted mt-3" style="font-size:11.5px;"><i class="bi bi-info-circle"></i> Les objectifs prévus peuvent être mis à jour à chaque enregistrement. Les valeurs réalisées doivent rester inférieures ou égales aux valeurs prévues. Ces indicateurs alimentent la synthèse pédagogique transmise au Censeur et au Proviseur pour le conseil de classe.</div>
+  <div class="text-muted mt-3" style="font-size:11.5px;"><i class="bi bi-info-circle"></i> Après le premier enregistrement, les objectifs prévus sont verrouillés. Seul un censeur peut les déverrouiller temporairement pour les corriger, puis ils sont verrouillés à nouveau après l’enregistrement. Ces indicateurs alimentent la synthèse pédagogique transmise au Censeur et au Proviseur pour le conseil de classe.</div>
 </div>
 {% endblock %}

@@ -301,3 +301,9 @@
 - [x] Refuser chez les enseignants et les censeurs toute valeur réalisée supérieure à sa valeur prévue.
 - [x] Afficher un message explicite et conserver les valeurs existantes en cas de tentative invalide.
 - [x] Tester la règle, le préflight, Vitest, le type-check et le build.
+
+- [x] Rétablir l’interligne 1,25 pour les emplois écran, PDF et aperçu global.
+- [x] Reverrouiller les objectifs prévus après le premier enregistrement enseignant.
+- [x] Ajouter au censeur le déverrouillage explicite, puis le reverrouillage automatique après sauvegarde.
+- [x] Autoriser les troncs communs pour toute matière sélectionnée, y compris les enseignements divers.
+- [x] Valider le préflight, les tests, Vitest, le type-check et le build.

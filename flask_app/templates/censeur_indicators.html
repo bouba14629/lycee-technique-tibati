@@ -69,7 +69,9 @@
         {% for c in missing %}<option value="{{ c.id }}">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
       </select>
       {{ ind_fields(none) }}
-      <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
+      <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="unlock_planned" value="1" id="unlockPlanned"><label class="form-check-label" for="unlockPlanned"><i class="bi bi-unlock-fill"></i> Déverrouiller les objectifs prévus pour cette modification</label></div>
+      <div class="text-muted mb-2" style="font-size:11px;">Sans cette option, les objectifs prévus déjà enregistrés sont conservés. Après l’enregistrement, ils sont de nouveau verrouillés chez l’enseignant.</div>
+      <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer et reverrouiller</button>
     </form>
   </div>
 </div></div></div>
