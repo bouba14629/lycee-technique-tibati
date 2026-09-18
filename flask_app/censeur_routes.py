@@ -1464,10 +1464,18 @@ def censeur_indicator_edit(course_id):
     if not ind:
         ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
         db.session.add(ind)
-    for field in ["hours_due", "hours_done", "lessons_planned", "lessons_done",
-                  "digital_lessons_planned", "digital_lessons_done",
-                  "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done"]:
-        setattr(ind, field, request.form.get(field, 0, type=int))
+    values = {field: request.form.get(field, 0, type=int) for field in [
+        "hours_due", "hours_done", "lessons_planned", "lessons_done",
+        "digital_lessons_planned", "digital_lessons_done",
+        "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done"]}
+    pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
+             ("digital_lessons_planned", "digital_lessons_done"),
+             ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
+    if any(values[done] > values[planned] for planned, done in pairs):
+        flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
+        return redirect(url_for("censeur_indicators", term=term))
+    for field, value in values.items():
+        setattr(ind, field, value)
     db.session.commit()
     flash(f"Indicateurs de {teacher.user.full_name} ({course.school_class.name} — {course.subject.name}) enregistrés.", "success")
     return redirect(url_for("censeur_indicators", term=term))

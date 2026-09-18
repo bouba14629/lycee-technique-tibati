@@ -397,11 +397,20 @@ def teacher_indicators():
                           "tp_planned", "digital_tp_planned"}
         editable_fields = ["hours_done", "lessons_done", "digital_lessons_done",
                            "tp_done", "digital_tp_done"]
+        planned_values = {field: (getattr(ind, field) if ind.id else request.form.get(field, 0, type=int))
+                          for field in planned_fields}
+        done_values = {field: request.form.get(field, 0, type=int) for field in editable_fields}
+        pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
+                 ("digital_lessons_planned", "digital_lessons_done"),
+                 ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
+        if any(done_values[done] > planned_values[planned] for planned, done in pairs):
+            flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
+            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
         if not ind.id:
-            for field in sorted(planned_fields):
-                setattr(ind, field, request.form.get(field, 0, type=int))
-        for field in editable_fields:
-            setattr(ind, field, request.form.get(field, 0, type=int))
+            for field, value in planned_values.items():
+                setattr(ind, field, value)
+        for field, value in done_values.items():
+            setattr(ind, field, value)
         for ct in custom_types:
             cv = CustomIndicatorValue.query.filter_by(indicator_type_id=ct.id, course_id=course.id, term=term).first()
             if not cv:

@@ -297,3 +297,7 @@
 - [x] Ajouter chez les censeurs un aperçu global imprimable de tous les emplois individuels.
 - [x] Appliquer l’interligne 1,25 et les sauts de page entre emplois dans l’aperçu global.
 - [x] Tester les deux modes, le préflight, Vitest, le type-check et le build.
+
+- [x] Refuser chez les enseignants et les censeurs toute valeur réalisée supérieure à sa valeur prévue.
+- [x] Afficher un message explicite et conserver les valeurs existantes en cas de tentative invalide.
+- [x] Tester la règle, le préflight, Vitest, le type-check et le build.
