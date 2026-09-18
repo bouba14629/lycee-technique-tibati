@@ -14,16 +14,15 @@ planned_fields = [
 ]
 for field in planned_fields:
     assert f'name="{field}"' in template
-    assert f"{{{{ 'readonly' if indicator else '' }}}}" in template
+    assert f"{{{{ 'readonly' if indicator else '' }}}}" not in template
     assert f'"{field}"' in route
-
-assert "if not ind.id:" in route
 assert "editable_fields" in route
 assert '"hours_done", "lessons_done", "digital_lessons_done"' in route
-assert "objectifs prévus sont verrouillés" in template
+assert "Les objectifs prévus peuvent être mis à jour à chaque enregistrement." in template
 assert "Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante." in route
 assert "pairs = [(\"hours_due\", \"hours_done\")" in route
 assert "Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante." in censeur_route
 assert "pairs = [(\"hours_due\", \"hours_done\")" in censeur_route
+assert "planned_values = {field: request.form.get(field, 0, type=int)" in route
 
 print("TEACHER_INDICATOR_LOCK_FEATURE_TEST_OK")
