@@ -16,17 +16,17 @@
   .title-table td { border: 0; border-top: 0; border-bottom: 0; }
   .title { font-family: 'Playfair', Helvetica, sans-serif; font-size: 14pt; color: #0B2545; text-align:center; text-decoration:none; border:0; }
   .meta-table { width: 100%; margin-bottom: 5pt; font-size: 12pt; line-height:1; }
-  .meta-table td { padding: 1pt 7pt; line-height:1; }
+  .meta-table td { padding: 1pt 5pt; line-height:1; white-space:nowrap; }
   .red { color: #000000; font-weight: bold; }
   table.grid { width: 100%; border-collapse: collapse; border: 1pt solid #0B2545; }
-  table.grid th { background-color: #F8F5EC; color: #0B2545; font-size: 10.2pt; text-align: center;
+  table.grid th { background-color: #F8F5EC; color: #0B2545; font-size: 12.2pt; text-align: center;
                   padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; }
-  table.grid td { padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; text-align:center; vertical-align: middle; font-size: 11pt; height: 46pt; word-wrap: break-word; }
-  .day-cell { background: #F8F5EC; font-weight: bold; font-size: 10.8pt; }
-  .day-en { font-style: italic; color: #888; font-size: 9.2pt; }
-  .subj { font-weight: bold; font-size: 11pt; line-height: 1.18; }
-  .teach { font-style: italic; color: #666; font-size: 9.4pt; line-height: 1.15; }
-  .recess { width: 7%; font-size: 10.4pt; line-height: 1.9; vertical-align: middle; text-align: center; }
+  table.grid td { padding: 5pt 2pt; border: 0.7pt solid #ddd3ae; text-align:center; vertical-align: middle; font-size: 13pt; height: 50pt; word-wrap: break-word; }
+  .day-cell { background: #F8F5EC; font-weight: bold; font-size: 12.8pt; }
+  .day-en { font-style: italic; color: #888; font-size: 11.2pt; }
+  .subj { font-weight: bold; font-size: 13pt; line-height: 1.18; }
+  .teach { font-style: italic; color: #666; font-size: 11.4pt; line-height: 1.1; }
+  .recess { width: 7%; font-size: 12.4pt; line-height: 1.75; vertical-align: middle; text-align: center; }
   table.grid th.recess { background: #0B2545 !important; color: #fff !important; border: 0.5pt solid #0B2545; }
   .period-th { width: 8.8%; }
   .footer-table { width: 100%; margin-top: 8pt; border: 0; border-top: 0; border-bottom: 0; border-collapse: collapse; line-height:1; }
@@ -71,10 +71,13 @@
 {% else %}
 <table class="meta-table">
   <tr>
-    <td><strong>PROFESSEUR :</strong> <span class="red">{{ teacher.user.full_name.upper() }}</span></td>
-    <td><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department else (teacher.specialty or 'Enseignements généraux') }}</span></td>
-    <td><strong>H. DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>
-    <td><strong>H. FAITES :</strong> <span class="red">{{ hours_faites }}</span></td>
+    <td colspan="2"><strong>PROFESSEUR :</strong> <span class="red">{{ teacher.user.full_name.upper() }}</span></td>
+    <td colspan="3"><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department else (teacher.specialty or 'Enseignements généraux') }}</span></td>
+  </tr>
+  <tr>
+    <td><strong>HEURES DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>
+    <td><strong>HEURES FAITES :</strong> <span class="red">{{ hours_faites }}</span></td>
+    <td colspan="3"><strong>ANNÉE SCOLAIRE :</strong> <span class="red">{{ school_year }}</span></td>
   </tr>
   <tr>
     <td colspan="3"><strong>CLASSES TENUES :</strong> <span class="red">{{ classes_tenues }}</span></td>

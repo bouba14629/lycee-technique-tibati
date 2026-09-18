@@ -284,3 +284,6 @@
 - [x] Supprimer « CRÉNEAUX PLANIFIÉS » et resserrer la mise en forme des emplois du temps individuels écran/PDF.
 - [x] Faire correspondre le département d’enseignement général à la spécialité et remplacer « LE CENSEUR » par « LE CENSEUR DES ENSEIGNEMENTS GÉNÉRAUX ».
 - [x] Tester les modèles individuels, les exports PDF/Excel et le préflight sans modifier les données existantes.
+- [x] Augmenter de 2 points la police des tableaux d’emplois du temps écran/PDF et uniformiser les cellules avec leur texte.
+- [x] Mettre HEURES DUES, HEURES FAITES et ANNÉE SCOLAIRE 2026-2027 sur une même ligne dans l’emploi individuel.
+- [x] Tester le rendu, les exports et le préflight sans modifier les données existantes.
