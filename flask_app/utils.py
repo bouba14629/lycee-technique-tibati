@@ -540,8 +540,8 @@ def dashboard_rates(class_ids=None, subject_ids=None):
         att_q = att_q.filter(Attendance.student_id.in_(student_ids))
     if subject_ids:
         att_q = att_q.join(Course).filter(Course.subject_id.in_(subject_ids))
-    absence_students = {a.student_id for a in att_q.filter_by(type="Absence").all()}
-    retard_students = {a.student_id for a in att_q.filter_by(type="Retard").all()}
+    absence_students = {a.student_id for a in att_q.filter(Attendance.type == "Absence").all()}
+    retard_students = {a.student_id for a in att_q.filter(Attendance.type == "Retard").all()}
     absence_rate = round(len(absence_students) / total_students * 100)
     attendance_rate = 100 - absence_rate
     retard_rate = round(len(retard_students) / total_students * 100)

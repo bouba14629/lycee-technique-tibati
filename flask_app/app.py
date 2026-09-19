@@ -348,8 +348,12 @@ def _dashboard_filter_context(user):
         rate_class_ids = selected_class_ids
     else:
         rate_class_ids = filtered_class_ids
-    subjects = (Subject.query.filter(Subject.department_id.in_(filtered_department_ids)).order_by(Subject.name).all()
-                if filtered_department_ids else [])
+    subject_class_ids = selected_class_ids if selected_class_ids else filtered_class_ids
+    if subject_class_ids:
+        subjects = (Subject.query.join(Course).filter(Course.class_id.in_(subject_class_ids))
+                    .order_by(Subject.name).distinct().all())
+    else:
+        subjects = []
     subject_ids = {subject.id for subject in subjects}
     selected_subject_ids &= subject_ids
     return {
