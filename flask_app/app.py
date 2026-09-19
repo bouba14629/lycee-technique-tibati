@@ -311,11 +311,67 @@ def logout():
 
 
 # --------------------------------------------------------------- dashboard ---
+def _dashboard_filter_context(user):
+    """Construit les filtres de pilotage en respectant la portée du compte."""
+    from utils import user_scoped_class_ids
+
+    scoped_ids = user_scoped_class_ids(user) if user.role in ("censeur", "censeur_crm", "surveillant_general") else None
+    class_query = SchoolClass.query
+    if scoped_ids is not None:
+        class_query = class_query.filter(SchoolClass.id.in_(scoped_ids))
+    allowed_classes = class_query.order_by(SchoolClass.name).all()
+    allowed_class_ids = {school_class.id for school_class in allowed_classes}
+    allowed_department_ids = {school_class.department_id for school_class in allowed_classes}
+    allowed_departments = (Department.query.filter(Department.id.in_(allowed_department_ids)).order_by(Department.name).all()
+                           if allowed_department_ids else [])
+    allowed_section_ids = {department.section_id for department in allowed_departments}
+    sections = (Section.query.filter(Section.id.in_(allowed_section_ids)).order_by(Section.name).all()
+                if allowed_section_ids else [])
+
+    section_id = request.args.get("attendance_section_id", type=int)
+    department_id = request.args.get("attendance_department_id", type=int)
+    selected_class_ids = set(request.args.getlist("attendance_class_id", type=int)) & allowed_class_ids
+    selected_subject_ids = set(request.args.getlist("attendance_subject_id", type=int))
+    if section_id not in allowed_section_ids:
+        section_id = None
+    if department_id not in allowed_department_ids:
+        department_id = None
+    if section_id:
+        allowed_departments = [d for d in allowed_departments if d.section_id == section_id]
+    if department_id:
+        allowed_departments = [d for d in allowed_departments if d.id == department_id]
+    filtered_department_ids = {d.id for d in allowed_departments}
+    filtered_classes = [c for c in allowed_classes if c.department_id in filtered_department_ids]
+    filtered_class_ids = {c.id for c in filtered_classes}
+    if selected_class_ids:
+        selected_class_ids &= filtered_class_ids
+        rate_class_ids = selected_class_ids
+    else:
+        rate_class_ids = filtered_class_ids
+    subjects = (Subject.query.filter(Subject.department_id.in_(filtered_department_ids)).order_by(Subject.name).all()
+                if filtered_department_ids else [])
+    subject_ids = {subject.id for subject in subjects}
+    selected_subject_ids &= subject_ids
+    return {
+        "sections": sections,
+        "departments": allowed_departments,
+        "classes": filtered_classes,
+        "subjects": subjects,
+        "section_id": section_id,
+        "department_id": department_id,
+        "class_ids": sorted(rate_class_ids),
+        "subject_ids": sorted(selected_subject_ids),
+        "selected_class_ids": sorted(selected_class_ids),
+        "selected_subject_ids": sorted(selected_subject_ids),
+    }
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
     role = session["role"]
     user = User.query.get(session["user_id"])
+    dashboard_filters = _dashboard_filter_context(user)
 
     if role == "directeur":
         stats = dict(
@@ -335,7 +391,7 @@ def dashboard():
             by_section.append((s.name, n))
         recent_announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
-        rates = dashboard_rates()
+        rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates()
         evolution = evolution_series()
         alerts = dashboard_alerts()
@@ -365,7 +421,8 @@ def dashboard():
                                 evolution=evolution, alerts=alerts, activities=activities, calendar_events=calendar_events,
                                 setup_steps=setup_steps, setup_progress=setup_progress, chart_summary=chart_summary,
                                 school_summary=school_summary,
-                                is_founder_setup=User.query.count() == 1 and stats["students"] == 0)
+                                is_founder_setup=User.query.count() == 1 and stats["students"] == 0,
+                                dashboard_filters=dashboard_filters)
 
     if role == "censeur":
         from utils import user_scoped_class_ids, user_scoped_department_ids
@@ -386,7 +443,7 @@ def dashboard():
         subjects_count = Subject.query.filter(Subject.department_id.in_(scoped_dept_ids)).count() if scoped_dept_ids else Subject.query.count()
         stats = dict(students=students_count, teachers=teachers_count, rooms=Room.query.count(),
                      schedules=schedules_count, subjects=subjects_count)
-        rates = dashboard_rates(scoped_ids)
+        rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates(scoped_dept_ids)
         evolution = evolution_series(scoped_ids)
         alerts = dashboard_alerts(scoped_ids, scoped_dept_ids)
@@ -395,14 +452,14 @@ def dashboard():
         return render_template("dashboard_censeur.html", rates=rates, success_by_dept=success_by_dept,
                                 evolution=evolution, alerts=alerts, activities=activities,
                                 recent_absences=recent_absences, recent_sanctions=recent_sanctions, stats=stats,
-                                calendar_events=calendar_events)
+                                calendar_events=calendar_events, dashboard_filters=dashboard_filters)
 
     if role == "censeur_crm":
         general_courses = Course.query.join(Subject).filter(Subject.category == "Enseignements Généraux").all()
         stats = dict(students=Student.query.count(), teachers=len(set(c.teacher_id for c in general_courses)),
                      rooms=Room.query.count())
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
-        rates = dashboard_rates()
+        rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates()
         evolution = evolution_series()
         alerts = dashboard_alerts()
@@ -435,10 +492,10 @@ def dashboard():
         recent_absences = att_q.order_by(Attendance.date.desc()).limit(10).all()
         recent_sanctions = sanction_q.order_by(Sanction.date.desc()).limit(5).all()
         from utils import dashboard_alerts, dashboard_rates
-        rates = dashboard_rates(scoped_ids)
+        rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         return render_template("dashboard_surveillant.html", stats=stats, rates=rates,
                                 recent_absences=recent_absences, recent_sanctions=recent_sanctions,
-                                life_alerts=dashboard_alerts(class_ids=scoped_ids))
+                                life_alerts=dashboard_alerts(class_ids=scoped_ids), dashboard_filters=dashboard_filters)
 
     if role == "conseiller_orientation":
         stats = dict(

@@ -1,6 +1,15 @@
-{% macro gauges(rates, title="Taux globaux", labels={}) %}
+{% macro gauges(rates, title="Taux globaux", labels={}, filters=None) %}
 <div class="card-ltt">
   <div class="section-title"><h2><i class="bi bi-speedometer2 me-1" style="color:var(--gold-500);"></i> {{ title }}</h2></div>
+  {% if filters %}
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-3"><label class="form-label small">Section</label><select name="attendance_section_id" class="form-select form-select-sm"><option value="">Toutes</option>{% for section in filters.sections %}<option value="{{ section.id }}" {{ 'selected' if filters.section_id == section.id }}>{{ section.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label small">Filière</label><select name="attendance_department_id" class="form-select form-select-sm"><option value="">Toutes</option>{% for department in filters.departments %}<option value="{{ department.id }}" {{ 'selected' if filters.department_id == department.id }}>{{ department.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label small">Classes</label><select name="attendance_class_id" class="form-select form-select-sm" multiple size="3">{% for school_class in filters.classes %}<option value="{{ school_class.id }}" {{ 'selected' if school_class.id in filters.selected_class_ids }}>{{ school_class.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label small">Matières (sélection multiple)</label><select name="attendance_subject_id" class="form-select form-select-sm" multiple size="3">{% for subject in filters.subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id in filters.selected_subject_ids }}>{{ subject.name }}</option>{% endfor %}</select></div>
+    <div class="col-12 d-flex gap-2"><button class="btn-ltt-navy btn-sm" type="submit"><i class="bi bi-funnel"></i> Appliquer les filtres</button><a class="btn-ltt-outline btn-sm" href="{{ url_for('dashboard') }}">Réinitialiser</a></div>
+  </form>
+  {% endif %}
   <div class="gauge-grid">
     <div class="gauge-card">
       <div class="gauge-wrap"><canvas id="gaugeSuccess"></canvas><div class="gauge-value">{{ rates.success_rate }}%</div></div>
