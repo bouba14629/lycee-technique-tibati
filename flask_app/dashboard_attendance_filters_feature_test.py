@@ -12,6 +12,8 @@ assert 'attendance_section_id' in macros
 assert 'attendance_department_id' in macros
 assert 'name="attendance_class_id"' in macros
 assert 'name="attendance_subject_id"' in macros
+assert 'onchange="scheduleAttendanceFilterSubmit(this.form)"' in macros
+assert 'window.setTimeout(function () { form.submit(); }, 500)' in macros
 assert 'class_ids=dashboard_filters["class_ids"]' not in app
 assert 'dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])' in app
 assert 'def dashboard_rates(class_ids=None, subject_ids=None):' in utils
