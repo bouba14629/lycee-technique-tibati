@@ -64,18 +64,14 @@
         <td>{% if u.active %}<span class="badge-ltt badge-success">Actif</span>{% else %}<span class="badge-ltt badge-danger">Désactivé</span>{% endif %}</td>
         {% if current_user.role == 'directeur' %}
         <td class="text-end">
-          {% if u.role not in ['eleve','parent'] %}
           <a href="#" data-bs-toggle="modal" data-bs-target="#userEdit{{ u.id }}Modal" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-pencil-square"></i></a>
-          {% endif %}
           <form method="POST" action="{{ url_for('dir_user_reset', user_id=u.id) }}" class="d-inline"><button type="submit" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;" title="Régénérer le mot de passe" onclick="return confirm('Générer un nouveau mot de passe temporaire pour {{ u.username }} ?')"><i class="bi bi-key-fill"></i> Régénérer</button></form>
           <a href="{{ url_for('dir_user_toggle', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-power"></i></a>
-          {% if u.role not in ['eleve','parent'] %}
-          <a href="{{ url_for('dir_user_delete', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2 text-danger" style="font-size:11.5px; border-color:var(--danger);" onclick="return confirm('Supprimer définitivement le compte {{ u.username }} ?')"><i class="bi bi-trash"></i></a>
-          {% endif %}
+          {% if u.role not in ['eleve','parent'] %}<a href="{{ url_for('dir_user_delete', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2 text-danger" style="font-size:11.5px; border-color:var(--danger);" onclick="return confirm('Supprimer définitivement le compte {{ u.username }} ?')"><i class="bi bi-trash"></i></a>{% endif %}
         </td>
         {% endif %}
       </tr>
-      {% if current_user.role == 'directeur' and u.role not in ['eleve','parent'] %}
+      {% if current_user.role == 'directeur' %}
       <div class="modal fade" id="userEdit{{ u.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
         <div class="modal-header"><h5 class="modal-title">Modifier {{ u.full_name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
@@ -84,6 +80,14 @@
             <label>Nom complet</label><input type="text" name="full_name" class="form-control mb-2" value="{{ u.full_name }}">
             <label>Email</label><input type="email" name="email" class="form-control mb-2" value="{{ u.email or '' }}">
             <label>Téléphone</label><input type="text" name="phone" class="form-control mb-2" value="{{ u.phone or '' }}">
+            {% if u.role == 'parent' and u.parent_profile %}<label>Profession</label><input type="text" name="profession" class="form-control mb-2" value="{{ u.parent_profile.profession or '' }}">{% endif %}
+            {% if u.role == 'eleve' and u.student_profile %}
+            <label>Prénom</label><input type="text" name="first_name" class="form-control mb-2" value="{{ u.student_profile.first_name }}">
+            <label>Nom</label><input type="text" name="last_name" class="form-control mb-2" value="{{ u.student_profile.last_name }}">
+            <label>Date de naissance</label><input type="date" name="dob" class="form-control mb-2" value="{{ u.student_profile.dob.isoformat() if u.student_profile.dob else '' }}">
+            <label>Lieu de naissance</label><input type="text" name="birth_place" class="form-control mb-2" value="{{ u.student_profile.birth_place or '' }}">
+            <label>Adresse</label><input type="text" name="address" class="form-control mb-2" value="{{ u.student_profile.address or '' }}">
+            {% endif %}
             <label>Grade</label>
             <input type="text" name="grade" class="form-control mb-1" list="teacher-grade-suggestions-{{ u.id }}" value="{{ u.teacher_profile.grade if u.role=='enseignant' and u.teacher_profile else u.grade or '' }}" placeholder="Saisir le grade">
             <datalist id="teacher-grade-suggestions-{{ u.id }}"><option value="Instituteur">{% for g in ['PLEG', 'PLET', 'PCEG', 'PCET', 'IGE', 'IPR', 'CPE'] %}<option value="{{ g }}">{% endfor %}</datalist>

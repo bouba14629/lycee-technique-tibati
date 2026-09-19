@@ -412,7 +412,7 @@ def censeur_absences():
             "types": ", ".join(sorted({r.type for r in student_records})),
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
         })
-    absence_rows.sort(key=lambda row: (row["student"].school_class.name if row["student"].school_class else "", row["student"].last_name, row["student"].first_name))
+    absence_rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
     return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id)
 
 
@@ -463,6 +463,7 @@ def surveillant_daily_absences():
     scoped = user_scoped_class_ids(user)
     classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
     rows = _daily_absence_rows(user, selected_date, class_id)
+    rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
     return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date)
 
 
@@ -519,6 +520,7 @@ def surveillant_absences_export_all_xlsx():
         rows.append({"student": student, "records": records, "hours": _absence_hours(student.id), "count": len(records),
                      "types": ", ".join(sorted({r.type for r in records})),
                      "reasons": ", ".join(sorted({r.reason for r in records if r.reason})) or "—"})
+    rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
     title = "Absences à justifier" + (f" — {rows[0]['student'].school_class.name}" if class_id and rows else "")
     return send_file(absence_justification_workbook(rows, title), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name="Absences_a_justifier.xlsx")

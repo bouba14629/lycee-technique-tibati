@@ -301,6 +301,24 @@ def dir_user_edit(user_id):
         u.teacher_profile.specialty = request.form.get("specialty", u.teacher_profile.specialty)
         u.teacher_profile.grade = grade
         u.teacher_profile.hours_due = request.form.get("hours_due", u.teacher_profile.hours_due, type=int)
+    elif u.role == "parent" and u.parent_profile:
+        u.parent_profile.phone = request.form.get("phone", u.parent_profile.phone or "").strip()
+        u.parent_profile.profession = request.form.get("profession", u.parent_profile.profession or "").strip()
+    elif u.role == "eleve" and u.student_profile:
+        student = u.student_profile
+        student.first_name = request.form.get("first_name", student.first_name).strip()
+        student.last_name = request.form.get("last_name", student.last_name).strip()
+        student.address = request.form.get("address", student.address or "").strip()
+        student.birth_place = request.form.get("birth_place", student.birth_place or "").strip()
+        student.sex = request.form.get("sex", student.sex or "") or None
+        raw_dob = request.form.get("dob", "").strip()
+        if raw_dob:
+            try:
+                student.dob = date.fromisoformat(raw_dob)
+            except ValueError:
+                flash("Date de naissance invalide.", "warning")
+                return redirect(url_for("dir_users", role="eleve"))
+        u.full_name = f"{student.first_name} {student.last_name}".strip()
     elif grade:
         u.grade = grade
     new_pw = request.form.get("new_password", "").strip()
@@ -357,7 +375,7 @@ def parent_new():
             flash("Nom du parent et au moins un enfant sont obligatoires.", "warning")
             return redirect(url_for("parent_new"))
         uname = gen_username(full_name)
-        temp_pw = generate_account_password(full_name, "parent")
+        temp_pw = "0000"
         pu = User(username=uname, role="parent", full_name=full_name, phone=phone,
                   must_change_password=True)
         pu.set_password(temp_pw)
@@ -408,7 +426,7 @@ def student_enroll():
 
         # Compte de connexion de l'élève — exclusif, pour qu'il consulte uniquement ses propres informations
         student_uname = gen_username(f"{first} {last}")
-        student_temp_pw = generate_account_password(f"{first} {last}", "eleve")
+        student_temp_pw = "0000"
         su = User(username=student_uname, role="eleve", full_name=f"{first} {last}",
                   must_change_password=True)
         su.set_password(student_temp_pw)
@@ -437,7 +455,7 @@ def student_enroll():
                 msg += f" — Rattaché au compte parent existant : {existing_parent.user.username}"
         elif parent_name:
             uname = gen_username(parent_name)
-            temp_pw = generate_account_password(parent_name, "parent")
+            temp_pw = "0000"
             pu = User(username=uname, role="parent", full_name=parent_name,
                       must_change_password=True)
             pu.set_password(temp_pw)
@@ -502,7 +520,7 @@ def students_import():
             matricule = f"LTT{year_prefix}{random.randint(1000,9999)}"
 
         student_uname = gen_username(full_name)
-        student_temp_pw = f"LTT{random.randint(1000,9999)}!"
+        student_temp_pw = "0000"
         su = User(username=student_uname, role="eleve", full_name=full_name, must_change_password=True)
         su.set_password(student_temp_pw)
         db.session.add(su)
