@@ -539,6 +539,7 @@ def dashboard_rates(class_ids=None):
     absence_students = {a.student_id for a in att_q.filter_by(type="Absence").all()}
     retard_students = {a.student_id for a in att_q.filter_by(type="Retard").all()}
     absence_rate = round(len(absence_students) / total_students * 100)
+    attendance_rate = 100 - absence_rate
     retard_rate = round(len(retard_students) / total_students * 100)
 
     teacher_q = Teacher.query
@@ -550,6 +551,7 @@ def dashboard_rates(class_ids=None):
     return {
         "success_rate": success_rate,
         "absence_rate": absence_rate,
+        "attendance_rate": attendance_rate,
         "retard_rate": retard_rate,
         "active_rate": active_rate,
     }

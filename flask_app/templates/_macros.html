@@ -11,6 +11,10 @@
       <div class="gauge-label">{{ labels.absence_rate or "Taux d'absences" }}</div>
     </div>
     <div class="gauge-card">
+      <div class="gauge-wrap"><canvas id="gaugeAttendance"></canvas><div class="gauge-value">{{ rates.attendance_rate }}%</div></div>
+      <div class="gauge-label">{{ labels.attendance_rate or "Taux d'assiduité" }}</div>
+    </div>
+    <div class="gauge-card">
       <div class="gauge-wrap"><canvas id="gaugeRetard"></canvas><div class="gauge-value">{{ rates.retard_rate }}%</div></div>
       <div class="gauge-label">{{ labels.retard_rate or "Taux de retards" }}</div>
     </div>
@@ -24,6 +28,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   renderGauge('gaugeSuccess', {{ rates.success_rate }}, '#0B2545');
   renderGauge('gaugeAbsence', {{ rates.absence_rate }}, '#1a4d8a');
+  renderGauge('gaugeAttendance', {{ rates.attendance_rate }}, '#2f7d5a');
   renderGauge('gaugeRetard', {{ rates.retard_rate }}, '#123a6b');
   renderGauge('gaugeActive', {{ rates.active_rate }}, '#2c6ca8');
 });

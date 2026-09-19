@@ -413,7 +413,8 @@ def censeur_absences():
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
         })
     absence_rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id)
+    total_hours = round(sum(row["hours"] for row in absence_rows), 2)
+    return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id, total_hours=total_hours)
 
 
 def _attendance_duration(record):
@@ -464,7 +465,8 @@ def surveillant_daily_absences():
     classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
     rows = _daily_absence_rows(user, selected_date, class_id)
     rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date)
+    total_hours = round(sum(row["hours"] for row in rows), 2)
+    return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date, total_hours=total_hours)
 
 
 @app.route("/surveillant/absences-quotidiennes/export.xlsx")

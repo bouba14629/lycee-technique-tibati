@@ -9,6 +9,9 @@
     <a class="btn-ltt-navy" href="{{ url_for('surveillant_daily_absences') }}"><i class="bi bi-calendar-day"></i> Absences quotidiennes</a>
   </form>
   <p class="text-muted small">Les absences sont regroupées par élève. Le total correspond à la somme de toutes les durées enregistrées ; la colonne Date n’est pas affichée dans cette vue.</p>
+  <div class="alert alert-info d-flex justify-content-between align-items-center py-2 mb-3" role="status">
+    <strong>Total général des heures d’absence</strong><span class="fs-5 fw-bold">{{ total_hours }} h</span>
+  </div>
   <table class="table-ltt">
     <thead><tr><th>Élève</th><th>Classe</th><th>Heures cumulées</th><th>Nombre</th><th>Type</th><th>Motif(s)</th>{% if current_user.role == 'surveillant_general' %}<th></th>{% endif %}</tr></thead>
     <tbody>
