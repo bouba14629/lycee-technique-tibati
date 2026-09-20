@@ -6,7 +6,7 @@
 
 {% block content %}
 {{ gauges(rates, "Taux globaux — " ~ current_user.scope_label, {}, dashboard_filters) }}
-{{ demographics_panel(stats.demographics) }}
+{{ demographics_panel(stats.demographics, dashboard_filters) }}
 <div class="kpi-grid">
   <a href="{{ url_for('students_list') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves inscrits</div></a>
   <a href="{{ url_for('dir_users', role='enseignant') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-person-workspace"></i></div><div class="kpi-value">{{ stats.teachers }}</div><div class="kpi-label">Enseignants</div></a>

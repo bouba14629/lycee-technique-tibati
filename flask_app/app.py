@@ -396,8 +396,17 @@ def dashboard():
             value = (value or "").strip().upper()
             return "Filles" if value in {"F", "FILLE", "FILLES"} else "Garçons" if value in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
         keys = ("Filles", "Garçons", "Non renseigné")
-        return {"effectifs": {key: sum(1 for student in students if gender(student.sex) == key) for key in keys},
-                "redoublants": {key: sum(1 for student in students if student.is_repeater and gender(student.sex) == key) for key in keys}}
+        def counts(items, predicate=lambda _student: True):
+            return {key: sum(1 for student in items if predicate(student) and gender(student.sex) == key) for key in keys}
+        class_rows = {}
+        for student in students:
+            class_name = student.school_class.name if student.school_class else "Classe non renseignée"
+            class_rows.setdefault(class_name, []).append(student)
+        return {"effectifs": counts(students),
+                "redoublants": counts(students, lambda student: bool(student.is_repeater)),
+                "classes": [{"name": name, "effectifs": counts(items),
+                             "redoublants": counts(items, lambda student: bool(student.is_repeater))}
+                            for name, items in sorted(class_rows.items(), key=lambda item: item[0].casefold())]}
 
     if role == "directeur":
         stats = dict(
@@ -410,7 +419,7 @@ def dashboard():
             absences_month=Attendance.query.filter_by(type="Absence").count(),
             sanctions=Sanction.query.count(),
             maintenance_open=MaintenanceRequest.query.filter(MaintenanceRequest.status != "Résolue").count(),
-            demographics=student_demographics(),
+            demographics=student_demographics(dashboard_filters["class_ids"]),
         )
         by_section = []
         for s in Section.query.all():
@@ -470,7 +479,7 @@ def dashboard():
         subjects_count = Subject.query.filter(Subject.department_id.in_(scoped_dept_ids)).count() if scoped_dept_ids else Subject.query.count()
         stats = dict(students=students_count, teachers=teachers_count, rooms=Room.query.count(),
                      schedules=schedules_count, subjects=subjects_count,
-                     demographics=student_demographics(scoped_ids))
+                     demographics=student_demographics(dashboard_filters["class_ids"]))
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates(scoped_dept_ids)
         evolution = evolution_series(scoped_ids)
@@ -485,7 +494,7 @@ def dashboard():
     if role == "censeur_crm":
         general_courses = Course.query.join(Subject).filter(Subject.category == "Enseignements Généraux").all()
         stats = dict(students=Student.query.count(), teachers=len(set(c.teacher_id for c in general_courses)),
-                     rooms=Room.query.count(), demographics=student_demographics())
+                     rooms=Room.query.count(), demographics=student_demographics(dashboard_filters["class_ids"]))
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates()
@@ -495,7 +504,8 @@ def dashboard():
         calendar_events = dashboard_calendar_events()
         return render_template("dashboard_censeur.html", rates=rates, success_by_dept=success_by_dept,
                                 evolution=evolution, alerts=alerts, activities=activities,
-                                recent_absences=[], recent_sanctions=[], stats=stats, calendar_events=calendar_events)
+                                recent_absences=[], recent_sanctions=[], stats=stats, calendar_events=calendar_events,
+                                dashboard_filters=dashboard_filters)
 
     if role == "surveillant_general":
         from utils import user_scoped_class_ids
@@ -516,7 +526,7 @@ def dashboard():
             unjustified=att_q.filter(Attendance.justified == False).count(),  # noqa: E712
             sanctions=sanction_q.count(),
             rewards=reward_q.count(),
-            demographics=student_demographics(scoped_ids),
+            demographics=student_demographics(dashboard_filters["class_ids"]),
         )
         recent_absences = att_q.order_by(Attendance.date.desc()).limit(10).all()
         recent_sanctions = sanction_q.order_by(Sanction.date.desc()).limit(5).all()
@@ -528,7 +538,7 @@ def dashboard():
 
     if role == "conseiller_orientation":
         stats = dict(students=Student.query.count(), teachers=Teacher.query.count(), rooms=Room.query.count(),
-                     demographics=student_demographics())
+                     demographics=student_demographics(dashboard_filters["class_ids"]))
         recent_absences = Attendance.query.order_by(Attendance.date.desc()).limit(10).all()
         recent_sanctions = Sanction.query.order_by(Sanction.date.desc()).limit(5).all()
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
