@@ -16,6 +16,10 @@ assert routes.count('student_temp_pw = "0000"') >= 2
 assert 'student_ids = request.form.getlist("student_ids", type=int)' in routes
 assert 'for sid in student_ids:' in routes
 assert 'elif u.role == "parent" and u.parent_profile:' in routes
+assert 'available_students = Student.query.order_by(Student.last_name, Student.first_name).all()' in routes
+assert 'available_students=available_students' in routes
+assert 'for student_id in request.form.getlist("student_ids", type=int):' in routes
+assert 'u.parent_profile.children.append(student)' in routes
 assert 'elif u.role == "eleve" and u.student_profile:' in routes
 assert 'absence_rows.sort(key=lambda row: (-row["hours"]' in censeur
 assert 'rows.sort(key=lambda row: (-row["hours"]' in censeur
@@ -23,6 +27,9 @@ assert 'name="student_ids"' in parent
 assert 'Mot de passe par défaut' in parent
 assert 'Mot de passe par défaut : 0000' in student
 assert 'data-bs-target="#userEdit{{ u.id }}Modal"' in users
+assert 'name="student_ids"' in users
+assert 'Ajouter élève(s)' in users
+assert 'Les associations existantes sont conservées.' in users
 assert 'total_hours = round(sum(row["hours"] for row in rows), 2)' in censeur
 assert 'total_hours = round(sum(row["hours"] for row in absence_rows), 2)' in censeur
 assert daily.count('Total général des heures d’absence') == 1

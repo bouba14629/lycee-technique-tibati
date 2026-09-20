@@ -110,9 +110,11 @@ def dir_users():
     sort_col = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
     users = q.order_by(sort_col).all()
     sections = Section.query.order_by(Section.name).all()
+    available_students = Student.query.order_by(Student.last_name, Student.first_name).all()
     return render_template("dir_users.html", users=users, role_filter=role_filter, search=search,
                             sort=sort, sort_dir=sort_dir,
-                            sections=sections, staff_grades=STAFF_GRADES)
+                            sections=sections, staff_grades=STAFF_GRADES,
+                            available_students=available_students)
 
 
 @app.route("/directeur/utilisateurs/export.xlsx")
@@ -304,6 +306,10 @@ def dir_user_edit(user_id):
     elif u.role == "parent" and u.parent_profile:
         u.parent_profile.phone = request.form.get("phone", u.parent_profile.phone or "").strip()
         u.parent_profile.profession = request.form.get("profession", u.parent_profile.profession or "").strip()
+        for student_id in request.form.getlist("student_ids", type=int):
+            student = Student.query.get(student_id)
+            if student and student not in u.parent_profile.children:
+                u.parent_profile.children.append(student)
     elif u.role == "eleve" and u.student_profile:
         student = u.student_profile
         student.first_name = request.form.get("first_name", student.first_name).strip()

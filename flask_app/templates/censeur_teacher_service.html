@@ -1,27 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Service des Professeurs{% endblock %}
 {% block page_title %}Service des Professeurs{% endblock %}
-{% block page_subtitle %}Heures hebdomadaires par matière enseignée — {{ school_year }}{% endblock %}
+{% block page_subtitle %}Synthèse des matières et heures hebdomadaires — {{ school_year }}{% endblock %}
 {% block extra_css %}<style>
-@media print { @page { size: landscape; margin: 8mm; } .no-print { display:none !important; } }
-.service-table { width:100%; border-collapse:collapse; color:#000; font-size:11px; }
-.service-table th,.service-table td { border:1px solid #111; padding:5px 6px; vertical-align:middle; line-height:1.25; }
-.service-table th { background:#f1f1f1; font-weight:700; text-align:center; }
-.service-table .teacher { font-weight:700; text-transform:uppercase; white-space:nowrap; }
-.service-table .number { text-align:center; white-space:nowrap; }
-.service-table tfoot th,.service-table tfoot td { background:#e4e4e4; font-weight:700; }
+@media print { @page { size: landscape; margin: 6mm; } .no-print { display:none !important; } .service-page { break-after: page; } }
+.service-page { margin-bottom:24px; } .service-table { width:100%; border-collapse:collapse; table-layout:fixed; color:#000; font-size:9px; }
+.service-table th,.service-table td { border:1px solid #111; padding:3px; text-align:center; vertical-align:middle; line-height:1.25; }
+.service-table .school { width:8%; font-size:8px; font-weight:700; } .service-table .year { width:12%; font-size:8px; }
+.service-table .teacher-head { font-size:10px; font-weight:700; text-transform:uppercase; }
+.service-table .label { width:8%; font-weight:700; background:#f1f1f1; }
+.service-table .teacher-cell { min-height:150px; text-align:left; vertical-align:top; }
+.service-table .subject-line { padding:2px 0; border-bottom:1px dotted #777; } .service-table .subject-line:last-child { border-bottom:0; }
+.service-table .hours { float:right; font-weight:700; white-space:nowrap; } .service-table .summary th,.service-table .summary td { font-weight:700; background:#e4e4e4; }
 .service-toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
 </style>{% endblock %}
 {% block content %}
-<div class="service-toolbar no-print"><div class="text-muted">{{ services|length }} professeur{{ 's' if services|length != 1 else '' }} — les heures sont regroupées par matière et classe, sans affichage des créneaux.</div><button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button></div>
-<div class="card-ltt">
-  <table class="service-table"><thead><tr><th style="width:24%;">ENSEIGNANT</th><th style="width:30%;">MATIÈRE ENSEIGNÉE</th><th style="width:20%;">CLASSE</th><th style="width:13%;">HEURES ENSEIGNÉES</th><th style="width:13%;">HEURES DUES</th></tr></thead><tbody>
-  {% for item in services %}
-    {% if item.subjects %}
-      {% for row in item.subjects %}<tr><td class="teacher">{% if loop.first %}{{ item.teacher.user.full_name }}{% endif %}</td><td>{{ row.subject }}</td><td>{{ row.class_name }}</td><td class="number">{{ row.hours }}</td><td class="number">{% if loop.first %}{{ item.teacher.hours_due or 0 }}{% endif %}</td></tr>{% endfor %}
-      <tr><th colspan="3" class="text-end">TOTAL {{ item.teacher.user.full_name }}</th><th class="number">{{ item.hours_done }}</th><th class="number">{{ item.teacher.hours_due or 0 }}</th></tr>
-    {% else %}<tr><td class="teacher">{{ item.teacher.user.full_name }}</td><td colspan="2" class="text-muted">Aucune matière enseignée</td><td class="number">0</td><td class="number">{{ item.teacher.hours_due or 0 }}</td></tr>{% endif %}
-  {% else %}<tr><td colspan="5" class="text-center text-muted py-4">Aucun enseignant accessible.</td></tr>{% endfor %}
-  </tbody><tfoot><tr><th colspan="3" class="text-end">TOTAL GÉNÉRAL</th><th class="number">{{ services|sum(attribute='hours_done') }}</th><th class="number">{{ services|sum(attribute='hours_due') }}</th></tr></tfoot></table>
-</div>
+<div class="service-toolbar no-print"><div class="text-muted">{{ services|length }} professeur{{ 's' if services|length != 1 else '' }} — six professeurs par page, matières regroupées par classe et volume horaire.</div><button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button></div>
+{% for group in services|batch(6, none) %}<div class="service-page"><table class="service-table"><thead><tr><th class="school">L.T. DE TIBATI<br><small>GTHS TIBATI</small></th><th colspan="6" class="teacher-head" style="font-size:15px;">SERVICE DES PROFESSEURS</th><th class="year">Année scolaire<br><strong>{{ school_year }}</strong></th></tr><tr><th class="label">PROFESSEURS</th>{% for item in group if item %}<th class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th>{% endfor %}<th></th></tr><tr><th class="label">MATIÈRES / CLASSES</th>{% for item in group if item %}<th>DISCIPLINE / SUBJECT<br><small>CLASSE / FORM</small></th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th>{% endfor %}<th></th></tr></thead><tbody><tr><th class="label">HEURES</th>{% for item in group if item %}<td class="teacher-cell">{% for row in item.subjects %}<div class="subject-line"><strong>{{ row.subject }}</strong><br><small>{{ row.class_name }}</small><span class="hours">{{ row.hours }} h</span></div>{% else %}<span class="text-muted">Aucune matière</span>{% endfor %}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td>{% endfor %}<td></td></tr></tbody><tfoot><tr class="summary"><th class="label">HEURES DUES</th>{% for item in group if item %}<td>{{ item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td>{% endfor %}<td></td></tr><tr class="summary"><th class="label">HEURES FAITES</th>{% for item in group if item %}<td>{{ item.hours_done }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td>{% endfor %}<td></td></tr><tr class="summary"><th class="label">DIFFÉRENCE</th>{% for item in group if item %}<td>{{ item.hours_done - item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td>{% endfor %}<td></td></tr></tfoot></table></div>{% else %}<div class="card-ltt text-center text-muted">Aucun enseignant accessible.</div>{% endfor %}
 {% endblock %}

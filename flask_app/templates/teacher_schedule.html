@@ -2,8 +2,19 @@
 {% block title %}Mon emploi du temps{% endblock %}
 {% block page_title %}Mon emploi du temps{% endblock %}
 {% block content %}
+<form method="get" class="card-ltt no-print mb-3" id="teacherScheduleFilters">
+  <div class="section-title"><h2><i class="bi bi-funnel-fill me-1" style="color:var(--gold-500);"></i> Filtrer mon emploi du temps</h2></div>
+  <p class="text-muted" style="font-size:12px;">Les choix proposés correspondent uniquement aux sections, filières, classes et matières présentes dans votre emploi du temps.</p>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3"><label>Section</label><select class="form-select" name="schedule_section_id" onchange="this.form.submit()"><option value="">Toutes mes sections</option>{% for item in schedule_filters.sections %}<option value="{{ item.id }}" {{ 'selected' if schedule_filters.section_id == item.id }}>{{ item.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label>Filière</label><select class="form-select" name="schedule_department_id" onchange="this.form.submit()"><option value="">Toutes mes filières</option>{% for item in schedule_filters.departments %}<option value="{{ item.id }}" {{ 'selected' if schedule_filters.department_id == item.id }}>{{ item.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label>Classe</label><select class="form-select" name="schedule_class_id" onchange="this.form.submit()"><option value="">Toutes mes classes</option>{% for item in schedule_filters.classes %}<option value="{{ item.id }}" {{ 'selected' if schedule_filters.class_id == item.id }}>{{ item.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label>Matière</label><select class="form-select" name="schedule_subject_id" onchange="this.form.submit()"><option value="">Toutes mes matières</option>{% for item in schedule_filters.subjects %}<option value="{{ item.id }}" {{ 'selected' if schedule_filters.subject_id == item.id }}>{{ item.name }}</option>{% endfor %}</select></div>
+  </div>
+  {% if schedule_filters.section_id or schedule_filters.department_id or schedule_filters.class_id or schedule_filters.subject_id %}<a class="btn-ltt-outline mt-3" href="{{ url_for('teacher_schedule') }}"><i class="bi bi-x-circle"></i> Réinitialiser</a>{% endif %}
+</form>
 <div class="d-flex justify-content-end mb-3 no-print gap-2">
-  <a href="{{ url_for('teacher_schedule_official') }}" class="btn-ltt-gold"><i class="bi bi-file-earmark-text-fill"></i> Aperçu officiel</a>
+  <a href="{{ url_for('teacher_schedule_official', **request.args) }}" class="btn-ltt-gold"><i class="bi bi-file-earmark-text-fill"></i> Aperçu officiel</a>
   <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Aperçu &amp; imprimer</button>
 </div>
 <div class="card-ltt">

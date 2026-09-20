@@ -211,19 +211,59 @@ def teacher_attendance(course_id):
                            schedule_entry=schedule_entry)
 
 
+def _teacher_schedule_data():
+    from models import ScheduleEntry
+    teacher = current_teacher()
+    all_entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    section_id = request.args.get("schedule_section_id", type=int)
+    department_id = request.args.get("schedule_department_id", type=int)
+    class_id = request.args.get("schedule_class_id", type=int)
+    subject_id = request.args.get("schedule_subject_id", type=int)
+
+    def unique(values):
+        return sorted({item.id: item for item in values}.values(), key=lambda item: item.name.upper())
+
+    sections = unique([entry.course.school_class.department.section for entry in all_entries])
+    if section_id not in {item.id for item in sections}:
+        section_id = None
+    departments = unique([entry.course.school_class.department for entry in all_entries
+                          if not section_id or entry.course.school_class.department.section_id == section_id])
+    if department_id not in {item.id for item in departments}:
+        department_id = None
+    classes = sorted({entry.course.school_class.id: entry.course.school_class for entry in all_entries
+                      if (not section_id or entry.course.school_class.department.section_id == section_id)
+                      and (not department_id or entry.course.school_class.department_id == department_id)}.values(),
+                     key=lambda item: item.name.upper())
+    if class_id not in {item.id for item in classes}:
+        class_id = None
+    subjects = unique([entry.course.subject for entry in all_entries
+                       if (not section_id or entry.course.school_class.department.section_id == section_id)
+                       and (not department_id or entry.course.school_class.department_id == department_id)
+                       and (not class_id or entry.course.class_id == class_id)])
+    if subject_id not in {item.id for item in subjects}:
+        subject_id = None
+    entries = [entry for entry in all_entries
+               if (not section_id or entry.course.school_class.department.section_id == section_id)
+               and (not department_id or entry.course.school_class.department_id == department_id)
+               and (not class_id or entry.course.class_id == class_id)
+               and (not subject_id or entry.course.subject_id == subject_id)]
+    return teacher, entries, {"sections": sections, "departments": departments, "classes": classes,
+                              "subjects": subjects, "section_id": section_id, "department_id": department_id,
+                              "class_id": class_id, "subject_id": subject_id}
+
+
 @app.route("/enseignant/emploi-du-temps")
 @roles_required("enseignant")
 def teacher_schedule():
-    from models import ScheduleEntry
     from utils import DAYS
-    teacher = current_teacher()
-    entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    teacher, entries, schedule_filters = _teacher_schedule_data()
     grid = {d: [] for d in DAYS}
     for e in entries:
         grid[e.day].append(e)
     for d in grid:
         grid[d].sort(key=lambda e: e.start_time)
-    return render_template("teacher_schedule.html", grid=grid, days=DAYS, teacher=teacher)
+    return render_template("teacher_schedule.html", grid=grid, days=DAYS, teacher=teacher,
+                           schedule_filters=schedule_filters)
 
 
 @app.route("/enseignant/disponibilites", methods=["GET", "POST"])
@@ -304,10 +344,8 @@ def teacher_activities():
 @app.route("/enseignant/emploi-du-temps/officiel")
 @roles_required("enseignant")
 def teacher_schedule_official():
-    from models import ScheduleEntry
     from utils import filled_official_slots
-    teacher = current_teacher()
-    entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    teacher, entries, _filters = _teacher_schedule_data()
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
     extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
@@ -323,11 +361,9 @@ def teacher_schedule_official():
 @roles_required("enseignant")
 def teacher_schedule_official_pdf():
     from flask import send_file
-    from models import ScheduleEntry
     from pdf_utils import render_pdf
     from utils import filled_official_slots
-    teacher = current_teacher()
-    entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    teacher, entries, _filters = _teacher_schedule_data()
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
     extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
@@ -345,10 +381,8 @@ def teacher_schedule_official_pdf():
 @roles_required("enseignant")
 def teacher_schedule_official_xlsx():
     from flask import send_file
-    from models import ScheduleEntry
     from excel_utils import teacher_schedule_workbook
-    teacher = current_teacher()
-    entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    teacher, entries, _filters = _teacher_schedule_data()
     grid_raw = {d: [] for d in DAYS[:5]}
     for e in entries:
         if e.day in grid_raw:
