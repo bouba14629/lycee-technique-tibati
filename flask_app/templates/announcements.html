@@ -2,6 +2,7 @@
 {% block title %}Annonces{% endblock %}
 {% block page_title %}Annonces &amp; communications{% endblock %}
 {% block content %}
+{% if current_user.role == 'enseignant' and unread_announcements %}<a href="#annonces-recues" class="alert alert-danger d-flex align-items-center justify-content-between fw-bold mb-3"><span><i class="bi bi-megaphone-fill me-2"></i>{{ unread_announcements }} annonce{{ 's' if unread_announcements > 1 else '' }} reçue{{ 's' if unread_announcements > 1 else '' }} — consulter</span><i class="bi bi-arrow-down"></i></a>{% endif %}
 <div class="row g-3">
   {% if current_user.role in ['directeur','censeur'] %}
   <div class="col-lg-4 order-lg-2">
@@ -24,7 +25,7 @@
     </div>
   </div>
   {% endif %}
-  <div class="col-lg-{{ '8 order-lg-1' if current_user.role in ['directeur','censeur'] else '12' }}">
+  <div id="annonces-recues" class="col-lg-{{ '8 order-lg-1' if current_user.role in ['directeur','censeur'] else '12' }}">
     {% for a in items %}
     <div class="card-ltt">
       <div class="d-flex justify-content-between align-items-start">

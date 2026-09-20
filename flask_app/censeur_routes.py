@@ -33,7 +33,7 @@ def _subject_compatible_with_class(subject, school_class):
 @app.route("/censeur/service-des-professeurs")
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_teacher_service():
-    """Vue matricielle hebdomadaire du service, recalculée depuis les créneaux actuels."""
+    """Service agrégé par matière/classe, sans afficher les créneaux horaires."""
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     teachers_q = Teacher.query.join(User).order_by(User.full_name)
@@ -44,18 +44,26 @@ def censeur_teacher_service():
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     entries = entries_q.all()
-    by_teacher = {teacher.id: {"teacher": teacher, "entries": {}, "hours_done": 0} for teacher in teachers}
     period_starts = {start for start, _end in OFFICIAL_PERIODS}
+    hours_by_course = {}
     for entry in entries:
-        bucket = by_teacher.get(entry.course.teacher_id)
-        if not bucket or entry.start_time not in period_starts:
+        if entry.start_time not in period_starts:
             continue
-        key = (entry.day, entry.start_time)
-        bucket["entries"][key] = entry
-        bucket["hours_done"] += 1
-    services = sorted(by_teacher.values(), key=lambda item: item["teacher"].user.full_name.upper())
-    return render_template("censeur_teacher_service.html", services=services, days=DAYS,
-                           periods=OFFICIAL_PERIODS, school_year=get_current_school_year())
+        hours_by_course[entry.course_id] = hours_by_course.get(entry.course_id, 0) + 1
+    services = []
+    for teacher in teachers:
+        courses = [course for course in teacher.courses
+                   if scoped_class_ids is None or course.class_id in scoped_class_ids]
+        subjects = []
+        for course in sorted(courses, key=lambda item: (item.subject.name.upper(), item.school_class.name.upper())):
+            subjects.append({"subject": course.subject.name, "class_name": course.school_class.name,
+                             "hours": hours_by_course.get(course.id, 0)})
+        services.append({"teacher": teacher, "subjects": subjects,
+                         "hours_done": sum(item["hours"] for item in subjects),
+                         "hours_due": teacher.hours_due or 0})
+    services.sort(key=lambda item: item["teacher"].user.full_name.upper())
+    return render_template("censeur_teacher_service.html", services=services,
+                           school_year=get_current_school_year())
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
