@@ -19,7 +19,8 @@
 	  .app-back-button:active { transform:scale(.97); }
 		  .app-back-button:focus-visible { outline:3px solid rgba(197,155,41,.45); outline-offset:2px; }
 		  @media (max-width: 767px) { .app-back-button .app-back-label { display:none; } .app-back-button { min-width:38px; justify-content:center; padding:0; } }
-		  @media print {
+		@media print {
+		    .skip-link { display:none !important; }
 		    [data-ltt-print-excluded="external-branding"],
 		    [data-manus-badge],
 		    [data-made-with-manus],

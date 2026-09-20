@@ -33,7 +33,7 @@ def _subject_compatible_with_class(subject, school_class):
 @app.route("/censeur/service-des-professeurs")
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_teacher_service():
-    """Service agrégé par matière/classe, sans afficher les créneaux horaires."""
+    """Service agrégé par matière/classe avec jours, horaires et durée réelle des passages."""
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     teachers_q = Teacher.query.join(User).order_by(User.full_name)
@@ -44,20 +44,35 @@ def censeur_teacher_service():
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     entries = entries_q.all()
-    period_starts = {start for start, _end in OFFICIAL_PERIODS}
-    hours_by_course = {}
+    day_order = {day: index for index, day in enumerate(DAYS)}
+    passages_by_course = {}
+
+    def duration_hours(start_time, end_time):
+        try:
+            start_minutes = int(start_time[:2]) * 60 + int(start_time[3:5])
+            end_minutes = int(end_time[:2]) * 60 + int(end_time[3:5])
+            return max(0, (end_minutes - start_minutes) / 60)
+        except (TypeError, ValueError, IndexError):
+            return 0
+
     for entry in entries:
-        if entry.start_time not in period_starts:
-            continue
-        hours_by_course[entry.course_id] = hours_by_course.get(entry.course_id, 0) + 1
+        passages_by_course.setdefault(entry.course_id, []).append({
+            "day": entry.day,
+            "start": entry.start_time,
+            "end": entry.end_time,
+            "hours": duration_hours(entry.start_time, entry.end_time),
+        })
     services = []
     for teacher in teachers:
         courses = [course for course in teacher.courses
                    if scoped_class_ids is None or course.class_id in scoped_class_ids]
         subjects = []
         for course in sorted(courses, key=lambda item: (item.subject.name.upper(), item.school_class.name.upper())):
+            passages = sorted(passages_by_course.get(course.id, []),
+                              key=lambda item: (day_order.get(item["day"], 99), item["start"], item["end"]))
             subjects.append({"subject": course.subject.name, "class_name": course.school_class.name,
-                             "hours": hours_by_course.get(course.id, 0)})
+                             "hours": round(sum(item["hours"] for item in passages), 2),
+                             "passages": passages})
         services.append({"teacher": teacher, "subjects": subjects,
                          "hours_done": sum(item["hours"] for item in subjects),
                          "hours_due": teacher.hours_due or 0})
