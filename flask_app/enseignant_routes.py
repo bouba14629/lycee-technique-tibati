@@ -187,6 +187,14 @@ def teacher_attendance(course_id):
         session_date = request.form.get("date") or date.today().isoformat()
         start = scheduled_start
         end = scheduled_end
+        call_description = f"Appel effectué — {course.subject.name} / {course.school_class.name}"
+        already_called = ActivityLog.query.filter_by(
+            user_id=session["user_id"], date=date.fromisoformat(session_date),
+            description=call_description, category="pédagogique"
+        ).first()
+        if already_called:
+            flash("Cet appel a déjà été enregistré pour cette classe, cette heure et cette matière.", "warning")
+            return redirect(url_for("teacher_attendance", course_id=course_id))
         count = 0
         for student in course.school_class.students:
             status = request.form.get(f"status_{student.id}", "Présent")
@@ -198,7 +206,7 @@ def teacher_attendance(course_id):
                     notify(p.user_id, f"{student.full_name} : {status.lower()} enregistré(e) le {session_date} en {course.subject.name}.")
                 count += 1
         db.session.add(ActivityLog(user_id=session["user_id"],
-                                    description=f"Appel effectué — {course.subject.name} / {course.school_class.name}",
+                                    description=call_description,
                                     category="pédagogique"))
         db.session.commit()
         flash(f"Appel enregistré ({count} absence(s)/retard(s)).", "success")

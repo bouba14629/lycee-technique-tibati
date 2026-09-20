@@ -319,6 +319,10 @@ def _dashboard_filter_context(user):
     from utils import user_scoped_class_ids
 
     scoped_ids = user_scoped_class_ids(user) if user.role in ("censeur", "censeur_crm", "surveillant_general") else None
+    teacher_course_ids = None
+    if user.role == "enseignant" and user.teacher_profile:
+        teacher_course_ids = {course.class_id for course in user.teacher_profile.courses if course.class_id}
+        scoped_ids = teacher_course_ids
     class_query = SchoolClass.query
     if scoped_ids is not None:
         class_query = class_query.filter(SchoolClass.id.in_(scoped_ids))
@@ -353,7 +357,10 @@ def _dashboard_filter_context(user):
         rate_class_ids = filtered_class_ids
     subject_class_ids = selected_class_ids if selected_class_ids else filtered_class_ids
     if subject_class_ids:
-        subjects = (Subject.query.join(Course).filter(Course.class_id.in_(subject_class_ids))
+        subjects_query = Subject.query.join(Course).filter(Course.class_id.in_(subject_class_ids))
+        if user.role == "enseignant":
+            subjects_query = subjects_query.filter(Course.teacher_id == user.teacher_profile.id)
+        subjects = (subjects_query
                     .order_by(Subject.name).distinct().all())
     else:
         subjects = []
@@ -380,6 +387,18 @@ def dashboard():
     user = User.query.get(session["user_id"])
     dashboard_filters = _dashboard_filter_context(user)
 
+    def student_demographics(class_ids=None):
+        query = Student.query
+        if class_ids is not None:
+            query = query.filter(Student.class_id.in_(class_ids)) if class_ids else query.filter(db.false())
+        students = query.all()
+        def gender(value):
+            value = (value or "").strip().upper()
+            return "Filles" if value in {"F", "FILLE", "FILLES"} else "Garçons" if value in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
+        keys = ("Filles", "Garçons", "Non renseigné")
+        return {"effectifs": {key: sum(1 for student in students if gender(student.sex) == key) for key in keys},
+                "redoublants": {key: sum(1 for student in students if student.is_repeater and gender(student.sex) == key) for key in keys}}
+
     if role == "directeur":
         stats = dict(
             students=Student.query.count(),
@@ -391,6 +410,7 @@ def dashboard():
             absences_month=Attendance.query.filter_by(type="Absence").count(),
             sanctions=Sanction.query.count(),
             maintenance_open=MaintenanceRequest.query.filter(MaintenanceRequest.status != "Résolue").count(),
+            demographics=student_demographics(),
         )
         by_section = []
         for s in Section.query.all():
@@ -449,7 +469,8 @@ def dashboard():
         scoped_dept_ids = user_scoped_department_ids(user)
         subjects_count = Subject.query.filter(Subject.department_id.in_(scoped_dept_ids)).count() if scoped_dept_ids else Subject.query.count()
         stats = dict(students=students_count, teachers=teachers_count, rooms=Room.query.count(),
-                     schedules=schedules_count, subjects=subjects_count)
+                     schedules=schedules_count, subjects=subjects_count,
+                     demographics=student_demographics(scoped_ids))
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates(scoped_dept_ids)
         evolution = evolution_series(scoped_ids)
@@ -464,7 +485,7 @@ def dashboard():
     if role == "censeur_crm":
         general_courses = Course.query.join(Subject).filter(Subject.category == "Enseignements Généraux").all()
         stats = dict(students=Student.query.count(), teachers=len(set(c.teacher_id for c in general_courses)),
-                     rooms=Room.query.count())
+                     rooms=Room.query.count(), demographics=student_demographics())
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
         success_by_dept = department_success_rates()
@@ -495,6 +516,7 @@ def dashboard():
             unjustified=att_q.filter(Attendance.justified == False).count(),  # noqa: E712
             sanctions=sanction_q.count(),
             rewards=reward_q.count(),
+            demographics=student_demographics(scoped_ids),
         )
         recent_absences = att_q.order_by(Attendance.date.desc()).limit(10).all()
         recent_sanctions = sanction_q.order_by(Sanction.date.desc()).limit(5).all()
@@ -505,7 +527,8 @@ def dashboard():
                                 life_alerts=dashboard_alerts(class_ids=scoped_ids), dashboard_filters=dashboard_filters)
 
     if role == "conseiller_orientation":
-        stats = dict(students=Student.query.count(), teachers=Teacher.query.count(), rooms=Room.query.count())
+        stats = dict(students=Student.query.count(), teachers=Teacher.query.count(), rooms=Room.query.count(),
+                     demographics=student_demographics())
         recent_absences = Attendance.query.order_by(Attendance.date.desc()).limit(10).all()
         recent_sanctions = Sanction.query.order_by(Sanction.date.desc()).limit(5).all()
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
@@ -550,10 +573,10 @@ def dashboard():
         from utils import dashboard_rates
         return render_template("dashboard_enseignant.html", teacher=teacher, courses=courses,
                                 schedule=my_schedule,
-                                rates=dashboard_rates(teacher_class_ids, teacher_subject_ids, teacher.id) if teacher else {
+                                rates=dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"], teacher.id) if teacher else {
                                     "success_rate": 0, "absence_rate": 0, "attendance_rate": 100,
                                     "retard_rate": 0, "active_rate": 0,
-                                })
+                                }, dashboard_filters=dashboard_filters)
 
     if role == "eleve":
         student = user.student_profile

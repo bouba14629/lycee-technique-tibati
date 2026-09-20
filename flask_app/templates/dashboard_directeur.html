@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import gauges, alerts_panel, activity_feed, school_calendar with context %}
+{% from "_macros.html" import gauges, alerts_panel, activity_feed, school_calendar, demographics_panel with context %}
 {% block title %}Tableau de bord Proviseur{% endblock %}
 {% block page_title %}Vue d'ensemble de l'établissement{% endblock %}
 {% block page_subtitle %}Bienvenue, {{ current_user.full_name }} — Année scolaire {{ school_year }}{% endblock %}
@@ -36,6 +36,7 @@
 {% endfor %}
 
 {{ gauges(rates, "Taux globaux — établissement", {}, dashboard_filters) }}
+{{ demographics_panel(stats.demographics) }}
 
 <div class="kpi-grid">
   <a href="{{ url_for('students_list') }}" class="kpi-card kpi-blue"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves inscrits</div></a>

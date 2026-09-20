@@ -6,7 +6,7 @@
     <div class="col-md-3"><label class="form-label small">Section</label><select name="attendance_section_id" class="form-select form-select-sm" onchange="scheduleAttendanceFilterSubmit(this.form)"><option value="">Toutes</option>{% for section in filters.sections %}<option value="{{ section.id }}" {{ 'selected' if filters.section_id == section.id }}>{{ section.name }}</option>{% endfor %}</select></div>
     <div class="col-md-3"><label class="form-label small">Filière</label><select name="attendance_department_id" class="form-select form-select-sm" onchange="scheduleAttendanceFilterSubmit(this.form)"><option value="">Toutes</option>{% for department in filters.departments %}<option value="{{ department.id }}" {{ 'selected' if filters.department_id == department.id }}>{{ department.name }}</option>{% endfor %}</select></div>
     <div class="col-md-3"><label class="form-label small">Classes</label><select name="attendance_class_id" class="form-select form-select-sm" multiple size="3" onchange="scheduleAttendanceFilterSubmit(this.form)">{% for school_class in filters.classes %}<option value="{{ school_class.id }}" {{ 'selected' if school_class.id in filters.selected_class_ids }}>{{ school_class.name }}</option>{% endfor %}</select></div>
-    <div class="col-md-3"><label class="form-label small">Matières (sélection multiple)</label><select name="attendance_subject_id" class="form-select form-select-sm" multiple size="3">{% for subject in filters.subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id in filters.selected_subject_ids }}>{{ subject.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label small">Matières (sélection multiple)</label><select name="attendance_subject_id" class="form-select form-select-sm" multiple size="3" onchange="scheduleAttendanceFilterSubmit(this.form)">{% for subject in filters.subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id in filters.selected_subject_ids }}>{{ subject.name }}</option>{% endfor %}</select></div>
     <div class="col-12 d-flex gap-2"><button class="btn-ltt-navy btn-sm" type="submit"><i class="bi bi-funnel"></i> Appliquer les filtres</button><a class="btn-ltt-outline btn-sm" href="{{ url_for('dashboard') }}">Réinitialiser</a></div>
   </form>
   <script>
@@ -34,10 +34,6 @@
       <div class="gauge-wrap"><canvas id="gaugeRetard"></canvas><div class="gauge-value">{{ rates.retard_rate }}%</div></div>
       <div class="gauge-label">{{ labels.retard_rate or "Taux de retards" }}</div>
     </div>
-    <div class="gauge-card">
-      <div class="gauge-wrap"><canvas id="gaugeActive"></canvas><div class="gauge-value">{{ rates.active_rate }}%</div></div>
-      <div class="gauge-label">{{ labels.active_rate or "Enseignants actifs" }}</div>
-    </div>
   </div>
 </div>
 <script>
@@ -46,9 +42,16 @@ document.addEventListener('DOMContentLoaded', function() {
   renderGauge('gaugeAbsence', {{ rates.absence_rate }}, '#1a4d8a');
   renderGauge('gaugeAttendance', {{ rates.attendance_rate }}, '#2f7d5a');
   renderGauge('gaugeRetard', {{ rates.retard_rate }}, '#123a6b');
-  renderGauge('gaugeActive', {{ rates.active_rate }}, '#2c6ca8');
 });
 </script>
+{% endmacro %}
+
+{% macro demographics_panel(demographics) %}
+<div class="card-ltt mb-3"><div class="section-title"><h2><i class="bi bi-people-fill me-1" style="color:var(--gold-500);"></i> Effectifs par genre</h2></div>
+<div class="table-responsive"><table class="table-ltt mb-0"><thead><tr><th>Indicateur</th><th>Filles</th><th>Garçons</th><th>Non renseigné</th><th>Total</th></tr></thead><tbody>
+<tr><td>Élèves inscrits</td><td>{{ demographics.effectifs.Filles }}</td><td>{{ demographics.effectifs.Garçons }}</td><td>{{ demographics.effectifs['Non renseigné'] }}</td><td>{{ demographics.effectifs.values()|sum }}</td></tr>
+<tr><td>Redoublants</td><td>{{ demographics.redoublants.Filles }}</td><td>{{ demographics.redoublants.Garçons }}</td><td>{{ demographics.redoublants['Non renseigné'] }}</td><td>{{ demographics.redoublants.values()|sum }}</td></tr>
+</tbody></table></div></div>
 {% endmacro %}
 
 {% macro alerts_panel(alerts) %}

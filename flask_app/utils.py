@@ -96,13 +96,21 @@ def subject_averages(student_id, term=None):
     student = Student.query.get(student_id)
     if not student or not student.class_id:
         return []
-    courses = Course.query.filter_by(class_id=student.class_id).all()
+    courses = (Course.query.filter_by(class_id=student.class_id)
+               .join(ScheduleEntry)
+               .distinct()
+               .all())
     result = []
     for c in courses:
+        if "orientation scolaire" in (c.subject.name or "").casefold():
+            continue
         avg = student_average(student_id, course_id=c.id, term=term)
         if avg is not None:
             result.append({"course": c, "average": avg, "coef": c.subject.coefficient})
-    return result
+    category_order = {"Enseignements Généraux": 0, "Enseignements Professionnels Théoriques": 1,
+                      "Enseignements Professionnels Pratiques": 2, "Enseignements Divers": 3}
+    return sorted(result, key=lambda row: (category_order.get(row["course"].subject.category, 99),
+                                           row["course"].subject.name.casefold()))
 
 
 def general_average(student_id, term=None):
