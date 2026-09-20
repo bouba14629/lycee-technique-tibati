@@ -86,6 +86,7 @@
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_teacher_service' }}" href="{{ url_for('censeur_teacher_service') }}"><i class="bi bi-grid-3x3-gap-fill"></i> Service des Professeurs</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_conseil' }}" href="{{ url_for('censeur_conseil') }}"><i class="bi bi-clipboard2-data-fill"></i> Conseils de classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
@@ -101,6 +102,7 @@
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_teacher_service' }}" href="{{ url_for('censeur_teacher_service') }}"><i class="bi bi-grid-3x3-gap-fill"></i> Service des Professeurs</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
@@ -124,9 +126,7 @@
       {% if current_user and current_user.role == 'conseiller_orientation' %}
       <div class="sidebar-section-title">Consultation</div>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves &amp; bulletins</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='parent') }}"><i class="bi bi-people-fill"></i> Parents</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='enseignant') }}"><i class="bi bi-person-workspace"></i> Enseignants</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_absences' }}" href="{{ url_for('censeur_absences') }}"><i class="bi bi-exclamation-octagon-fill"></i> Discipline &amp; absences</a>
+      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Les comptes, la discipline et les modifications restent réservés aux rôles habilités.</div>
       {% endif %}
 
       {% if current_user and current_user.role in ['chef_travaux','chef_crm'] %}
@@ -189,7 +189,7 @@
       <div class="topbar-actions">
         {% if current_user and current_user.last_login_at %}<div class="d-none d-xl-flex flex-column text-end me-1" style="font-size:10.5px; line-height:1.25; color:var(--muted);"><span>Dernière connexion</span><strong style="color:var(--navy-800); font-size:11.5px;">{{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}</strong></div>{% endif %}
         <button type="button" class="icon-btn d-none" data-pwa-install aria-label="Installer l’application" title="Installer l’application"><i class="bi bi-download" aria-hidden="true"></i><span class="icon-btn-label">Installer</span></button>
-        <a class="icon-btn" href="{{ url_for('announcements') }}" title="Annonces" aria-label="Annonces"><i class="bi bi-megaphone" aria-hidden="true"></i><span class="icon-btn-label">Annonces</span></a>
+        <a class="icon-btn position-relative {{ 'text-danger fw-bold' if unread_announcements else '' }}" href="{{ url_for('announcements') }}" title="Annonces" aria-label="Annonces"><i class="bi bi-megaphone" aria-hidden="true"></i><span class="icon-btn-label">Annonces</span>{% if unread_announcements %}<span class="icon-badge bg-danger">{{ unread_announcements }}</span>{% endif %}</a>
         <a class="icon-btn" href="{{ url_for('messages_inbox') }}" title="Messagerie">
           <i class="bi bi-envelope" aria-hidden="true"></i><span class="icon-btn-label">Messages</span>
           {% if unread_msgs %}<span class="icon-badge">{{ unread_msgs }}</span>{% endif %}

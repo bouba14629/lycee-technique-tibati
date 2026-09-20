@@ -29,7 +29,7 @@
     <div class="card-ltt">
       <div class="d-flex justify-content-between align-items-start">
         <h3 style="font-size:16px; color:var(--navy-900);">{{ a.title }}</h3>
-        <span class="badge-ltt badge-gold">{{ ROLE_LABELS.get(a.target_role, 'Tous') if a.target_role != 'tous' else 'Tous' }}</span>
+        <div class="d-flex align-items-center gap-2"><span class="badge-ltt badge-gold">{{ ROLE_LABELS.get(a.target_role, 'Tous') if a.target_role != 'tous' else 'Tous' }}</span>{% if current_user.role == 'directeur' %}<a class="btn-ltt-outline py-1 px-2" href="{{ url_for('announcement_edit', announcement_id=a.id) }}" title="Modifier"><i class="bi bi-pencil"></i></a><form method="post" action="{{ url_for('announcement_delete', announcement_id=a.id) }}" onsubmit="return confirm('Supprimer cette annonce ?');"><button class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button></form>{% endif %}</div>
       </div>
       <p class="mb-2" style="font-size:13.5px; line-height:1.6;">{{ a.body }}</p>
       <div class="text-muted" style="font-size:12px;">Publié par {{ a.author.full_name if a.author }} · {{ a.date.strftime('%d/%m/%Y %H:%M') }}</div>

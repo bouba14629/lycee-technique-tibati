@@ -816,9 +816,18 @@ def dir_class_homeroom(class_id):
     teacher_id = request.form.get("teacher_id", type=int)
     teacher = Teacher.query.get(teacher_id) if teacher_id else None
     if teacher and teacher.department_id != cls.department_id:
-        flash("Le professeur principal doit appartenir au département de cette classe.", "danger")
-        return redirect(url_for("dir_structure"))
+        flash("Le professeur principal peut être choisi parmi tous les enseignants autorisés.", "warning")
     cls.homeroom_teacher_id = teacher.id if teacher else None
+    if teacher:
+        tm = Subject.query.filter(Subject.department_id == cls.department_id,
+                                  db.func.lower(Subject.name) == "travail manuel").first()
+        if not tm:
+            tm = Subject(name="Travail Manuel", coefficient=0, category="Enseignements Divers",
+                         department_id=cls.department_id, class_id=cls.id)
+            db.session.add(tm)
+            db.session.flush()
+        if not Course.query.filter_by(subject_id=tm.id, teacher_id=teacher.id, class_id=cls.id).first():
+            db.session.add(Course(subject_id=tm.id, teacher_id=teacher.id, class_id=cls.id))
     db.session.commit()
     flash(f"Professeur principal de {cls.name} mis à jour.", "success")
     return redirect(url_for("dir_structure"))
@@ -851,9 +860,13 @@ def dir_structure():
             session.pop("last_subject_class_id", None)
     available_classes = [school_class for section in sections for department in section.departments for school_class in department.classes]
     available_levels = sorted({school_class.level for school_class in available_classes if school_class.level})
+    teachers_q = Teacher.query.join(User).order_by(User.full_name)
+    if scoped_dept_ids is not None:
+        teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
+    available_teachers = teachers_q.all()
     return render_template("dir_structure.html", sections=sections, scoped_dept_ids=scoped_dept_ids,
                            last_subject_class_id=last_subject_class_id, available_classes=available_classes,
-                           available_levels=available_levels)
+                           available_levels=available_levels, available_teachers=available_teachers)
 
 
 @app.route("/directeur/structure/section/nouvelle", methods=["POST"])

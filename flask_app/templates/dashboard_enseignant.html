@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% from "_macros.html" import gauges with context %}
 {% block title %}Tableau de bord Enseignant{% endblock %}
 {% block page_title %}Bonjour, {{ current_user.full_name.split(' ')[0] }}{% endblock %}
 {% block page_subtitle %}{{ teacher.department.name if teacher and teacher.department }} — {{ courses|length }} cours en charge{% endblock %}
 
 {% block content %}
+{% if unread_announcements %}<a href="{{ url_for('announcements') }}" class="alert alert-danger d-flex align-items-center justify-content-between fw-bold"><span><i class="bi bi-megaphone-fill me-2"></i>{{ unread_announcements }} annonce{{ 's' if unread_announcements > 1 else '' }} reçue{{ 's' if unread_announcements > 1 else '' }} — consulter</span><i class="bi bi-arrow-right"></i></a>{% endif %}
+{{ gauges(rates, "Mes indicateurs — matières enseignées") }}
 <section class="role-hero role-hero-teacher">
   <div><div class="eyebrow"><i class="bi bi-journal-check"></i> Espace pédagogique</div><h2>Préparez vos cours et suivez vos classes.</h2><p>Accédez rapidement à la saisie des notes, à l’appel et à votre organisation hebdomadaire.</p></div>
   <a class="btn-hero-ghost" href="{{ url_for('teacher_courses') }}"><i class="bi bi-journal-bookmark-fill"></i> Mes classes</a>

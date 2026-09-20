@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Service des Professeurs{% endblock %}
+{% block page_title %}Service des Professeurs{% endblock %}
+{% block page_subtitle %}Mise à jour automatique depuis les emplois du temps — {{ school_year }}{% endblock %}
+{% block extra_css %}<style>
+@media print { @page { size: landscape; margin: 6mm; } .no-print { display:none !important; } .service-page { break-after: page; } }
+.service-page { margin-bottom:24px; } .service-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:8px; color:#000; }
+.service-table th,.service-table td { border:1px solid #111; padding:2px; text-align:center; vertical-align:middle; height:18px; line-height:1.25; }
+.service-table .teacher-head { background:#fff; font-size:11px; font-weight:700; text-transform:uppercase; }
+.service-table .hour { width:8%; font-size:7px; white-space:nowrap; } .service-table .day { width:7%; writing-mode:vertical-rl; transform:rotate(180deg); font-size:8px; font-weight:700; }
+.service-table .pause { background:#d4d4d4; font-weight:700; letter-spacing:3px; height:14px; }
+.service-table .summary th,.service-table .summary td { font-weight:700; background:#f1f1f1; }
+.service-toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
+</style>{% endblock %}
+{% block content %}
+<div class="service-toolbar no-print"><div class="text-muted">{{ services|length }} professeur{{ 's' if services|length != 1 else '' }} — les données reflètent les créneaux actuellement enregistrés.</div><button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button></div>
+{% for group in services|batch(6, none) %}
+<div class="service-page">
+  <table class="service-table"><thead><tr><th colspan="2" class="teacher-head">L.T. DE TIBATI — SERVICE DES PROFESSEURS</th><th colspan="2">Année scolaire<br><strong>{{ school_year }}</strong></th></tr><tr><th class="hour">JOURS / HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}</tr><tr><th class="hour">Créneau</th>{% for item in group if item %}<th>DISCIPLINE<br><small>SUBJECT</small></th><th>CLASSE<br><small>FORM</small></th>{% endfor %}</tr></thead>
+  <tbody>{% for day in days %}{% for period in periods %}<tr><th class="hour">{{ day }}<br>{{ period[0] }}–{{ period[1] }}</th>{% for item in group if item %}{% set entry=item.entries.get((day, period[0])) %}<td>{{ entry.course.subject.name if entry else '' }}</td><td>{{ entry.course.school_class.name if entry else '' }}</td>{% endfor %}</tr>{% endfor %}{% if not loop.last %}<tr><td colspan="{{ 2 + (group|select|list|length * 2) }}" class="pause">PAUSE</td></tr>{% endif %}{% endfor %}</tbody>
+  <tfoot>{% for label,key in [('Heures dues','hours_due'),('Heures faites','hours_done'),('Différence','difference')] %}<tr class="summary"><th>{{ label }}</th>{% for item in group if item %}{% set value=item.teacher.hours_due if key == 'hours_due' else item.hours_done if key == 'hours_done' else item.hours_done - item.teacher.hours_due %}<td colspan="2">{{ value }}</td>{% endfor %}</tr>{% endfor %}</tfoot></table>
+</div>
+{% else %}<div class="card-ltt text-center text-muted">Aucun enseignant ou créneau programmé.</div>{% endfor %}
+{% endblock %}

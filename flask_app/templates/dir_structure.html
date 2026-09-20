@@ -123,7 +123,7 @@
               <form method="POST" action="{{ url_for('dir_class_homeroom', class_id=c.id) }}" class="form-ltt">
                 <select name="teacher_id" class="form-select mb-2">
                   <option value="">— Aucun —</option>
-                  {% for t in dept.teachers %}<option value="{{ t.id }}" {{ 'selected' if c.homeroom_teacher_id==t.id }}>{{ t.user.full_name }}</option>{% endfor %}
+                  {% for t in available_teachers %}<option value="{{ t.id }}" {{ 'selected' if c.homeroom_teacher_id==t.id }}>{{ t.user.full_name }}{% if t.department %} — {{ t.department.name }}{% endif %}</option>{% endfor %}
                 </select>
                 <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer</button>
               </form>

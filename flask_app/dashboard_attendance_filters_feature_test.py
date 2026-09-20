@@ -17,7 +17,7 @@ assert 'onchange="scheduleAttendanceFilterSubmit(this.form)"' in macros
 assert 'window.setTimeout(function () { form.submit(); }, 500)' in macros
 assert 'class_ids=dashboard_filters["class_ids"]' not in app
 assert 'dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])' in app
-assert 'def dashboard_rates(class_ids=None, subject_ids=None):' in utils
+assert 'def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):' in utils
 assert 'Course.subject_id.in_(subject_ids)' in utils
 assert 'att_q.filter(Attendance.type == "Absence")' in utils
 assert 'att_q.filter(Attendance.type == "Retard")' in utils

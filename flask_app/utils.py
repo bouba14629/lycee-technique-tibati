@@ -512,7 +512,7 @@ def user_scoped_class_ids(user):
     return [c.id for c in SchoolClass.query.filter(SchoolClass.department_id.in_(dept_ids)).all()]
 
 
-def dashboard_rates(class_ids=None, subject_ids=None):
+def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
     """Indicateurs globaux (taux) pour les jauges du tableau de bord, éventuellement limités
     à une liste de classes (portée d'un Censeur/Surveillant Général)."""
     from models import Grade, Student, Attendance, Teacher, Course
@@ -526,8 +526,12 @@ def dashboard_rates(class_ids=None, subject_ids=None):
     grade_q = Grade.query
     if class_ids is not None:
         grade_q = grade_q.filter(Grade.student_id.in_(student_ids))
-    if subject_ids:
-        grade_q = grade_q.join(Course).filter(Course.subject_id.in_(subject_ids))
+    if subject_ids or teacher_id is not None:
+        grade_q = grade_q.join(Course)
+        if subject_ids:
+            grade_q = grade_q.filter(Course.subject_id.in_(subject_ids))
+        if teacher_id is not None:
+            grade_q = grade_q.filter(Course.teacher_id == teacher_id)
     grades = grade_q.all()
     if grades:
         passing = sum(1 for g in grades if g.max_value and (g.value / g.max_value * 20) >= 10)
@@ -538,8 +542,12 @@ def dashboard_rates(class_ids=None, subject_ids=None):
     att_q = Attendance.query
     if class_ids is not None:
         att_q = att_q.filter(Attendance.student_id.in_(student_ids))
-    if subject_ids:
-        att_q = att_q.join(Course).filter(Course.subject_id.in_(subject_ids))
+    if subject_ids or teacher_id is not None:
+        att_q = att_q.join(Course)
+        if subject_ids:
+            att_q = att_q.filter(Course.subject_id.in_(subject_ids))
+        if teacher_id is not None:
+            att_q = att_q.filter(Course.teacher_id == teacher_id)
     absence_students = {a.student_id for a in att_q.filter(Attendance.type == "Absence").all()}
     retard_students = {a.student_id for a in att_q.filter(Attendance.type == "Retard").all()}
     absence_rate = round(len(absence_students) / total_students * 100)
@@ -547,12 +555,14 @@ def dashboard_rates(class_ids=None, subject_ids=None):
     retard_rate = round(len(retard_students) / total_students * 100)
 
     teacher_q = Teacher.query
-    if class_ids is not None or subject_ids:
+    if class_ids is not None or subject_ids or teacher_id is not None:
         teacher_q = teacher_q.join(Course)
         if class_ids is not None:
             teacher_q = teacher_q.filter(Course.class_id.in_(class_ids))
         if subject_ids:
             teacher_q = teacher_q.filter(Course.subject_id.in_(subject_ids))
+        if teacher_id is not None:
+            teacher_q = teacher_q.filter(Course.teacher_id == teacher_id)
         teacher_q = teacher_q.distinct()
     teachers = teacher_q.all()
     active_rate = round(sum(1 for t in teachers if t.user.active) / (len(teachers) or 1) * 100)

@@ -406,6 +406,9 @@ def teacher_indicators():
         if any(done_values[done] > planned_values[planned] for planned, done in pairs):
             flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
             return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
+        if ind.id and any(done_values[done] < getattr(ind, done, 0) for _planned, done in pairs):
+            flash("Une valeur réalisée déjà enregistrée ne peut pas être diminuée.", "danger")
+            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
         for field, value in planned_values.items():
             setattr(ind, field, value)
         for field, value in done_values.items():

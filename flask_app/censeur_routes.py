@@ -30,6 +30,34 @@ def _subject_compatible_with_class(subject, school_class):
     return subject.department_id is None or subject.department_id == school_class.department_id
 
 
+@app.route("/censeur/service-des-professeurs")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_teacher_service():
+    """Vue matricielle hebdomadaire du service, recalculée depuis les créneaux actuels."""
+    user = User.query.get(session["user_id"])
+    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    teachers_q = Teacher.query.join(User).order_by(User.full_name)
+    if user.role == "censeur" and user.section_id:
+        teachers_q = teachers_q.filter(Teacher.department.has(section_id=user.section_id))
+    teachers = teachers_q.all()
+    entries_q = ScheduleEntry.query.join(Course).filter(Course.teacher_id.in_([t.id for t in teachers] or [-1]))
+    if scoped_class_ids is not None:
+        entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
+    entries = entries_q.all()
+    by_teacher = {teacher.id: {"teacher": teacher, "entries": {}, "hours_done": 0} for teacher in teachers}
+    period_starts = {start for start, _end in OFFICIAL_PERIODS}
+    for entry in entries:
+        bucket = by_teacher.get(entry.course.teacher_id)
+        if not bucket or entry.start_time not in period_starts:
+            continue
+        key = (entry.day, entry.start_time)
+        bucket["entries"][key] = entry
+        bucket["hours_done"] += 1
+    services = sorted(by_teacher.values(), key=lambda item: item["teacher"].user.full_name.upper())
+    return render_template("censeur_teacher_service.html", services=services, days=DAYS,
+                           periods=OFFICIAL_PERIODS, school_year=get_current_school_year())
+
+
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
 @roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule():
@@ -1480,6 +1508,9 @@ def censeur_indicator_edit(course_id):
              ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
     if any(values[done] > values[planned] for planned, done in pairs):
         flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
+        return redirect(url_for("censeur_indicators", term=term))
+    if ind.id and any(values[done] < getattr(ind, done, 0) for _planned, done in pairs):
+        flash("Une valeur réalisée déjà enregistrée ne peut pas être diminuée.", "danger")
         return redirect(url_for("censeur_indicators", term=term))
     for field, value in values.items():
         setattr(ind, field, value)

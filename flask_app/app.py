@@ -187,13 +187,16 @@ def inject_globals():
     user = None
     unread_msgs = 0
     unread_notifs = 0
+    unread_announcements = 0
     if "user_id" in session:
         user = User.query.get(session["user_id"])
         if user:
             _issue_bulletin_release_notifications(user)
             unread_msgs = Message.query.filter_by(recipient_id=user.id, read=False).count()
             unread_notifs = Notification.query.filter_by(user_id=user.id, read=False).count()
+            unread_announcements = Notification.query.filter_by(user_id=user.id, read=False, link="/annonces").count()
     return dict(current_user=user, unread_msgs=unread_msgs, unread_notifs=unread_notifs,
+                unread_announcements=unread_announcements,
                 ROLE_LABELS=ROLE_LABELS, now=datetime.utcnow(), school_year=get_current_school_year(),
                 url_for=ltt_url_for, student_photo_url=student_photo_url)
 
@@ -502,19 +505,16 @@ def dashboard():
                                 life_alerts=dashboard_alerts(class_ids=scoped_ids), dashboard_filters=dashboard_filters)
 
     if role == "conseiller_orientation":
-        stats = dict(
-            students=Student.query.count(),
-            parents=Parent.query.count(),
-            teachers=Teacher.query.count(),
-            classes=SchoolClass.query.count(),
-        )
-        recent_announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
-        from utils import dashboard_rates, dashboard_alerts, recent_activity_feed
-        rates = dashboard_rates()
-        alerts = dashboard_alerts()
-        activities = recent_activity_feed()
-        return render_template("dashboard_conseiller.html", stats=stats, announcements=recent_announcements,
-                                rates=rates, alerts=alerts, activities=activities)
+        stats = dict(students=Student.query.count(), teachers=Teacher.query.count(), rooms=Room.query.count())
+        recent_absences = Attendance.query.order_by(Attendance.date.desc()).limit(10).all()
+        recent_sanctions = Sanction.query.order_by(Sanction.date.desc()).limit(5).all()
+        from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
+        return render_template("dashboard_censeur.html", rates=dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"]),
+                                success_by_dept=department_success_rates(), evolution=evolution_series(),
+                                alerts=dashboard_alerts(), activities=recent_activity_feed(),
+                                recent_absences=recent_absences, recent_sanctions=recent_sanctions, stats=stats,
+                                calendar_events=dashboard_calendar_events(), dashboard_filters=dashboard_filters,
+                                orientation_read_only=True)
 
     if role in ("chef_travaux", "chef_crm"):
         from utils import user_scoped_department_ids
@@ -545,8 +545,15 @@ def dashboard():
         teacher = user.teacher_profile
         courses = teacher.courses if teacher else []
         my_schedule = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all() if teacher else []
+        teacher_class_ids = sorted({course.class_id for course in courses if course.class_id})
+        teacher_subject_ids = sorted({course.subject_id for course in courses if course.subject_id})
+        from utils import dashboard_rates
         return render_template("dashboard_enseignant.html", teacher=teacher, courses=courses,
-                                schedule=my_schedule)
+                                schedule=my_schedule,
+                                rates=dashboard_rates(teacher_class_ids, teacher_subject_ids, teacher.id) if teacher else {
+                                    "success_rate": 0, "absence_rate": 0, "attendance_rate": 100,
+                                    "retard_rate": 0, "active_rate": 0,
+                                })
 
     if role == "eleve":
         student = user.student_profile
@@ -670,7 +677,12 @@ def announcements():
         body = request.form.get("body", "").strip()
         target = request.form.get("target_role", "tous")
         if title and body:
-            db.session.add(Announcement(title=title, body=body, author_id=user.id, target_role=target))
+            announcement = Announcement(title=title, body=body, author_id=user.id, target_role=target)
+            db.session.add(announcement)
+            db.session.flush()
+            if target in ("tous", "enseignant"):
+                for teacher_user in User.query.filter_by(role="enseignant", active=True).all():
+                    notify(teacher_user.id, f"Nouvelle annonce : {title}", "/annonces")
             db.session.commit()
             flash("Annonce publiée.", "success")
         return redirect(url_for("announcements"))
@@ -679,7 +691,36 @@ def announcements():
         items = Announcement.query.order_by(Announcement.date.desc()).all()
     else:
         items = Announcement.query.filter(Announcement.target_role.in_(["tous", user.role])).order_by(Announcement.date.desc()).all()
+        Notification.query.filter_by(user_id=user.id, read=False, link="/annonces").update({"read": True}, synchronize_session=False)
+        db.session.commit()
     return render_template("announcements.html", items=items)
+
+
+@app.route("/annonces/<int:announcement_id>/modifier", methods=["GET", "POST"])
+@roles_required("directeur")
+def announcement_edit(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    if request.method == "POST":
+        announcement.title = request.form.get("title", announcement.title).strip()
+        announcement.body = request.form.get("body", announcement.body).strip()
+        announcement.target_role = request.form.get("target_role", announcement.target_role)
+        if not announcement.title or not announcement.body:
+            flash("Le titre et le message sont obligatoires.", "danger")
+        else:
+            db.session.commit()
+            flash("Annonce modifiée.", "success")
+            return redirect(url_for("announcements"))
+    return render_template("announcement_edit.html", announcement=announcement)
+
+
+@app.post("/annonces/<int:announcement_id>/supprimer")
+@roles_required("directeur")
+def announcement_delete(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    db.session.delete(announcement)
+    db.session.commit()
+    flash("Annonce supprimée.", "info")
+    return redirect(url_for("announcements"))
 
 
 @app.route("/notifications/lu/<int:notif_id>")
