@@ -201,7 +201,8 @@ def bulletin_data(student, term=None):
     term = term or TERMS[0]
     if not student.class_id:
         return None
-    courses = Course.query.filter_by(class_id=student.class_id).all()
+    courses = [course for course in Course.query.filter_by(class_id=student.class_id).all()
+               if "orientation scolaire" not in (course.subject.name or "").casefold()]
     classmates = student.school_class.students
 
     # moyenne + rang par matière, groupés par catégorie
@@ -373,6 +374,8 @@ def annual_bulletin_data(student):
     for category in SUBJECT_CATEGORIES:
         rows = []
         for course in Course.query.filter_by(class_id=student.class_id).all():
+            if "orientation scolaire" in (course.subject.name or "").casefold():
+                continue
             if course.subject.category != category:
                 continue
             term_values = []
@@ -414,6 +417,8 @@ def annual_bulletin_data(student):
     def peer_annual_average(peer):
         peer_points, peer_coefs = 0.0, 0
         for course in Course.query.filter_by(class_id=peer.class_id).all():
+            if "orientation scolaire" in (course.subject.name or "").casefold():
+                continue
             values_by_term = []
             for item_term in terms:
                 values = [grade.value / (grade.max_value or 20) * 20 for grade in Grade.query.filter_by(student_id=peer.id, course_id=course.id, term=item_term).all()]
