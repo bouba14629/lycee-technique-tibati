@@ -74,7 +74,7 @@
 <table class="meta-table">
   <tr>
     <td colspan="2"><strong>PROFESSEUR :</strong> <span class="red">{{ teacher.user.full_name.upper() }}</span></td>
-    <td colspan="3"><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.department.code if teacher.department else (teacher.specialty or 'Enseignements généraux') }}</span></td>
+    <td colspan="3"><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.specialty or (teacher.department.code if teacher.department else 'Enseignements généraux') }}</span></td>
   </tr>
   <tr>
     <td><strong>HEURES DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>

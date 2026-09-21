@@ -33,20 +33,18 @@ def _subject_compatible_with_class(subject, school_class):
 @app.route("/censeur/service-des-professeurs")
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_teacher_service():
-    """Service agrégé par matière/classe avec jours, horaires et durée réelle des passages."""
+    """Grille du Service des Professeurs conforme au modèle importé, alimentée par les créneaux."""
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     teachers_q = Teacher.query.join(User).order_by(User.full_name)
     if user.role == "censeur" and user.section_id:
         teachers_q = teachers_q.filter(Teacher.department.has(section_id=user.section_id))
     teachers = teachers_q.all()
-    entries_q = ScheduleEntry.query.join(Course).filter(Course.teacher_id.in_([t.id for t in teachers] or [-1]))
+    teacher_ids = [teacher.id for teacher in teachers]
+    entries_q = ScheduleEntry.query.join(Course).filter(Course.teacher_id.in_(teacher_ids or [-1]))
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     entries = entries_q.all()
-    day_order = {day: index for index, day in enumerate(DAYS)}
-    passages_by_course = {}
-
     def duration_hours(start_time, end_time):
         try:
             start_minutes = int(start_time[:2]) * 60 + int(start_time[3:5])
@@ -54,30 +52,21 @@ def censeur_teacher_service():
             return max(0, (end_minutes - start_minutes) / 60)
         except (TypeError, ValueError, IndexError):
             return 0
-
+    by_teacher = {teacher.id: {day: [None] * len(OFFICIAL_PERIODS) for day in DAYS[:5]} for teacher in teachers}
+    hours_done = {teacher.id: 0.0 for teacher in teachers}
     for entry in entries:
-        passages_by_course.setdefault(entry.course_id, []).append({
-            "day": entry.day,
-            "start": entry.start_time,
-            "end": entry.end_time,
-            "hours": duration_hours(entry.start_time, entry.end_time),
-        })
-    services = []
-    for teacher in teachers:
-        courses = [course for course in teacher.courses
-                   if scoped_class_ids is None or course.class_id in scoped_class_ids]
-        subjects = []
-        for course in sorted(courses, key=lambda item: (item.subject.name.upper(), item.school_class.name.upper())):
-            passages = sorted(passages_by_course.get(course.id, []),
-                              key=lambda item: (day_order.get(item["day"], 99), item["start"], item["end"]))
-            subjects.append({"subject": course.subject.name, "class_name": course.school_class.name,
-                             "hours": round(sum(item["hours"] for item in passages), 2),
-                             "passages": passages})
-        services.append({"teacher": teacher, "subjects": subjects,
-                         "hours_done": sum(item["hours"] for item in subjects),
-                         "hours_due": teacher.hours_due or 0})
+        if entry.day not in by_teacher[entry.course.teacher_id]:
+            continue
+        hours_done[entry.course.teacher_id] += duration_hours(entry.start_time, entry.end_time)
+        for index, (start_time, end_time) in enumerate(OFFICIAL_PERIODS):
+            if entry.start_time < end_time and start_time < entry.end_time:
+                by_teacher[entry.course.teacher_id][entry.day][index] = entry
+    services = [{"teacher": teacher, "grid": by_teacher[teacher.id],
+                 "hours_done": round(hours_done[teacher.id], 2), "hours_due": teacher.hours_due or 0}
+                for teacher in teachers]
     services.sort(key=lambda item: item["teacher"].user.full_name.upper())
     return render_template("censeur_teacher_service.html", services=services,
+                           days=DAYS[:5], periods=OFFICIAL_PERIODS,
                            school_year=get_current_school_year())
 
 

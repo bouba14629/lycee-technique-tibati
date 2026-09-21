@@ -36,7 +36,7 @@
 {% endfor %}
 
 {{ gauges(rates, "Taux globaux — établissement", {}, dashboard_filters) }}
-{{ demographics_panel(stats.demographics, dashboard_filters) }}
+{{ demographics_panel(stats.demographics) }}
 
 <div class="kpi-grid">
   <a href="{{ url_for('students_list') }}" class="kpi-card kpi-blue"><div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div><div class="kpi-value">{{ stats.students }}</div><div class="kpi-label">Élèves inscrits</div></a>

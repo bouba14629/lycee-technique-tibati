@@ -357,7 +357,7 @@ def teacher_schedule_official():
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
     extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
-    classes_tenues = ", ".join(sorted({c.school_class.code or c.school_class.name for c in teacher.courses}))
+    classes_tenues = ", ".join(sorted({e.course.school_class.code or e.course.school_class.name for e in entries}))
     return render_template("schedule_official.html", mode="individuel", teacher=teacher, grid=grid,
                             periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
                             hours_faites=hours_faites, extra_hours=extra_hours, classes_tenues=classes_tenues,
@@ -375,7 +375,7 @@ def teacher_schedule_official_pdf():
     grid = build_official_grid(entries)
     hours_faites = filled_official_slots(grid)
     extra_hours = schedule_extra_hours(hours_faites, teacher.hours_due)
-    classes_tenues = ", ".join(sorted({c.school_class.code or c.school_class.name for c in teacher.courses}))
+    classes_tenues = ", ".join(sorted({e.course.school_class.code or e.course.school_class.name for e in entries}))
     pdf = render_pdf("pdf/schedule_official_pdf.html", mode="individuel", teacher=teacher, grid=grid,
                       periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
                       hours_faites=hours_faites, extra_hours=extra_hours, classes_tenues=classes_tenues)
@@ -410,7 +410,8 @@ def teacher_indicators():
     teacher = current_teacher()
     term = request.args.get("term", TERMS[0]) if request.method == "GET" else request.form.get("term", TERMS[0])
     course_id = request.args.get("course_id", type=int) if request.method == "GET" else request.form.get("course_id", type=int)
-    courses = sorted(Course.query.filter_by(teacher_id=teacher.id).all(), key=lambda c: (c.school_class.name, c.subject.name))
+    courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
+                     key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
     course = None
     if course_id:
         course = Course.query.get(course_id)

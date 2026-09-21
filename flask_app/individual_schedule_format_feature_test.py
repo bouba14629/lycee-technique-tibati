@@ -12,8 +12,8 @@ assert ".schedule-compact { line-height:1.25; color:#000; }" in preview
 assert "line-height:1.25;" in pdf
 assert "table-layout:fixed" in preview
 assert "ANNÉE SCOLAIRE" in preview
-assert "teacher.specialty or 'Enseignements généraux'" in preview
-assert "teacher.specialty or 'Enseignements généraux'" in pdf
+assert "teacher.specialty or (teacher.department.code if teacher.department else 'Enseignements généraux')" in preview
+assert "teacher.specialty or (teacher.department.code if teacher.department else 'Enseignements généraux')" in pdf
 assert "DES ENSEIGNEMENTS GÉNÉRAUX" in preview
 assert "DES ENSEIGNEMENTS GÉNÉRAUX" in pdf
 
