@@ -15,7 +15,7 @@
 .service-table .period { height:18px; font-size:7px; }
 .service-table .subject { font-weight:700; font-size:7px; }
 .service-table .class-code { font-size:7px; font-weight:700; }
-.service-table .break-row td { background:#bdbdbd; font-weight:700; letter-spacing:5px; height:10px; }
+.service-table .break-row td { background:#fff; font-weight:700; letter-spacing:0; height:18px; padding:2px 1px; }
 .service-table .summary th,.service-table .summary td { font-weight:700; background:#ededed; height:13px; }
 </style>{% endblock %}
 {% block content %}
@@ -23,7 +23,7 @@
 {% for group in services|batch(6, none) %}
 <div class="service-page"><table class="service-table">
 <thead>
-<tr><th class="school">L.T. DE TIBATI<br><small>GTHS TIBATI</small></th><th colspan="1" class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}</tr>
+<tr><th class="school">L.T. DE TIBATI<br><small>{{ school_year }}</small></th><th colspan="1" class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}</tr>
 <tr><th class="day" rowspan="2">JOURS</th><th></th>{% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
 <tr><th class="sub-head">HEURES</th>{% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
 </thead><tbody>

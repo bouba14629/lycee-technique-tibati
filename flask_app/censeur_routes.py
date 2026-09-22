@@ -331,7 +331,7 @@ def _teacher_schedule_context(teacher):
         "day_en": DAY_EN,
         "hours_faites": filled_official_slots(grid),
         "extra_hours": schedule_extra_hours(filled_official_slots(grid), teacher.hours_due),
-        "classes_tenues": ", ".join(sorted({course.school_class.code or course.school_class.name for course in teacher.courses})),
+        "classes_tenues": ", ".join(sorted({entry.course.school_class.code or entry.course.school_class.name for entry in entries})),
         "entries": entries,
     }
 
