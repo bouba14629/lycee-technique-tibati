@@ -65,8 +65,8 @@
       <label>Classe / Matière / Enseignant</label>
       <select id="genericCourseSelect" class="form-select mb-2" onchange="document.getElementById('genericIndForm').action='/censeur/indicateurs/'+this.value+'/modifier'">
         <option value="">— Choisir —</option>
-        {% for row in rows %}<option value="{{ row.course.id }}">{{ row.course.school_class.code or 'Sans code' }} · {{ row.course.school_class.name }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
-        {% for c in missing %}<option value="{{ c.id }}">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
+        {% for row in rows %}<option value="{{ row.course.id }}">{{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
+        {% for c in missing %}<option value="{{ c.id }}">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
       </select>
       {{ ind_fields(none) }}
       <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="unlock_planned" value="1" id="unlockPlanned"><label class="form-check-label" for="unlockPlanned"><i class="bi bi-unlock-fill"></i> Déverrouiller les objectifs prévus pour cette modification</label></div>
@@ -92,14 +92,14 @@
         {% for item in available_departments %}<option value="{{ item.id }}" {{ 'selected' if department_id==item.id }}>{{ item.name }}{% if item.code %} · {{ item.code }}{% endif %}</option>{% endfor %}
       </select>
       <select name="class_ids" class="form-select" style="min-width:190px; max-width:250px;" multiple size="4" aria-label="Sélection multiple de classes">
-        {% for item in scoped_classes %}<option value="{{ item.id }}" {{ 'selected' if item.id in class_ids }}>{{ item.code or 'Sans code' }} · {{ item.name }}</option>{% endfor %}
+        {% for item in scoped_classes %}<option value="{{ item.id }}" {{ 'selected' if item.id in class_ids }}>{{ item.code or 'Sans code' }}</option>{% endfor %}
       </select>
       <select name="subject_ids" class="form-select" style="min-width:210px; max-width:280px;" multiple size="4" aria-label="Sélection multiple de matières">
         {% for item in available_subjects %}<option value="{{ item.id }}" {{ 'selected' if item.id in subject_ids }}>{{ item.name }}</option>{% endfor %}
       </select>
       <select name="assessment_id" class="form-select" style="max-width:260px;">
         <option value="">Toutes les évaluations</option>
-        {% for item in available_assessments %}<option value="{{ item.id }}" {{ 'selected' if assessment_id==item.id }}>S{{ item.sequence }} · {{ item.course.school_class.code or 'Sans code' }} · {{ item.course.school_class.name }} · {{ item.course.subject.name }} — {{ item.title }}</option>{% endfor %}
+        {% for item in available_assessments %}<option value="{{ item.id }}" {{ 'selected' if assessment_id==item.id }}>S{{ item.sequence }} · {{ item.course.school_class.code or 'Sans code' }} · {{ item.course.subject.name }} — {{ item.title }}</option>{% endfor %}
       </select>
       <select name="view" class="form-select" style="max-width:220px;" onchange="this.form.submit()">
         <option value="cours" {{ 'selected' if view=='cours' }}>Vue par classe / matière</option>
@@ -121,7 +121,7 @@
       <div class="col-6 col-lg-3"><div class="metric-card"><span>Moyenne évaluations</span><strong>{{ evaluation_totals.average if evaluation_totals.average is not none else '—' }}<small>{{ '/20' if evaluation_totals.average is not none }}</small></strong></div></div>
       <div class="col-6 col-lg-3"><div class="metric-card"><span>Notes saisies</span><strong>{{ evaluation_totals.submitted }}/{{ evaluation_totals.expected }}</strong></div></div>
     </div>
-    <div class="table-responsive"><table class="table-ltt" style="font-size:12px;"><thead><tr><th>Évaluation</th><th>Classe / matière</th><th>Échéance</th><th>Notes</th><th>Moyenne</th><th>Réussite</th><th>État</th></tr></thead><tbody>{% for row in evaluation_rows %}<tr><td><strong>S{{ row.assessment.sequence }}</strong><div class="text-muted">{{ row.assessment.title }}</div></td><td><strong>{{ row.assessment.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.assessment.course.school_class.name }} · {{ row.assessment.course.subject.name }}</div></td><td>{{ row.assessment.scheduled_date.strftime('%d/%m/%Y') }}</td><td>{{ row.submitted }}/{{ row.expected }}</td><td>{{ row.average if row.average is not none else '—' }}{{ '/20' if row.average is not none }}</td><td>{{ row.success_rate if row.success_rate is not none else '—' }}{{ '%' if row.success_rate is not none }}</td><td><span class="badge-ltt {{ 'badge-success' if row.assessment.status=='Saisie complète' else 'badge-warning' if row.assessment.status=='Saisie en cours' else 'badge-danger' }}">{{ row.assessment.status }}</span></td></tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucune évaluation ne correspond aux filtres sélectionnés.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="table-responsive"><table class="table-ltt" style="font-size:12px;"><thead><tr><th>Évaluation</th><th>Classe / matière</th><th>Échéance</th><th>Notes</th><th>Moyenne</th><th>Réussite</th><th>État</th></tr></thead><tbody>{% for row in evaluation_rows %}<tr><td><strong>S{{ row.assessment.sequence }}</strong><div class="text-muted">{{ row.assessment.title }}</div></td><td><strong>{{ row.assessment.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.assessment.course.subject.name }}</div></td><td>{{ row.assessment.scheduled_date.strftime('%d/%m/%Y') }}</td><td>{{ row.submitted }}/{{ row.expected }}</td><td>{{ row.average if row.average is not none else '—' }}{{ '/20' if row.average is not none }}</td><td>{{ row.success_rate if row.success_rate is not none else '—' }}{{ '%' if row.success_rate is not none }}</td><td><span class="badge-ltt {{ 'badge-success' if row.assessment.status=='Saisie complète' else 'badge-warning' if row.assessment.status=='Saisie en cours' else 'badge-danger' }}">{{ row.assessment.status }}</span></td></tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucune évaluation ne correspond aux filtres sélectionnés.</td></tr>{% endfor %}</tbody></table></div>
   </section>
 
   {% if view == 'departement' %}
@@ -189,7 +189,7 @@
     {% for row in rows %}
       <tr>
         <td class="fw-semibold">{{ row.teacher.user.full_name }} <span class="text-muted">({{ row.teacher.department.code if row.teacher.department }})</span></td>
-        <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.course.school_class.name }}</div></td>
+        <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong></td>
         <td>{{ row.course.subject.name }}</td>
         <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ row.pct_hours if row.pct_hours is not none else '—' }}%</td>
         <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ row.pct_lessons if row.pct_lessons is not none else '—' }}%</td>
@@ -203,7 +203,7 @@
         {% if current_user.role == 'censeur' %}
         <td class="no-print"><a href="#" data-bs-toggle="modal" data-bs-target="#editInd{{ row.course.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a></td>
         <div class="modal fade" id="editInd{{ row.course.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
-          <div class="modal-header"><h5 class="modal-title">Modifier — {{ row.teacher.user.full_name }} ({{ row.course.school_class.code or 'Sans code' }} · {{ row.course.school_class.name }} — {{ row.course.subject.name }})</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-header"><h5 class="modal-title">Modifier — {{ row.teacher.user.full_name }} ({{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }})</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
           <div class="modal-body">
             <form method="POST" action="{{ url_for('censeur_indicator_edit', course_id=row.course.id) }}" class="form-ltt">
               <input type="hidden" name="term" value="{{ term }}">
@@ -240,9 +240,9 @@
     <strong class="text-muted">En attente de saisie :</strong>
     {% for c in missing %}
     {% if current_user.role == 'censeur' %}
-    <a href="#" data-bs-toggle="modal" data-bs-target="#addFor{{ c.id }}Modal" class="badge-ltt badge-warning me-1" style="cursor:pointer;">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) <i class="bi bi-plus-circle"></i></a>
+    <a href="#" data-bs-toggle="modal" data-bs-target="#addFor{{ c.id }}Modal" class="badge-ltt badge-warning me-1" style="cursor:pointer;">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) <i class="bi bi-plus-circle"></i></a>
     <div class="modal fade" id="addFor{{ c.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
-      <div class="modal-header"><h5 class="modal-title">Ajouter — {{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} / {{ c.subject.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header"><h5 class="modal-title">Ajouter — {{ c.school_class.code or 'Sans code' }} / {{ c.subject.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <form method="POST" action="{{ url_for('censeur_indicator_edit', course_id=c.id) }}" class="form-ltt">
           <input type="hidden" name="term" value="{{ term }}">
@@ -252,7 +252,7 @@
       </div>
     </div></div></div>
     {% else %}
-    <span class="badge-ltt badge-warning me-1">{{ c.school_class.code or 'Sans code' }} · {{ c.school_class.name }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }})</span>
+    <span class="badge-ltt badge-warning me-1">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }})</span>
     {% endif %}
     {% endfor %}
   </div>
