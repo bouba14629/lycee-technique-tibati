@@ -9,10 +9,9 @@
 .service-table th,.service-table td { border:1px solid #111; padding:2px 1px; text-align:center; vertical-align:middle; line-height:1.05; }
 .service-table .school { width:7%; font-size:7px; font-weight:700; }
 .service-table .hours { width:7%; font-size:7px; font-weight:700; }
-.service-table .year { width:10%; font-size:7px; }
 .service-table .teacher-head { font-size:8px; font-weight:700; text-transform:uppercase; }
 .service-table .sub-head { font-size:6px; font-weight:700; }
-.service-table .day { width:7%; font-size:7px; font-weight:700; writing-mode:vertical-rl; transform:rotate(180deg); }
+.service-table .day { width:7%; font-size:7px; font-weight:700; text-align:center; vertical-align:middle; }
 .service-table .period { height:18px; font-size:7px; }
 .service-table .subject { font-weight:700; font-size:7px; }
 .service-table .class-code { font-size:7px; font-weight:700; }
@@ -24,21 +23,21 @@
 {% for group in services|batch(6, none) %}
 <div class="service-page"><table class="service-table">
 <thead>
-<tr><th class="school">L.T. DE TIBATI<br><small>GTHS TIBATI</small></th><th colspan="1" class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}<th class="year">Année scolaire<br><strong>{{ school_year }}</strong></th></tr>
-<tr><th class="day" rowspan="2">JOURS</th><th></th>{% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}<th></th></tr>
-<tr><th class="sub-head">HEURES</th>{% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}<th></th></tr>
+<tr><th class="school">L.T. DE TIBATI<br><small>GTHS TIBATI</small></th><th colspan="1" class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}</tr>
+<tr><th class="day" rowspan="2">JOURS</th><th></th>{% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
+<tr><th class="sub-head">HEURES</th>{% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
 </thead><tbody>
 {% for day in days %}
 {% for index in range(periods|length) %}
-{% if index == 3 %}<tr class="break-row"><td colspan="{{ 3 + (6 * 2) + 1 }}">P R E M I È R E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
-{% if index == 6 %}<tr class="break-row"><td colspan="{{ 3 + (6 * 2) + 1 }}">D E U X I È M E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
-<tr><th class="day">{% if index == 0 %}{{ day.upper() }}{% endif %}</th><td class="period">{{ index + 1 }}H/ {{ periods[index][0] }}–{{ periods[index][1] }}</td>{% for item in group if item %}{% set entry = item.grid[day][index] %}<td>{% if entry %}<span class="subject">{{ entry.course.subject.name }}</span>{% endif %}</td><td>{% if entry %}<span class="class-code">{{ entry.course.school_class.code or entry.course.school_class.name }}</span>{% endif %}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td><td></td>{% endfor %}<td></td></tr>
+{% if index == 3 %}<tr class="break-row"><td colspan="{{ 2 + (6 * 2) }}">P R E M I È R E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
+{% if index == 6 %}<tr class="break-row"><td colspan="{{ 2 + (6 * 2) }}">D E U X I È M E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
+<tr>{% if index == 0 %}<th class="day" rowspan="{{ periods|length + 2 }}">{{ day.upper() }}</th>{% endif %}<td class="period">{{ index + 1 }}H/ {{ periods[index][0] }}–{{ periods[index][1] }}</td>{% for item in group if item %}{% set entry = item.grid[day][index] %}<td>{% if entry %}<span class="subject">{{ entry.course.subject.name }}</span>{% endif %}</td><td>{% if entry %}<span class="class-code">{{ entry.course.school_class.code or entry.course.school_class.name }}</span>{% endif %}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td><td></td>{% endfor %}</tr>
 {% endfor %}
 {% endfor %}
 </tbody><tfoot>
-<tr class="summary"><th colspan="2">HEURES DUES</th>{% for item in group if item %}<td colspan="2">{{ item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}<td></td></tr>
-<tr class="summary"><th colspan="2">HEURES FAITES</th>{% for item in group if item %}<td colspan="2">{{ '%.2f'|format(item.hours_done) }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}<td></td></tr>
-<tr class="summary"><th colspan="2">DIFFÉRENCE + ou -</th>{% for item in group if item %}<td colspan="2">{{ '%.2f'|format(item.hours_done - item.hours_due) }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}<td></td></tr>
+<tr class="summary"><th colspan="2">HEURES DUES</th>{% for item in group if item %}<td colspan="2">{{ item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
+<tr class="summary"><th colspan="2">HEURES FAITES</th>{% for item in group if item %}<td colspan="2">{{ '%.2f'|format(item.hours_done) }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
+<tr class="summary"><th colspan="2">DIFFÉRENCE + ou -</th>{% for item in group if item %}<td colspan="2">{{ '%.2f'|format(item.hours_done - item.hours_due) }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
 </tfoot></table></div>
 {% else %}<div class="card-ltt text-center text-muted">Aucun enseignant accessible.</div>{% endfor %}
 {% endblock %}
