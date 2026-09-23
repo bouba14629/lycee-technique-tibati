@@ -380,6 +380,39 @@ def _dashboard_filter_context(user):
     }
 
 
+@app.route("/dashboard/effectifs-genre/export.xlsx")
+@login_required
+def dashboard_demographics_export():
+    user = User.query.get(session["user_id"])
+    if user.role not in {"directeur", "censeur", "censeur_crm", "conseiller_orientation", "surveillant_general"}:
+        abort(403)
+    class_ids = list(dict.fromkeys(request.args.getlist("attendance_class_id", type=int)))
+    scoped = user_scoped_class_ids(user) if user.role in {"censeur", "surveillant_general"} else None
+    if scoped is not None:
+        if any(cid not in scoped for cid in class_ids):
+            abort(403)
+        if not class_ids:
+            class_ids = list(scoped)
+    query = Student.query
+    if class_ids:
+        query = query.filter(Student.class_id.in_(class_ids))
+    students = query.all()
+    keys = ("Filles", "Garçons", "Non renseigné")
+    def gender(value):
+        value = (value or "").strip().upper()
+        return "Filles" if value in {"F", "FILLE", "FILLES"} else "Garçons" if value in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
+    def counts(items, predicate=lambda _student: True):
+        return {key: sum(1 for student in items if predicate(student) and gender(student.sex) == key) for key in keys}
+    grouped = {}
+    for student in students:
+        grouped.setdefault(student.school_class.name if student.school_class else "Classe non renseignée", []).append(student)
+    demographics = {"effectifs": counts(students), "redoublants": counts(students, lambda student: bool(student.is_repeater)), "non_redoublants": counts(students, lambda student: not bool(student.is_repeater)), "classes": []}
+    for name, items in sorted(grouped.items(), key=lambda item: item[0].casefold()):
+        demographics["classes"].append({"name": name, "effectifs": counts(items), "redoublants": counts(items, lambda student: bool(student.is_repeater)), "non_redoublants": counts(items, lambda student: not bool(student.is_repeater))})
+    from excel_utils import demographics_workbook
+    return send_file(demographics_workbook(demographics), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name="Effectifs_par_genre.xlsx")
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():

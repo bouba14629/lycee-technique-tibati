@@ -561,3 +561,32 @@ def honor_roll_register_workbook(rows, term, school_year):
     wb.save(wb_io)
     wb_io.seek(0)
     return wb_io
+
+
+def demographics_workbook(demographics, title="Effectifs par genre"):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Effectifs par genre"
+    widths = [28, 22, 12, 12, 16, 12]
+    for i, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    _header(ws, 1, len(widths), title)
+    headers = ["Classe", "Indicateur", "Filles", "Garçons", "Non renseigné", "Total"]
+    for i, value in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=i, value=value)
+        cell.font = Font(bold=True, color=NAVY)
+        cell.fill = PatternFill("solid", fgColor=CREAM)
+        cell.border = BORDER
+    row_no = 4
+    for item in [{"name": "Toutes les classes", **demographics}] + demographics.get("classes", []):
+        for label, key in (("Élèves inscrits", "effectifs"), ("Redoublants", "redoublants"), ("Non redoublants", "non_redoublants")):
+            values = item.get(key, {})
+            vals = [item.get("name", "—"), label, values.get("Filles", 0), values.get("Garçons", 0), values.get("Non renseigné", 0), sum(values.values())]
+            for col, value in enumerate(vals, start=1):
+                cell = ws.cell(row=row_no, column=col, value=value)
+                cell.border = BORDER
+            row_no += 1
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output

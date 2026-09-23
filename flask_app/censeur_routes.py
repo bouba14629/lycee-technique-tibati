@@ -77,7 +77,7 @@ def censeur_schedule():
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     # Le directeur et tous les censeurs construisent ; le conseiller d’orientation reste en consultation seule.
-    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm"}
+    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -90,11 +90,14 @@ def censeur_schedule():
     current_class = SchoolClass.query.get(class_id) if class_id else None
     can_create_tronc_commun = bool(current_class) and can_build_schedule
     if current_class:
-        subjects_q = Subject.query.filter(or_(
+        if user.role == "conseiller_orientation":
+            subjects = Subject.query.filter(db.func.lower(Subject.name) == "orientation scolaire").order_by(Subject.name).all()
+        else:
+            subjects_q = Subject.query.filter(or_(
             Subject.class_id == current_class.id,
             and_(Subject.class_id.is_(None), or_(Subject.department_id == current_class.department_id, Subject.department_id.is_(None))),
         ))
-        subjects = subjects_q.order_by(Subject.name).all()
+            subjects = subjects_q.order_by(Subject.name).all()
     else:
         subjects = []
     all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
@@ -217,7 +220,7 @@ def censeur_schedule():
 
 
 @app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule_edit(entry_id):
     import uuid
     user = User.query.get(session["user_id"])
@@ -337,7 +340,7 @@ def _teacher_schedule_context(teacher):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants")
-@roles_required("censeur", "censeur_crm")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_list():
     user = User.query.get(session["user_id"])
     teachers_q = Teacher.query.join(User)
@@ -349,7 +352,7 @@ def censeur_teacher_schedule_list():
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>")
-@roles_required("censeur", "censeur_crm")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official(teacher_id):
     user = User.query.get(session["user_id"])
     teacher = Teacher.query.get_or_404(teacher_id)
@@ -364,7 +367,7 @@ def censeur_teacher_schedule_official(teacher_id):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>/officiel.pdf")
-@roles_required("censeur", "censeur_crm")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official_pdf(teacher_id):
     from flask import send_file
     from pdf_utils import render_pdf
@@ -382,7 +385,7 @@ def censeur_teacher_schedule_official_pdf(teacher_id):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>/officiel.xlsx")
-@roles_required("censeur", "censeur_crm")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official_xlsx(teacher_id):
     from flask import send_file
     from excel_utils import teacher_schedule_workbook
@@ -585,6 +588,42 @@ def surveillant_absences_export_pdf(class_id):
         abort(500)
     return send_file(pdf, mimetype="application/pdf", as_attachment=True,
                      download_name=f"Absences_{school_class.name}.pdf".replace(" ", "_"))
+
+
+@app.route("/censeur/absences/<int:att_id>/modifier", methods=["POST"])
+@roles_required("surveillant_general")
+def censeur_absence_edit(att_id):
+    user = User.query.get(session["user_id"])
+    absence = Attendance.query.get_or_404(att_id)
+    scoped = user_scoped_class_ids(user)
+    if scoped is not None and absence.student.class_id not in scoped:
+        abort(403)
+    absence.reason = request.form.get("reason", "").strip() or None
+    raw_date = request.form.get("date", "").strip()
+    if raw_date:
+        try:
+            absence.date = date.fromisoformat(raw_date)
+        except ValueError:
+            flash("La date de l’absence est invalide.", "danger")
+            return redirect(url_for("censeur_absences"))
+    db.session.commit()
+    flash("Absence modifiée.", "success")
+    return redirect(url_for("censeur_absences", class_id=absence.student.class_id))
+
+
+@app.route("/censeur/absences/<int:att_id>/supprimer", methods=["POST"])
+@roles_required("surveillant_general")
+def censeur_absence_delete(att_id):
+    user = User.query.get(session["user_id"])
+    absence = Attendance.query.get_or_404(att_id)
+    scoped = user_scoped_class_ids(user)
+    if scoped is not None and absence.student.class_id not in scoped:
+        abort(403)
+    class_id = absence.student.class_id
+    db.session.delete(absence)
+    db.session.commit()
+    flash("Absence supprimée.", "info")
+    return redirect(url_for("censeur_absences", class_id=class_id))
 
 
 @app.route("/censeur/absences/<int:att_id>/justifier")
@@ -1348,7 +1387,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 
 
 @app.route("/censeur/indicateurs")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators():
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
@@ -1387,6 +1426,11 @@ def censeur_indicators():
     if department_id:
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
     available_subjects = subjects_q.all()
+    orientation_mode = user.role == "conseiller_orientation"
+    if orientation_mode:
+        available_subjects = [item for item in available_subjects if (item.name or "").strip().casefold() == "orientation scolaire"]
+        allowed_subject_ids = {item.id for item in available_subjects}
+        subject_ids = [item for item in subject_ids if item in allowed_subject_ids]
     if any(item_id not in {item.id for item in available_subjects} for item_id in subject_ids):
         abort(403)
     courses_q = Course.query.join(SchoolClass)
@@ -1396,7 +1440,9 @@ def censeur_indicators():
         courses_q = courses_q.filter(SchoolClass.department_id == department_id)
     if class_ids:
         courses_q = courses_q.filter(Course.class_id.in_(class_ids))
-    if subject_ids:
+    if orientation_mode:
+        courses_q = courses_q.filter(Course.subject_id.in_(allowed_subject_ids))
+    elif subject_ids:
         courses_q = courses_q.filter(Course.subject_id.in_(subject_ids))
     if course_id:
         courses_q = courses_q.filter(Course.id == course_id)
@@ -1483,7 +1529,7 @@ def censeur_indicators():
                             scoped_courses=scoped_courses, available_subjects=available_subjects,
                             subject_ids=subject_ids, available_assessments=available_assessments,
                             evaluation_rows=evaluation_rows, evaluation_totals=evaluation_totals,
-                            department_id=department_id, available_departments=available_departments)
+                            department_id=department_id, available_departments=available_departments, orientation_mode=orientation_mode)
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
@@ -1515,12 +1561,14 @@ def censeur_indicators_export():
 
 
 @app.route("/censeur/indicateurs/<int:course_id>/modifier", methods=["POST"])
-@roles_required("censeur", "directeur")
+@roles_required("censeur", "conseiller_orientation", "directeur")
 def censeur_indicator_edit(course_id):
     from models import TeacherIndicator, Course
     user = User.query.get(session["user_id"])
     course = Course.query.get_or_404(course_id)
     teacher = course.teacher
+    if user.role == "conseiller_orientation" and (course.subject.name or "").strip().casefold() != "orientation scolaire":
+        abort(403)
     scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
     if scoped_dept_ids is not None and teacher.department_id not in scoped_dept_ids:
         abort(403)

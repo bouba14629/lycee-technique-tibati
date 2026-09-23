@@ -5,7 +5,7 @@ routes = (ROOT / "censeur_routes.py").read_text(encoding="utf-8")
 screen = (ROOT / "templates" / "schedule_official.html").read_text(encoding="utf-8")
 pdf = (ROOT / "templates" / "pdf" / "schedule_official_pdf.html").read_text(encoding="utf-8")
 
-assert 'can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm"}' in routes
+assert 'can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}' in routes
 assert 'can_create_tronc_commun = bool(current_class) and can_build_schedule' in routes
 assert 'user_scoped_class_ids(user) if user.role == "censeur" else None' in routes
 assert 'user.role == "censeur_crm"' in routes

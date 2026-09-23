@@ -11,25 +11,25 @@ function readProjectFile(relativePath: string) {
 }
 
 describe("conseiller orientation schedule access", () => {
-  it("allows class schedule viewing endpoints for the counselor role", () => {
+  it("allows schedule construction endpoints for the counselor role", () => {
     const source = readProjectFile("flask_app/censeur_routes.py");
     expect(source).toContain('@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")');
-    expect(source).toContain('can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm"}');
+    expect(source).toContain('can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}');
     expect(source).toContain('is_readonly = not can_build_schedule');
   });
 
-  it("allows censeurs to construct schedules while keeping the counselor read-only", () => {
+  it("allows censeurs and the counselor to construct schedules", () => {
     const source = readProjectFile("flask_app/censeur_routes.py");
     expect(source).toContain('if not can_build_schedule or is_readonly:');
     expect(source).toContain('"censeur_crm"');
     expect(source).toContain('"conseiller_orientation"');
-    expect(source).toContain('@roles_required("censeur", "censeur_crm", "directeur")\ndef censeur_schedule_edit');
+    expect(source).toContain('@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")\ndef censeur_schedule_edit');
   });
 
-  it("adds a consultation-only menu entry", () => {
+  it("adds a schedule menu entry", () => {
     const template = readProjectFile("flask_app/templates/base.html");
     expect(template).toContain("current_user.role == 'conseiller_orientation'");
     expect(template).toContain("Emplois du temps par classe");
-    expect(template).toContain("Consultation et impression uniquement");
+    expect(template).toContain("Emploi du temps individuel");
   });
 });

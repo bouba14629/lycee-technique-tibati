@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Synthèse des indicateurs pédagogiques{% endblock %}
-{% block page_title %}Synthèse — Indicateurs pédagogiques{% endblock %}
+{% block page_title %}Synthèse — {{ "Indicateurs pédagogiques — Orientation Scolaire" if orientation_mode else "Indicateurs pédagogiques" }}{% endblock %}
 {% block page_subtitle %}Couverture des heures, des programmes et des travaux pratiques — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
 {% block content %}
 <div class="mb-3 no-print d-flex justify-content-end gap-2">
-  {% if current_user.role == 'censeur' %}
+  {% if current_user.role in ['censeur', 'conseiller_orientation'] %}
   <button class="btn-ltt-outline" data-bs-toggle="modal" data-bs-target="#newIndTypeModal"><i class="bi bi-plus-circle"></i> Nouveau type d'indicateur</button>
   <button class="btn-ltt-gold" data-bs-toggle="modal" data-bs-target="#addIndModal"><i class="bi bi-plus-lg"></i> Ajouter / Modifier des indicateurs</button>
   {% endif %}
@@ -12,7 +12,7 @@
   <form method="GET" action="{{ url_for('censeur_indicators_export') }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="department_id" value="{{ department_id or '' }}">{% for item_id in class_ids %}<input type="hidden" name="class_ids" value="{{ item_id }}">{% endfor %}{% for item_id in subject_ids %}<input type="hidden" name="subject_ids" value="{{ item_id }}">{% endfor %}<button class="btn-ltt-gold"><i class="bi bi-file-earmark-excel-fill"></i> Excel</button></form>
 </div>
 
-{% if current_user.role == 'censeur' %}
+{% if current_user.role in ['censeur', 'conseiller_orientation'] %}
 <div class="modal fade" id="newIndTypeModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
   <div class="modal-header"><h5 class="modal-title">Nouveau type d'indicateur pédagogique</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
@@ -56,7 +56,7 @@
 </div>
 {% endmacro %}
 
-{% if current_user.role == 'censeur' %}
+{% if current_user.role in ['censeur', 'conseiller_orientation'] %}
 <div class="modal fade" id="addIndModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
   <div class="modal-header"><h5 class="modal-title">Ajouter / modifier des indicateurs</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
@@ -117,7 +117,7 @@ function populateGenericIndicator(select) {
       <small class="text-muted" style="font-size:11px;">Classes et matières : sélection multiple possible.</small>
     </div>
     {% if missing %}
-    <span class="badge-ltt badge-warning"><i class="bi bi-exclamation-triangle-fill"></i> {{ missing|length }} classe(s)/matière(s) sans indicateurs renseignés</span>
+    <span class="badge-ltt badge-warning"><i class="bi bi-exclamation-triangle-fill"></i> {{ missing|length }} classe(s)/matière(s) sans indicateurs</span>
     {% endif %}
   </form>
 
@@ -176,15 +176,16 @@ function populateGenericIndicator(select) {
         <th rowspan="2">Enseignant</th>
         <th rowspan="2">Code / Classe</th>
         <th rowspan="2">Matière</th>
+        <th rowspan="2">Date</th>
         <th colspan="3" class="text-center">Couverture des heures</th>
         <th colspan="3" class="text-center">Couverture des programmes</th>
         <th colspan="3" class="text-center">Leçons digitalisées</th>
         <th colspan="3" class="text-center">Travaux pratiques</th>
         <th colspan="3" class="text-center">TP digitalisés</th>
-        <th colspan="4" class="text-center">Moyennes ≥ 10 par genre</th>
-        <th colspan="4" class="text-center">Taux de réussite par genre</th>
+        <th colspan="3" class="text-center">Moyennes ≥ 10 par genre</th>
+        <th colspan="3" class="text-center">Taux de réussite par genre</th>
         {% for ct in custom_types %}<th colspan="3" class="text-center">{{ ct.label }}</th>{% endfor %}
-        {% if current_user.role == 'censeur' %}<th rowspan="2" class="no-print"></th>{% endif %}
+        {% if current_user.role in ['censeur', 'conseiller_orientation'] %}<th rowspan="2" class="no-print"></th>{% endif %}
       </tr>
       <tr>
         <th>Dues</th><th>Faites</th><th>%</th>
@@ -192,8 +193,8 @@ function populateGenericIndicator(select) {
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévus</th><th>Réalisés</th><th>%</th>
         <th>Prévus</th><th>Réalisés</th><th>%</th>
-        <th>Filles</th><th>Garçons</th><th>Non rensei.</th><th>Total</th>
-        <th>Filles</th><th>Garçons</th><th>Non rensei.</th><th>Total</th>
+        <th>Filles</th><th>Garçons</th><th>Total</th>
+        <th>Filles</th><th>Garçons</th><th>Total</th>
         {% for ct in custom_types %}<th>{{ ct.unit_planned }}</th><th>{{ ct.unit_done }}</th><th>%</th>{% endfor %}
       </tr>
     </thead>
@@ -203,18 +204,19 @@ function populateGenericIndicator(select) {
         <td class="fw-semibold">{{ row.teacher.user.full_name }} <span class="text-muted">({{ row.teacher.department.code if row.teacher.department }})</span></td>
         <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong></td>
         <td>{{ row.course.subject.name }}</td>
+        <td>{{ row.ind.updated_at.strftime("%d/%m/%Y") if row.ind.updated_at else "—" }}</td>
         <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ row.pct_hours if row.pct_hours is not none else '—' }}%</td>
         <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ row.pct_lessons if row.pct_lessons is not none else '—' }}%</td>
         <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ row.pct_digital_lessons if row.pct_digital_lessons is not none else '—' }}%</td>
         <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ row.pct_tp if row.pct_tp is not none else '—' }}%</td>
         <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ row.pct_digital_tp if row.pct_digital_tp is not none else '—' }}%</td>
-        <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful['Non renseigné'] }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
-        <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates['Non renseigné'] if row.gender_metrics.rates['Non renseigné'] is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
+        <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
+        <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
         {% for ct in custom_types %}
           {% set cv = row.custom.get(ct.id) %}
           <td>{{ cv.planned if cv else '—' }}</td><td>{{ cv.done if cv else '—' }}</td><td>{{ cv.pct if cv and cv.pct is not none else '—' }}%</td>
         {% endfor %}
-        {% if current_user.role == 'censeur' %}
+        {% if current_user.role in ['censeur', 'conseiller_orientation'] %}
         <td class="no-print"><a href="#" data-bs-toggle="modal" data-bs-target="#editInd{{ row.course.id }}Modal" class="text-muted"><i class="bi bi-pencil-square"></i></a></td>
         <div class="modal fade" id="editInd{{ row.course.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
           <div class="modal-header"><h5 class="modal-title">Modifier — {{ row.teacher.user.full_name }} ({{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }})</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -235,14 +237,14 @@ function populateGenericIndicator(select) {
     {% if rows %}
     <tfoot>
       <tr class="fw-bold" style="background:var(--cream);">
-        <td colspan="3">TOTAL</td>
+        <td colspan="4">TOTAL</td>
         <td>{{ totals.hours_due }}</td><td>{{ totals.hours_done }}</td><td>{{ totals.pct_hours if totals.pct_hours is not none else '—' }}%</td>
         <td>{{ totals.lessons_planned }}</td><td>{{ totals.lessons_done }}</td><td>{{ totals.pct_lessons if totals.pct_lessons is not none else '—' }}%</td>
         <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—' }}%</td>
         <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ totals.pct_tp if totals.pct_tp is not none else '—' }}%</td>
         <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ totals.pct_digital_tp if totals.pct_digital_tp is not none else '—' }}%</td>
         {% for ct in custom_types %}<td colspan="3"></td>{% endfor %}
-        {% if current_user.role == 'censeur' %}<td class="no-print"></td>{% endif %}
+        {% if current_user.role in ['censeur', 'conseiller_orientation'] %}<td class="no-print"></td>{% endif %}
       </tr>
     </tfoot>
     {% endif %}
@@ -253,7 +255,7 @@ function populateGenericIndicator(select) {
   <div class="mt-3" style="font-size:12px;">
     <strong class="text-muted">En attente de saisie :</strong>
     {% for c in missing %}
-    {% if current_user.role == 'censeur' %}
+    {% if current_user.role in ['censeur', 'conseiller_orientation'] %}
     <a href="#" data-bs-toggle="modal" data-bs-target="#addFor{{ c.id }}Modal" class="badge-ltt badge-warning me-1" style="cursor:pointer;">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) <i class="bi bi-plus-circle"></i></a>
     <div class="modal fade" id="addFor{{ c.id }}Modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:14px;">
       <div class="modal-header"><h5 class="modal-title">Ajouter — {{ c.school_class.code or 'Sans code' }} / {{ c.subject.name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>

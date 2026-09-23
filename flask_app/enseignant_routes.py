@@ -75,6 +75,13 @@ def teacher_grades(course_id):
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
 
     if request.method == "POST":
+        # Une note déjà enregistrée reste modifiable par son enseignant pendant 7 jours.
+        # Les notes plus anciennes sont conservées et ne peuvent plus être écrasées.
+        if request.form.get("assessment_id", type=int):
+            assessment_ref = PlannedAssessment.query.filter_by(id=request.form.get("assessment_id", type=int), course_id=course.id).first()
+            if assessment_ref and assessment_ref.submitted_at and (datetime.utcnow() - assessment_ref.submitted_at).days >= 7:
+                flash("Cette évaluation est verrouillée après le délai de 7 jours.", "danger")
+                return redirect(url_for("teacher_grades", course_id=course_id, term=request.form.get("term", TERMS[0])))
         term = request.form.get("term", TERMS[0])
         seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
         eval_type = request.form.get("type", "Devoir")  # "Devoir", "Évaluation-A" ou "Évaluation-B"

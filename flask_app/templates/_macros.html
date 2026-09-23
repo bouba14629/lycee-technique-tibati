@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endmacro %}
 
 {% macro demographics_panel(demographics, filters=None) %}
-<div class="card-ltt mb-3"><div class="section-title"><h2><i class="bi bi-people-fill me-1" style="color:var(--gold-500);"></i> Effectifs par genre</h2></div>
+<div class="card-ltt mb-3"><div class="section-title"><h2><i class="bi bi-people-fill me-1" style="color:var(--gold-500);"></i> Effectifs par genre</h2>
+{% if current_user and current_user.role in ['censeur','conseiller_orientation'] %}<a class="btn-ltt-outline btn-sm" href="{{ url_for('dashboard_demographics_export', attendance_class_id=request.args.getlist('attendance_class_id')) }}"><i class="bi bi-file-earmark-excel"></i> Exporter en Excel</a>{% endif %}</div>
 <div class="table-responsive"><table class="table-ltt mb-0"><thead><tr><th>Classe</th><th>Indicateur</th><th>Filles</th><th>Garçons</th><th>Non renseigné</th><th>Total</th></tr></thead><tbody>
 <tr><td rowspan="3"><strong>Toutes les classes</strong></td><td>Élèves inscrits</td><td>{{ demographics.effectifs.Filles }}</td><td>{{ demographics.effectifs.Garçons }}</td><td>{{ demographics.effectifs['Non renseigné'] }}</td><td>{{ demographics.effectifs.values()|sum }}</td></tr>
 <tr><td>Redoublants</td><td>{{ demographics.redoublants.Filles }}</td><td>{{ demographics.redoublants.Garçons }}</td><td>{{ demographics.redoublants['Non renseigné'] }}</td><td>{{ demographics.redoublants.values()|sum }}</td></tr>
