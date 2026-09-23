@@ -10,6 +10,7 @@ def test_industrial_section_uses_full_label_in_schedule():
     assert "<strong>SECTION" not in template
     assert "'LE CHEF SERVICE D’ORIENTATION SCOLAIRE'" in template
     assert "'LE CENSEUR ' ~ (censeur_label|default(''))" in template
+    assert "(teacher.department.code if teacher.department else '')" in template
     assert "school_class.department.section.code" not in template
 
 
