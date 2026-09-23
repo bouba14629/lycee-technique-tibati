@@ -12,7 +12,7 @@ os.environ.setdefault("LTT_ENV", "development")
 os.environ.setdefault("LTT_INITIAL_ADMIN_PASSWORD", "FoundateurTest#2026")
 
 from app import app
-from models import Course, Department, Grade, SchoolClass, Section, Student, Subject, Teacher, User, db
+from models import Course, Department, Grade, ScheduleEntry, SchoolClass, Section, Student, Subject, Teacher, User, db
 from utils import bulletin_data
 
 
@@ -58,6 +58,10 @@ with app.app_context():
                      Course(class_id=other_class.id, subject_id=subjects[1].id, teacher_id=teachers[1].id)]
     db.session.add_all([*courses, *other_courses])
     db.session.flush()
+    db.session.add_all([
+        ScheduleEntry(course_id=course.id, day="Lundi", start_time="07:30", end_time="08:20", published=True)
+        for course in [*courses, *other_courses]
+    ])
 
     students = []
     for username, matricule, first_name, last_name, dob, birth_place in [

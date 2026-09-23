@@ -9,7 +9,7 @@ for module_name in [name for name in list(sys.modules) if name in {"app", "model
     del sys.modules[module_name]
 
 from app import app
-from models import (BulletinWorkAppreciation, Course, Department, Grade, SchoolClass,
+from models import (BulletinWorkAppreciation, Course, Department, Grade, ScheduleEntry, SchoolClass,
                     Section, Student, Subject, Teacher, User, db)
 from utils import bulletin_data
 
@@ -42,6 +42,10 @@ with app.app_context():
     professional_course = Course(subject_id=professional_subject.id, teacher_id=teacher.id, class_id=school_class.id)
     db.session.add_all([general_course, professional_course])
     db.session.flush()
+    db.session.add_all([
+        ScheduleEntry(course_id=general_course.id, day="Lundi", start_time="07:30", end_time="08:20", published=True),
+        ScheduleEntry(course_id=professional_course.id, day="Mardi", start_time="07:30", end_time="08:20", published=True),
+    ])
     db.session.add_all([
         Grade(value=8, student_id=student.id, course_id=general_course.id, term="Trimestre 1", sequence=1, type="Évaluation"),
         Grade(value=12, student_id=student.id, course_id=professional_course.id, term="Trimestre 1", sequence=1, type="Évaluation"),

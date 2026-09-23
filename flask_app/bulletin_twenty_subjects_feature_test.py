@@ -10,7 +10,7 @@ os.environ.setdefault("LTT_INITIAL_ADMIN_PASSWORD", "FoundateurTest#2026")
 
 from app import app
 from flask import render_template
-from models import BulletinApproval, Course, Department, Grade, SchoolClass, Section, Student, Subject, Teacher, User, db
+from models import BulletinApproval, Course, Department, Grade, ScheduleEntry, SchoolClass, Section, Student, Subject, Teacher, User, db
 from pdf_utils import render_pdf
 from utils import annual_bulletin_data, bulletin_data
 
@@ -52,6 +52,7 @@ with app.app_context():
         db.session.add(subject); db.session.flush()
         course = Course(subject_id=subject.id, teacher_id=teacher.id, class_id=school_class.id)
         db.session.add(course); db.session.flush()
+        db.session.add(ScheduleEntry(course_id=course.id, day="Lundi", start_time="07:30", end_time="08:20", published=True))
         db.session.add(Grade(value=10 + (index % 8), student_id=student.id, course_id=course.id, term="Trimestre 1", sequence=1, type="Évaluation"))
         db.session.add(Grade(value=7 + (index % 4), student_id=peer.id, course_id=course.id, term="Trimestre 1", sequence=1, type="Évaluation"))
     db.session.commit()

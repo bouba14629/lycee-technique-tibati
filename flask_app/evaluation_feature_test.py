@@ -11,7 +11,7 @@ os.environ["LTT_ENV"] = "development"
 os.environ["LTT_INITIAL_ADMIN_PASSWORD"] = "FoundateurTest#2026"
 
 from app import app
-from models import Course, Department, Grade, PlannedAssessment, SchoolClass, Section, Student, Subject, Teacher, User, db
+from models import Course, Department, Grade, PlannedAssessment, ScheduleEntry, SchoolClass, Section, Student, Subject, Teacher, User, db
 from utils import dashboard_alerts
 
 
@@ -68,6 +68,11 @@ with app.app_context():
     pending_course = Course(subject_id=pending_subject.id, teacher_id=teacher.id, class_id=school_class.id)
     student = Student(user_id=student_user.id, class_id=school_class.id, matricule="EVAL-001", first_name="Élève", last_name="Évaluation")
     db.session.add_all([course, other_course, pending_course, student])
+    db.session.flush()
+    db.session.add_all([
+        ScheduleEntry(course_id=course.id, day="Lundi", start_time="07:30", end_time="08:20", published=True),
+        ScheduleEntry(course_id=pending_course.id, day="Mardi", start_time="07:30", end_time="08:20", published=True),
+    ])
     db.session.commit()
 
     with app.test_client() as client:
