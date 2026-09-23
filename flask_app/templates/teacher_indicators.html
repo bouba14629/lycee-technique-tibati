@@ -34,7 +34,7 @@
 
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des heures</h3>
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="{{ indicator.hours_due|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
+      <div class="col-md-6"><label>Heures dues</label><select name="hours_due" class="form-select">{% for value in allowed_hours_due %}<option value="{{ value }}" {{ 'selected' if indicator and indicator.hours_due == value else '' }}>{{ value }}</option>{% endfor %}{% if indicator and indicator.hours_due not in allowed_hours_due %}<option value="{{ indicator.hours_due }}" selected>{{ indicator.hours_due }}</option>{% endif %}</select></div>
       <div class="col-md-6"><label>Heures faites</label><input type="number" name="hours_done" class="form-control" value="{{ indicator.hours_done|default(0, true) if indicator else 0 }}"></div>
     </div>
 

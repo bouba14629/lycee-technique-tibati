@@ -6,6 +6,7 @@ from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIOD
 
 DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi": "THURSDAY",
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
+ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 
 
 def current_teacher():
@@ -430,6 +431,10 @@ def teacher_indicators():
         if not course:
             flash("Veuillez choisir une classe et une matière.", "warning")
             return redirect(url_for("teacher_indicators", term=term))
+        submitted_hours_due = request.form.get("hours_due", type=int)
+        if submitted_hours_due not in ALLOWED_HOURS_DUE:
+            flash("Les heures dues doivent être choisies dans la liste autorisée.", "danger")
+            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
         ind = TeacherIndicator.query.filter_by(course_id=course.id, term=term).first()
         if not ind:
             ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
@@ -475,4 +480,5 @@ def teacher_indicators():
     filled_course_ids = {i.course_id for i in TeacherIndicator.query.filter_by(teacher_id=teacher.id, term=term).all()}
     return render_template("teacher_indicators.html", indicator=ind, term=term, terms=TERMS, teacher=teacher,
                             courses=courses, course=course, filled_course_ids=filled_course_ids,
-                            custom_types=custom_types, custom_values=custom_values)
+                            custom_types=custom_types, custom_values=custom_values,
+                            allowed_hours_due=ALLOWED_HOURS_DUE)

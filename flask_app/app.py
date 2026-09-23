@@ -404,8 +404,10 @@ def dashboard():
             class_rows.setdefault(class_name, []).append(student)
         return {"effectifs": counts(students),
                 "redoublants": counts(students, lambda student: bool(student.is_repeater)),
+                "non_redoublants": counts(students, lambda student: not bool(student.is_repeater)),
                 "classes": [{"name": name, "effectifs": counts(items),
-                             "redoublants": counts(items, lambda student: bool(student.is_repeater))}
+                             "redoublants": counts(items, lambda student: bool(student.is_repeater)),
+                             "non_redoublants": counts(items, lambda student: not bool(student.is_repeater))}
                             for name, items in sorted(class_rows.items(), key=lambda item: item[0].casefold())]}
 
     if role == "directeur":

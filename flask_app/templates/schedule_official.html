@@ -109,7 +109,7 @@
   </div>
 
   <div class="row mt-4 pt-2 schedule-compact" style="border-top:0;">
-    <div class="col-6 text-start"><div style="font-size:13px; color:#000;">LE CENSEUR {{ censeur_label }}</div><div style="margin-top:34px; height:1px;"></div></div>
+    <div class="col-6 text-start"><div style="font-size:13px; color:#000;">{{ 'LE CHEF SERVICE D’ORIENTATION SCOLAIRE' if teacher and 'orientation scolaire' in (teacher.specialty or '').casefold() else 'LE CENSEUR ' ~ (censeur_label|default('')) }}</div><div style="margin-top:34px; height:1px;"></div></div>
     <div class="col-6 text-center">
       <div style="font-size:13px; color:#000; margin-bottom:4px;">TIBATI, le ______</div>
       <div style="font-size:13px; color:#000;">LE PROVISEUR</div>

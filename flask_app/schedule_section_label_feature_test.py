@@ -8,7 +8,8 @@ def test_industrial_section_uses_full_label_in_schedule():
     assert "DES ENSEIGNEMENTS GÉNÉRAUX" in template
     assert "<span class=\"red\">{{ section_label }}</span>" in template
     assert "<strong>SECTION" not in template
-    assert "LE CENSEUR {{ censeur_label }}" in template
+    assert "'LE CHEF SERVICE D’ORIENTATION SCOLAIRE'" in template
+    assert "'LE CENSEUR ' ~ (censeur_label|default(''))" in template
     assert "school_class.department.section.code" not in template
 
 

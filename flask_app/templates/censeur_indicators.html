@@ -63,18 +63,26 @@
     <form method="POST" id="genericIndForm" class="form-ltt" onsubmit="return document.getElementById('genericCourseSelect').value !== '';">
       <input type="hidden" name="term" value="{{ term }}">
       <label>Classe / Matière / Enseignant</label>
-      <select id="genericCourseSelect" class="form-select mb-2" onchange="document.getElementById('genericIndForm').action='/censeur/indicateurs/'+this.value+'/modifier'">
+      <select id="genericCourseSelect" class="form-select mb-2" onchange="populateGenericIndicator(this); document.getElementById('genericIndForm').action='/censeur/indicateurs/'+this.value+'/modifier'">
         <option value="">— Choisir —</option>
-        {% for row in rows %}<option value="{{ row.course.id }}">{{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
-        {% for c in missing %}<option value="{{ c.id }}">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
+        {% for row in rows %}<option value="{{ row.course.id }}" data-hours-due="{{ row.ind.hours_due }}" data-hours-done="{{ row.ind.hours_done }}" data-lessons-planned="{{ row.ind.lessons_planned }}" data-lessons-done="{{ row.ind.lessons_done }}" data-digital-lessons-planned="{{ row.ind.digital_lessons_planned }}" data-digital-lessons-done="{{ row.ind.digital_lessons_done }}" data-tp-planned="{{ row.ind.tp_planned }}" data-tp-done="{{ row.ind.tp_done }}" data-digital-tp-planned="{{ row.ind.digital_tp_planned }}" data-digital-tp-done="{{ row.ind.digital_tp_done }}">{{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
+        {% for c in missing %}<option value="{{ c.id }}" data-hours-due="0" data-hours-done="0" data-lessons-planned="0" data-lessons-done="0" data-digital-lessons-planned="0" data-digital-lessons-done="0" data-tp-planned="0" data-tp-done="0" data-digital-tp-planned="0" data-digital-tp-done="0">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
       </select>
       {{ ind_fields(none) }}
-      <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="unlock_planned" value="1" id="unlockPlanned"><label class="form-check-label" for="unlockPlanned"><i class="bi bi-unlock-fill"></i> Déverrouiller les objectifs prévus pour cette modification</label></div>
-      <div class="text-muted mb-2" style="font-size:11px;">Sans cette option, les objectifs prévus déjà enregistrés sont conservés. Après l’enregistrement, ils sont de nouveau verrouillés chez l’enseignant.</div>
-      <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer et reverrouiller</button>
+      <div class="text-muted mb-2" style="font-size:11px;">Les valeurs enregistrées sont chargées directement et peuvent être modifiées par le censeur sans restriction.</div>
+      <button class="btn-ltt-navy w-100 justify-content-center">Enregistrer les valeurs</button>
     </form>
   </div>
 </div></div></div>
+<script>
+function populateGenericIndicator(select) {
+  const option = select.options[select.selectedIndex];
+  if (!option || !option.value) return;
+  const form = document.getElementById('genericIndForm');
+  const fields = ['hours_due', 'hours_done', 'lessons_planned', 'lessons_done', 'digital_lessons_planned', 'digital_lessons_done', 'tp_planned', 'tp_done', 'digital_tp_planned', 'digital_tp_done'];
+  fields.forEach(field => { const input = form.elements[field]; const key = field.replaceAll('_', '-'); const value = option.getAttribute('data-' + key); if (input && value !== null) input.value = value; });
+}
+</script>
 {% endif %}
 
 <div class="card-ltt">
@@ -173,6 +181,8 @@
         <th colspan="3" class="text-center">Leçons digitalisées</th>
         <th colspan="3" class="text-center">Travaux pratiques</th>
         <th colspan="3" class="text-center">TP digitalisés</th>
+        <th colspan="4" class="text-center">Moyennes ≥ 10 par genre</th>
+        <th colspan="4" class="text-center">Taux de réussite par genre</th>
         {% for ct in custom_types %}<th colspan="3" class="text-center">{{ ct.label }}</th>{% endfor %}
         {% if current_user.role == 'censeur' %}<th rowspan="2" class="no-print"></th>{% endif %}
       </tr>
@@ -182,6 +192,8 @@
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévus</th><th>Réalisés</th><th>%</th>
         <th>Prévus</th><th>Réalisés</th><th>%</th>
+        <th>Filles</th><th>Garçons</th><th>Non rensei.</th><th>Total</th>
+        <th>Filles</th><th>Garçons</th><th>Non rensei.</th><th>Total</th>
         {% for ct in custom_types %}<th>{{ ct.unit_planned }}</th><th>{{ ct.unit_done }}</th><th>%</th>{% endfor %}
       </tr>
     </thead>
@@ -196,6 +208,8 @@
         <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ row.pct_digital_lessons if row.pct_digital_lessons is not none else '—' }}%</td>
         <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ row.pct_tp if row.pct_tp is not none else '—' }}%</td>
         <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ row.pct_digital_tp if row.pct_digital_tp is not none else '—' }}%</td>
+        <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful['Non renseigné'] }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
+        <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates['Non renseigné'] if row.gender_metrics.rates['Non renseigné'] is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
         {% for ct in custom_types %}
           {% set cv = row.custom.get(ct.id) %}
           <td>{{ cv.planned if cv else '—' }}</td><td>{{ cv.done if cv else '—' }}</td><td>{{ cv.pct if cv and cv.pct is not none else '—' }}%</td>

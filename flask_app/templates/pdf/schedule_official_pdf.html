@@ -118,7 +118,7 @@
 
 <table class="footer-table" style="margin-top:8pt; border:0; border-top:0; border-bottom:0;">
   <tr>
-    <td style="width:50%; text-align:left; padding-left:0; border:0; border-top:0; border-bottom:0;">LE CENSEUR {{ censeur_label }}</td>
+    <td style="width:50%; text-align:left; padding-left:0; border:0; border-top:0; border-bottom:0;">{{ 'LE CHEF SERVICE D’ORIENTATION SCOLAIRE' if teacher and 'orientation scolaire' in (teacher.specialty or '').casefold() else 'LE CENSEUR ' ~ (censeur_label|default('')) }}</td>
     <td style="width:50%; text-align:right; border:0; border-top:0; border-bottom:0;">
       <div style="font-size:7.5pt; color:#6b7688;">TIBATI, le</div>
       LE PROVISEUR

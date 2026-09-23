@@ -1262,6 +1262,26 @@ def _pct(a, b):
     return round(a / b * 100, 1) if b else None
 
 
+def _gender_course_metrics(course, term):
+    """Retourne les moyennes >=10 et le taux de réussite par genre pour une matière."""
+    buckets = {"Filles": [], "Garçons": [], "Non renseigné": []}
+    for student in course.school_class.students:
+        grades = Grade.query.filter_by(student_id=student.id, course_id=course.id, term=term).all()
+        if not grades:
+            continue
+        average = sum((grade.value / (grade.max_value or 20) * 20) for grade in grades) / len(grades)
+        sex = (student.sex or "").strip().upper()
+        key = "Filles" if sex in {"F", "FILLE", "FILLES"} else "Garçons" if sex in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
+        buckets[key].append(average)
+    successful = {key: sum(value >= 10 for value in values) for key, values in buckets.items()}
+    totals = {key: len(values) for key, values in buckets.items()}
+    successful["Total"] = sum(successful.values())
+    totals["Total"] = sum(totals.values())
+    rates = {key: _pct(successful[key], totals[key]) for key in buckets}
+    rates["Total"] = _pct(successful["Total"], totals["Total"])
+    return {"successful": successful, "rates": rates}
+
+
 def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None):
     from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
     scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
@@ -1311,6 +1331,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
             "pct_digital_lessons": _pct(ind.digital_lessons_done, ind.digital_lessons_planned),
             "pct_tp": _pct(ind.tp_done, ind.tp_planned),
             "pct_digital_tp": _pct(ind.digital_tp_done, ind.digital_tp_planned),
+            "gender_metrics": _gender_course_metrics(c, term),
             "custom": custom_values_by_course.get(c.id, {}),
         })
     rows.sort(key=lambda r: (r["teacher"].user.full_name, r["course"].school_class.name))
@@ -1510,20 +1531,7 @@ def censeur_indicator_edit(course_id):
         db.session.add(ind)
     planned_fields = ["hours_due", "lessons_planned", "digital_lessons_planned", "tp_planned", "digital_tp_planned"]
     done_fields = ["hours_done", "lessons_done", "digital_lessons_done", "tp_done", "digital_tp_done"]
-    unlock_planned = request.form.get("unlock_planned") == "1"
     values = {field: request.form.get(field, 0, type=int) for field in planned_fields + done_fields}
-    if ind.id and not unlock_planned:
-        for field in planned_fields:
-            values[field] = getattr(ind, field)
-    pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
-             ("digital_lessons_planned", "digital_lessons_done"),
-             ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
-    if any(values[done] > values[planned] for planned, done in pairs):
-        flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
-        return redirect(url_for("censeur_indicators", term=term))
-    if ind.id and any(values[done] < getattr(ind, done, 0) for _planned, done in pairs):
-        flash("Une valeur réalisée déjà enregistrée ne peut pas être diminuée.", "danger")
-        return redirect(url_for("censeur_indicators", term=term))
     for field, value in values.items():
         setattr(ind, field, value)
     db.session.commit()

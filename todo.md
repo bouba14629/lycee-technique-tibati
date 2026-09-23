@@ -307,3 +307,10 @@
 - [x] Ajouter au censeur le déverrouillage explicite, puis le reverrouillage automatique après sauvegarde.
 - [x] Autoriser les troncs communs pour toute matière sélectionnée, y compris les enseignements divers.
 - [x] Valider le préflight, les tests, Vitest, le type-check et le build.
+
+- [x] Mettre les heures dues enseignant dans la liste autorisée : 22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176.
+- [x] Permettre aux censeurs de charger et modifier directement les indicateurs prévus/réalisés sans restriction.
+- [x] Ajouter les moyennes >= 10 et les taux de réussite par genre, avec totaux par matière.
+- [x] Ajouter les effectifs non redoublants par genre aux tableaux de bord.
+- [x] Adapter le libellé Orientation Scolaire dans les emplois individuels écran/PDF.
+- [x] Préflight SQLite, tests ciblés, Vitest, type-check et build validés.
