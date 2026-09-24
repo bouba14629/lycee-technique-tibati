@@ -26,7 +26,16 @@ def teacher_courses():
                          .order_by(Course.class_id, Course.subject_id)
                          .all())
     courses = list({course.id: course for course in scheduled_courses}.values())
-    return render_template("teacher_courses.html", teacher=teacher, courses=courses, schedule_synced=True)
+    students_by_course = {
+        course.id: sorted(course.school_class.students, key=lambda student: (
+            (student.last_name or "").strip().casefold(),
+            (student.first_name or "").strip().casefold(),
+            student.id,
+        ))
+        for course in courses
+    }
+    return render_template("teacher_courses.html", teacher=teacher, courses=courses,
+                           students_by_course=students_by_course, schedule_synced=True)
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")

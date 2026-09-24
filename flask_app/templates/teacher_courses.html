@@ -11,6 +11,14 @@
     <span class="badge-ltt badge-navy mb-2">{{ c.school_class.name }}</span>
     <h3 style="font-size:15px; color:var(--navy-900);">{{ c.subject.name }}</h3>
     <div class="text-muted mb-3" style="font-size:12.5px;">{{ c.school_class.students|length }} élève(s) · coefficient {{ c.subject.coefficient }}</div>
+    <details class="mb-3">
+      <summary class="text-muted" style="cursor:pointer; font-size:12px;">Élèves — ordre alphabétique A à Z</summary>
+      <ol class="mt-2 mb-0 ps-3" style="font-size:12px;">
+        {% for student in students_by_course.get(c.id, []) %}
+        <li>{{ student.last_name }} {{ student.first_name }}</li>
+        {% endfor %}
+      </ol>
+    </details>
     <div class="d-grid gap-2">
       <a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>
       <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
