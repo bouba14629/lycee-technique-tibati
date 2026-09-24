@@ -9,7 +9,7 @@
   <button class="btn-ltt-gold" data-bs-toggle="modal" data-bs-target="#addIndModal"><i class="bi bi-plus-lg"></i> Ajouter / Modifier des indicateurs</button>
   {% endif %}
   <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu / Imprimer</button>
-  <form method="GET" action="{{ url_for('censeur_indicators_export') }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="department_id" value="{{ department_id or '' }}">{% for item_id in class_ids %}<input type="hidden" name="class_ids" value="{{ item_id }}">{% endfor %}{% for item_id in subject_ids %}<input type="hidden" name="subject_ids" value="{{ item_id }}">{% endfor %}<button class="btn-ltt-gold"><i class="bi bi-file-earmark-excel-fill"></i> Excel</button></form>
+  <form method="GET" action="{{ url_for('censeur_indicators_export') }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="date_from" value="{{ date_from.isoformat() if date_from else '' }}"><input type="hidden" name="date_to" value="{{ date_to.isoformat() if date_to else '' }}"><input type="hidden" name="department_id" value="{{ department_id or '' }}">{% for item_id in class_ids %}<input type="hidden" name="class_ids" value="{{ item_id }}">{% endfor %}{% for item_id in subject_ids %}<input type="hidden" name="subject_ids" value="{{ item_id }}">{% endfor %}<button class="btn-ltt-gold"><i class="bi bi-file-earmark-excel-fill"></i> Excel</button></form>
 </div>
 
 {% if current_user.role in ['censeur', 'conseiller_orientation'] %}
@@ -105,6 +105,8 @@ function populateGenericIndicator(select) {
       <select name="subject_ids" class="form-select" style="min-width:210px; max-width:280px;" multiple size="4" aria-label="Sélection multiple de matières">
         {% for item in available_subjects %}<option value="{{ item.id }}" {{ 'selected' if item.id in subject_ids }}>{{ item.name }}</option>{% endfor %}
       </select>
+      <label class="form-label mb-0" style="font-size:11px;">Du <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from.isoformat() if date_from else '' }}" onchange="this.form.submit()"></label>
+      <label class="form-label mb-0" style="font-size:11px;">Au <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to.isoformat() if date_to else '' }}" onchange="this.form.submit()"></label>
       <select name="assessment_id" class="form-select" style="max-width:260px;">
         <option value="">Toutes les évaluations</option>
         {% for item in available_assessments %}<option value="{{ item.id }}" {{ 'selected' if assessment_id==item.id }}>S{{ item.sequence }} · {{ item.course.school_class.code or 'Sans code' }} · {{ item.course.subject.name }} — {{ item.title }}</option>{% endfor %}

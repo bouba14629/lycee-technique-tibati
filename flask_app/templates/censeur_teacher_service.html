@@ -15,7 +15,7 @@
 .service-table .period { height:18px; font-size:7px; }
 .service-table .subject { font-weight:700; font-size:7px; }
 .service-table .class-code { font-size:7px; font-weight:700; }
-.service-table .break-row td { background:#d9dee5; color:#000; font-weight:700; letter-spacing:0; height:18px; padding:2px 1px; }
+.service-table .break-row td { width:100%; background:#d9dee5; color:#000; font-weight:700; letter-spacing:0; height:18px; padding:2px 1px; }
 .service-table .summary th,.service-table .summary td { font-weight:700; background:#ededed; height:13px; }
 </style>{% endblock %}
 {% block content %}
@@ -29,8 +29,8 @@
 </thead><tbody>
 {% for day in days %}
 {% for index in range(periods|length) %}
-{% if index == 3 %}<tr class="break-row"><td colspan="{{ 2 + (6 * 2) }}">P R E M I È R E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
-{% if index == 6 %}<tr class="break-row"><td colspan="{{ 2 + (6 * 2) }}">D E U X I È M E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
+{% if index == 3 %}<tr class="break-row"><td colspan="14" style="width:100%;">P R E M I È R E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
+{% if index == 6 %}<tr class="break-row"><td colspan="14" style="width:100%;">D E U X I È M E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
 <tr>{% if index == 0 %}<th class="day" rowspan="{{ periods|length + 2 }}">{{ day.upper() }}</th>{% endif %}<td class="period">{{ index + 1 }}H/ {{ periods[index][0] }}–{{ periods[index][1] }}</td>{% for item in group if item %}{% set entry = item.grid[day][index] %}<td>{% if entry %}<span class="subject">{{ entry.course.subject.name }}</span>{% endif %}</td><td>{% if entry %}<span class="class-code">{{ entry.course.school_class.code or entry.course.school_class.name }}</span>{% endif %}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td><td></td>{% endfor %}</tr>
 {% endfor %}
 {% endfor %}

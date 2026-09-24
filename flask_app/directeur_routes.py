@@ -349,12 +349,19 @@ def dir_user_delete(user_id):
     if u.id == session.get("user_id"):
         flash("Vous ne pouvez pas supprimer votre propre compte.", "danger")
         return redirect(url_for("dir_users"))
-    if u.teacher_profile and u.teacher_profile.courses:
-        flash(f"Impossible de supprimer « {u.full_name} » : {len(u.teacher_profile.courses)} cours lui sont affectés. Réaffectez-les d'abord.", "danger")
-        return redirect(url_for("dir_users"))
     uname = u.username
     if u.teacher_profile:
-        db.session.delete(u.teacher_profile)
+        from models import TeacherIndicator, CustomIndicatorValue, Availability
+        teacher = u.teacher_profile
+        course_ids = [course.id for course in teacher.courses]
+        if course_ids:
+            CustomIndicatorValue.query.filter(CustomIndicatorValue.course_id.in_(course_ids)).delete(synchronize_session=False)
+            TeacherIndicator.query.filter(TeacherIndicator.course_id.in_(course_ids)).delete(synchronize_session=False)
+            PlannedAssessment.query.filter(PlannedAssessment.course_id.in_(course_ids)).delete(synchronize_session=False)
+            Course.query.filter(Course.id.in_(course_ids)).delete(synchronize_session=False)
+        Availability.query.filter_by(teacher_id=teacher.id).delete(synchronize_session=False)
+        TeacherIndicator.query.filter_by(teacher_id=teacher.id).delete(synchronize_session=False)
+        db.session.delete(teacher)
     db.session.delete(u)
     db.session.commit()
     flash(f"Compte « {uname} » supprimé.", "info")

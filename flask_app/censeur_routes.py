@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from sqlalchemy import and_, or_
 from app import app, db
@@ -44,7 +44,13 @@ def censeur_teacher_service():
     entries_q = ScheduleEntry.query.join(Course).filter(Course.teacher_id.in_(teacher_ids or [-1]))
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
+    if user.role == "censeur" and user.section_id is None:
+        entries_q = entries_q.filter(Course.subject.has(Subject.category.in_(("Enseignements Généraux", "Enseignements Divers"))))
     entries = entries_q.all()
+    if user.role == "censeur" and user.section_id is None:
+        allowed_teacher_ids = {entry.course.teacher_id for entry in entries}
+        teachers = [teacher for teacher in teachers if teacher.id in allowed_teacher_ids]
+        teacher_ids = [teacher.id for teacher in teachers]
     def duration_hours(start_time, end_time):
         try:
             start_minutes = int(start_time[:2]) * 60 + int(start_time[3:5])
@@ -1321,7 +1327,7 @@ def _gender_course_metrics(course, term):
     return {"successful": successful, "rates": rates}
 
 
-def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None):
+def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None, date_from=None, date_to=None):
     from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
     scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
     teachers_q = Teacher.query
@@ -1342,8 +1348,12 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     if user.role == "censeur" and user.section_id is None:
         # Censeur Enseignements Généraux : uniquement ses propres matières, quelle que soit la section
         courses = [c for c in courses if c.subject.category == "Enseignements Généraux"]
-    inds = {i.course_id: i for i in TeacherIndicator.query.filter(
-        TeacherIndicator.teacher_id.in_(teacher_ids), TeacherIndicator.term == term).all()} if teacher_ids else {}
+    indicators_q = TeacherIndicator.query.filter(TeacherIndicator.teacher_id.in_(teacher_ids), TeacherIndicator.term == term) if teacher_ids else None
+    if indicators_q is not None and date_from:
+        indicators_q = indicators_q.filter(TeacherIndicator.updated_at >= datetime.combine(date_from, datetime.min.time()))
+    if indicators_q is not None and date_to:
+        indicators_q = indicators_q.filter(TeacherIndicator.updated_at < datetime.combine(date_to + timedelta(days=1), datetime.min.time()))
+    inds = {i.course_id: i for i in indicators_q.all()} if indicators_q is not None else {}
 
     custom_types_q = CustomIndicatorType.query
     if user.role == "censeur" and user.section_id:
@@ -1401,6 +1411,14 @@ def censeur_indicators():
     subject_ids = list(dict.fromkeys(request.args.getlist("subject_ids", type=int)))
     course_id = request.args.get("course_id", type=int)
     assessment_id = request.args.get("assessment_id", type=int)
+    def _query_date(name):
+        raw = request.args.get(name, "").strip()
+        try:
+            return date.fromisoformat(raw) if raw else None
+        except ValueError:
+            return None
+    date_from = _query_date("date_from")
+    date_to = _query_date("date_to")
     valid_sequences = TERM_SEQUENCES.get(term, ())
     if sequence not in valid_sequences:
         sequence = None
@@ -1450,7 +1468,8 @@ def censeur_indicators():
     if course_id and not scoped_courses:
         abort(403)
     rows, totals, missing, custom_types = _compute_indicators(
-        user, term, department_id=department_id, class_ids=class_ids, subject_ids=subject_ids, course_id=course_id
+        user, term, department_id=department_id, class_ids=class_ids, subject_ids=subject_ids, course_id=course_id,
+        date_from=date_from, date_to=date_to
     )
     assessments_q = PlannedAssessment.query.join(Course).join(SchoolClass).filter(PlannedAssessment.term == term)
     if scoped_class_ids is not None:
@@ -1529,7 +1548,8 @@ def censeur_indicators():
                             scoped_courses=scoped_courses, available_subjects=available_subjects,
                             subject_ids=subject_ids, available_assessments=available_assessments,
                             evaluation_rows=evaluation_rows, evaluation_totals=evaluation_totals,
-                            department_id=department_id, available_departments=available_departments, orientation_mode=orientation_mode)
+                            department_id=department_id, available_departments=available_departments, orientation_mode=orientation_mode,
+                            date_from=date_from, date_to=date_to)
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
@@ -1539,6 +1559,14 @@ def censeur_indicators_export():
     from excel_utils import indicators_workbook
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
+    def _export_date(name):
+        raw = request.args.get(name, "").strip()
+        try:
+            return date.fromisoformat(raw) if raw else None
+        except ValueError:
+            return None
+    date_from = _export_date("date_from")
+    date_to = _export_date("date_to")
     department_id = request.args.get("department_id", type=int)
     class_id = request.args.get("class_id", type=int)
     class_ids = list(dict.fromkeys(request.args.getlist("class_ids", type=int)))
@@ -1552,7 +1580,8 @@ def censeur_indicators_export():
         if scoped_dept_ids is not None and department.id not in scoped_dept_ids:
             abort(403)
     rows, totals, missing, custom_types = _compute_indicators(
-        user, term, department_id=department_id, class_ids=class_ids, subject_ids=subject_ids, course_id=course_id
+        user, term, department_id=department_id, class_ids=class_ids, subject_ids=subject_ids, course_id=course_id,
+        date_from=date_from, date_to=date_to
     )
     wb_io = indicators_workbook(rows, totals, term, custom_types)
     filename = f"LTT_indicateurs_{term}.xlsx".replace(" ", "_")

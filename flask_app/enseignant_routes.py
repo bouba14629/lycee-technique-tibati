@@ -416,7 +416,7 @@ def teacher_schedule_official_xlsx():
 def teacher_indicators():
     from models import TeacherIndicator, Course, CustomIndicatorType, CustomIndicatorValue
     teacher = current_teacher()
-    term = request.args.get("term", TERMS[0]) if request.method == "GET" else request.form.get("term", TERMS[0])
+    term = TERMS[0]
     course_id = request.args.get("course_id", type=int) if request.method == "GET" else request.form.get("course_id", type=int)
     courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
                      key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
@@ -437,11 +437,11 @@ def teacher_indicators():
     if request.method == "POST":
         if not course:
             flash("Veuillez choisir une classe et une matière.", "warning")
-            return redirect(url_for("teacher_indicators", term=term))
+            return redirect(url_for("teacher_indicators"))
         submitted_hours_due = request.form.get("hours_due", type=int)
         if submitted_hours_due not in ALLOWED_HOURS_DUE:
             flash("Les heures dues doivent être choisies dans la liste autorisée.", "danger")
-            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
+            return redirect(url_for("teacher_indicators", course_id=course.id))
         ind = TeacherIndicator.query.filter_by(course_id=course.id, term=term).first()
         if not ind:
             ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
@@ -460,10 +460,10 @@ def teacher_indicators():
                  ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
         if any(done_values[done] > planned_values[planned] for planned, done in pairs):
             flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
-            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
+            return redirect(url_for("teacher_indicators", course_id=course.id))
         if ind.id and any(done_values[done] < getattr(ind, done, 0) for _planned, done in pairs):
             flash("Une valeur réalisée déjà enregistrée ne peut pas être diminuée.", "danger")
-            return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
+            return redirect(url_for("teacher_indicators", course_id=course.id))
         for field, value in planned_values.items():
             setattr(ind, field, value)
         for field, value in done_values.items():
@@ -477,7 +477,7 @@ def teacher_indicators():
             cv.done = request.form.get(f"custom_{ct.id}_done", 0, type=int)
         db.session.commit()
         flash("Indicateurs pédagogiques enregistrés.", "success")
-        return redirect(url_for("teacher_indicators", term=term, course_id=course.id))
+        return redirect(url_for("teacher_indicators", course_id=course.id))
 
     ind = TeacherIndicator.query.filter_by(course_id=course.id, term=term).first() if course else None
     custom_values = {}
