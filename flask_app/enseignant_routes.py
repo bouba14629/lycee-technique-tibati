@@ -25,7 +25,10 @@ def teacher_courses():
                          .filter(Course.teacher_id == teacher.id)
                          .order_by(Course.class_id, Course.subject_id)
                          .all())
-    courses = list({course.id: course for course in scheduled_courses}.values())
+    # Un créneau orphelin ne doit jamais faire tomber la page Mes classes.
+    # Il est ignoré jusqu'à la prochaine mise à jour de la configuration.
+    courses = [course for course in list({course.id: course for course in scheduled_courses}.values())
+               if course.school_class is not None and course.subject is not None]
     students_by_course = {
         course.id: sorted(course.school_class.students, key=lambda student: (
             (student.last_name or "").strip().casefold(),

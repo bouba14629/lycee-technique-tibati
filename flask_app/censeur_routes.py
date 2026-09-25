@@ -45,7 +45,12 @@ def censeur_teacher_service():
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     if user.role == "censeur" and user.section_id is None:
-        entries_q = entries_q.filter(Course.subject.has(Subject.category.in_(("Enseignements Généraux", "Enseignements Divers"))))
+        entries_q = entries_q.filter(
+            Course.subject.has(and_(
+                Subject.category.in_(("Enseignements Généraux", "Enseignements Divers")),
+                ~Subject.name.ilike("%travail manuel%"),
+            ))
+        )
     entries = entries_q.all()
     if user.role == "censeur" and user.section_id is None:
         allowed_teacher_ids = {entry.course.teacher_id for entry in entries}
@@ -59,14 +64,18 @@ def censeur_teacher_service():
         except (TypeError, ValueError, IndexError):
             return 0
     by_teacher = {teacher.id: {day: [None] * len(OFFICIAL_PERIODS) for day in DAYS[:5]} for teacher in teachers}
-    hours_done = {teacher.id: 0.0 for teacher in teachers}
+    # Le modèle compte les cellules occupées par une matière, pas la durée
+    # théorique du créneau ni le nombre de ScheduleEntry distincts.
+    hours_done = {teacher.id: 0 for teacher in teachers}
     for entry in entries:
         if entry.day not in by_teacher[entry.course.teacher_id]:
             continue
-        hours_done[entry.course.teacher_id] += duration_hours(entry.start_time, entry.end_time)
         for index, (start_time, end_time) in enumerate(OFFICIAL_PERIODS):
             if entry.start_time < end_time and start_time < entry.end_time:
-                by_teacher[entry.course.teacher_id][entry.day][index] = entry
+                cells = by_teacher[entry.course.teacher_id][entry.day]
+                if cells[index] is None:
+                    hours_done[entry.course.teacher_id] += 1
+                    cells[index] = entry
     services = [{"teacher": teacher, "grid": by_teacher[teacher.id],
                  "hours_done": round(hours_done[teacher.id], 2), "hours_due": teacher.hours_due or 0}
                 for teacher in teachers]
@@ -1324,7 +1333,10 @@ def _gender_course_metrics(course, term):
     totals["Total"] = sum(totals.values())
     rates = {key: _pct(successful[key], totals[key]) for key in buckets}
     rates["Total"] = _pct(successful["Total"], totals["Total"])
-    return {"successful": successful, "rates": rates}
+    averages = {key: round(sum(values) / len(values), 2) if values else None for key, values in buckets.items()}
+    all_values = [value for values in buckets.values() for value in values]
+    averages["Total"] = round(sum(all_values) / len(all_values), 2) if all_values else None
+    return {"successful": successful, "rates": rates, "averages": averages}
 
 
 def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None, date_from=None, date_to=None):
@@ -1553,7 +1565,7 @@ def censeur_indicators():
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators_export():
     from flask import send_file
     from excel_utils import indicators_workbook
