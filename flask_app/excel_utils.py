@@ -213,7 +213,7 @@ def indicators_workbook(rows, totals, term, custom_types=None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Indicateurs"
-    widths = [24, 14, 20, 8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7, 10, 10, 10, 10] + [9, 9, 7] * len(custom_types)
+    widths = [24, 14, 20, 8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7, 10, 10, 10] + [9, 9, 7] * len(custom_types)
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     _header(ws, 1, len(widths), f"SYNTHÈSE — INDICATEURS PÉDAGOGIQUES — {term}")
@@ -229,9 +229,9 @@ def indicators_workbook(rows, totals, term, custom_types=None):
         ("LEÇONS DIGITALISÉES", 10, 12),
         ("TRAVAUX PRATIQUES", 13, 15),
         ("TP DIGITALISÉS", 16, 18),
-        ("MOYENNE GÉNÉRALE PAR GENRE", 19, 22),
+        ("MOYENNE GÉNÉRALE PAR GENRE", 19, 21),
     ]
-    col = 23
+    col = 22
     for ct in custom_types:
         groups.append((ct.label.upper(), col, col + 2))
         col += 3
@@ -249,7 +249,7 @@ def indicators_workbook(rows, totals, term, custom_types=None):
                "Prévues", "Faites", "%",
                "Prévus", "Réalisés", "%",
                "Prévus", "Réalisés", "%",
-               "Filles", "Garçons", "Non renseigné", "Total"]
+               "Filles", "Garçons", "Total"]
     for ct in custom_types:
         headers += [ct.unit_planned, ct.unit_done, "%"]
     for i, h in enumerate(headers, start=1):
@@ -269,7 +269,6 @@ def indicators_workbook(rows, totals, term, custom_types=None):
                 ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"],
                 row.get("gender_metrics", {}).get("averages", {}).get("Filles"),
                 row.get("gender_metrics", {}).get("averages", {}).get("Garçons"),
-                row.get("gender_metrics", {}).get("averages", {}).get("Non renseigné"),
                 row.get("gender_metrics", {}).get("averages", {}).get("Total")]
         for ct in custom_types:
             cv = row.get("custom", {}).get(ct.id)
@@ -286,7 +285,7 @@ def indicators_workbook(rows, totals, term, custom_types=None):
                   totals["digital_lessons_planned"], totals["digital_lessons_done"], totals["pct_digital_lessons"],
                   totals["tp_planned"], totals["tp_done"], totals["pct_tp"],
                   totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"],
-                  "—", "—", "—", "—"]
+                  "—", "—", "—"]
     total_vals += ["", "", ""] * len(custom_types)
     for i, v in enumerate(total_vals, start=1):
         c = ws.cell(row=r, column=i, value=v)

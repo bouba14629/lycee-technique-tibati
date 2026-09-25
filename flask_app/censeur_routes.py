@@ -1318,14 +1318,19 @@ def _pct(a, b):
 
 def _gender_course_metrics(course, term):
     """Retourne les moyennes >=10 et le taux de réussite par genre pour une matière."""
-    buckets = {"Filles": [], "Garçons": [], "Non renseigné": []}
+    buckets = {"Filles": [], "Garçons": []}
     for student in course.school_class.students:
         grades = Grade.query.filter_by(student_id=student.id, course_id=course.id, term=term).all()
         if not grades:
             continue
         average = sum((grade.value / (grade.max_value or 20) * 20) for grade in grades) / len(grades)
         sex = (student.sex or "").strip().upper()
-        key = "Filles" if sex in {"F", "FILLE", "FILLES"} else "Garçons" if sex in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
+        if sex in {"F", "FILLE", "FILLES"}:
+            key = "Filles"
+        elif sex in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"}:
+            key = "Garçons"
+        else:
+            continue
         buckets[key].append(average)
     successful = {key: sum(value >= 10 for value in values) for key, values in buckets.items()}
     totals = {key: len(values) for key, values in buckets.items()}

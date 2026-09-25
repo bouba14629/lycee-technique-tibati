@@ -198,7 +198,7 @@ function populateGenericIndicator(select) {
         <th>Prévus</th><th>Réalisés</th><th>%</th>
         <th>Filles</th><th>Garçons</th><th>Total</th>
         <th>Filles</th><th>Garçons</th><th>Total</th>
-        <th>Filles</th><th>Garçons</th><th>Non renseigné</th><th>Total</th>
+        <th>Filles</th><th>Garçons</th><th>Total</th>
         {% for ct in custom_types %}<th>{{ ct.unit_planned }}</th><th>{{ ct.unit_done }}</th><th>%</th>{% endfor %}
       </tr>
     </thead>
@@ -216,7 +216,7 @@ function populateGenericIndicator(select) {
         <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ row.pct_digital_tp if row.pct_digital_tp is not none else '—' }}%</td>
         <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
         <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
-        <td>{{ row.gender_metrics.averages.Filles if row.gender_metrics.averages.Filles is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Garçons if row.gender_metrics.averages.Garçons is not none else '—' }}</td><td>{{ row.gender_metrics.averages['Non renseigné'] if row.gender_metrics.averages['Non renseigné'] is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Total if row.gender_metrics.averages.Total is not none else '—' }}</td>
+        <td>{{ row.gender_metrics.averages.Filles if row.gender_metrics.averages.Filles is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Garçons if row.gender_metrics.averages.Garçons is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Total if row.gender_metrics.averages.Total is not none else '—' }}</td>
         {% for ct in custom_types %}
           {% set cv = row.custom.get(ct.id) %}
           <td>{{ cv.planned if cv else '—' }}</td><td>{{ cv.done if cv else '—' }}</td><td>{{ cv.pct if cv and cv.pct is not none else '—' }}%</td>
@@ -236,7 +236,7 @@ function populateGenericIndicator(select) {
         {% endif %}
       </tr>
     {% else %}
-      <tr><td colspan="{{ 22 + custom_types|length * 3 }}" class="text-muted text-center py-4">Aucun indicateur renseigné pour cette période.</td></tr>
+      <tr><td colspan="{{ 28 + custom_types|length * 3 }}" class="text-muted text-center py-4">Aucun indicateur renseigné pour cette période.</td></tr>
     {% endfor %}
     </tbody>
     {% if rows %}
@@ -248,7 +248,7 @@ function populateGenericIndicator(select) {
         <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—' }}%</td>
         <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ totals.pct_tp if totals.pct_tp is not none else '—' }}%</td>
         <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ totals.pct_digital_tp if totals.pct_digital_tp is not none else '—' }}%</td>
-        <td colspan="4">—</td>
+        <td colspan="3">—</td>
         {% for ct in custom_types %}<td colspan="3"></td>{% endfor %}
         {% if current_user.role in ['censeur', 'conseiller_orientation'] %}<td class="no-print"></td>{% endif %}
       </tr>
