@@ -87,6 +87,7 @@
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_teacher_service' }}" href="{{ url_for('censeur_teacher_service') }}"><i class="bi bi-grid-3x3-gap-fill"></i> Service des Professeurs</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_conseil' }}" href="{{ url_for('censeur_conseil') }}"><i class="bi bi-clipboard2-data-fill"></i> Conseils de classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
@@ -102,6 +103,7 @@
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_teacher_service' }}" href="{{ url_for('censeur_teacher_service') }}"><i class="bi bi-grid-3x3-gap-fill"></i> Service des Professeurs</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
