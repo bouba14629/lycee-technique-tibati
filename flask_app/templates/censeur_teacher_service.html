@@ -1,43 +1,171 @@
 {% extends 'base.html' %}
 {% block title %}Service des Professeurs{% endblock %}
 {% block page_title %}Service des Professeurs{% endblock %}
-{% block page_subtitle %}Grille hebdomadaire des matières et heures selon les emplois du temps — {{ school_year }}{% endblock %}
-{% block extra_css %}<style>
-@media print { @page { size: landscape; margin: 5mm; } .no-print { display:none !important; } .service-page { break-after: page; } }
-.service-page { margin-bottom:20px; break-inside:avoid; page-break-inside:avoid; }
-.service-table { width:100%; border-collapse:collapse; table-layout:fixed; color:#000; font-size:8px; }
-.service-table th,.service-table td { border:1px solid #111; padding:2px 1px; text-align:center; vertical-align:middle; line-height:1.05; }
-.service-table .school { width:7%; font-size:7px; font-weight:700; }
-.service-table .hours { width:7%; font-size:7px; font-weight:700; }
-.service-table .teacher-head { font-size:8px; font-weight:700; text-transform:uppercase; }
-.service-table .sub-head { font-size:6px; font-weight:700; }
-.service-table .day { width:7%; font-size:7px; font-weight:700; text-align:center; vertical-align:middle; }
-.service-table .period { height:18px; font-size:7px; }
-.service-table .subject { font-weight:700; font-size:7px; }
-.service-table .class-code { font-size:7px; font-weight:700; }
-.service-table .break-row td { background:#d9dee5; color:#000; font-weight:700; letter-spacing:0; height:18px; padding:2px 1px; }
-.service-table .summary th,.service-table .summary td { font-weight:700; background:#ededed; height:13px; }
-</style>{% endblock %}
+{% block page_subtitle %}{{ school_year }}{% endblock %}
+{% block extra_css %}
+<style>
+@media print {
+  @page { size: landscape; margin: 5mm; }
+  .no-print { display: none !important; }
+  .service-page { break-after: page; page-break-after: always; }
+  .service-page:last-child { break-after: auto; page-break-after: auto; }
+}
+.service-page { margin-bottom: 20px; break-inside: avoid; page-break-inside: avoid; }
+.service-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #000;
+  background: #fff;
+  font-size: 8px;
+}
+.service-table th,
+.service-table td {
+  border: 1px solid #111;
+  padding: 1px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.05;
+  overflow: hidden;
+}
+.service-table .model-title {
+  height: 16px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.service-table .school {
+  width: 7%;
+  font-size: 6.5px;
+  font-weight: 800;
+}
+.service-table .hours {
+  width: 7%;
+  font-size: 6.5px;
+  font-weight: 800;
+}
+.service-table .teacher-head {
+  height: 17px;
+  font-size: 7.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.service-table .sub-head {
+  height: 13px;
+  font-size: 5.7px;
+  font-weight: 800;
+}
+.service-table .day {
+  width: 7%;
+  font-size: 6.5px;
+  font-weight: 800;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+}
+.service-table .period {
+  height: 17px;
+  font-size: 6.5px;
+  white-space: nowrap;
+}
+.service-table .subject,
+.service-table .class-code {
+  display: block;
+  font-size: 6.5px;
+  font-weight: 700;
+  line-height: 1.05;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.service-table .break-row td {
+  height: 17px;
+  padding: 1px;
+  background: #c7c7c7;
+  color: #000;
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  white-space: nowrap;
+}
+.service-table .summary th,
+.service-table .summary td {
+  height: 13px;
+  background: #ededed;
+  font-size: 6.5px;
+  font-weight: 800;
+}
+</style>
+{% endblock %}
 {% block content %}
-<div class="no-print d-flex justify-content-between align-items-center mb-2"><span class="text-muted">Modèle conservé : six professeurs par page, matières et classes mises à jour depuis les créneaux.</span><button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button></div>
+<div class="no-print d-flex justify-content-between align-items-center mb-2">
+  <span class="text-muted">Modèle importé : grille hebdomadaire mise à jour depuis les emplois du temps.</span>
+  <button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button>
+</div>
+
 {% for group in services|batch(6, none) %}
-<div class="service-page"><table class="service-table">
-<thead>
-<tr><th class="school">L.T. DE TIBATI<br><small>{{ school_year }}</small></th><th colspan="1" class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}</tr>
-<tr><th class="day" rowspan="2">JOURS</th><th></th>{% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
-<tr><th class="sub-head">HEURES</th>{% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<th></th><th></th>{% endfor %}</tr>
-</thead><tbody>
-{% for day in days %}
-{% for index in range(periods|length) %}
-{% if index == 3 %}<tr class="break-row"><td colspan="14">P R E M I È R E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
-{% if index == 6 %}<tr class="break-row"><td colspan="14">D E U X I È M E &nbsp;&nbsp; P A U S E</td></tr>{% endif %}
-<tr>{% if index == 0 %}<th class="day" rowspan="{{ periods|length + 2 }}">{{ day.upper() }}</th>{% endif %}<td class="period">{{ index + 1 }}H/ {{ periods[index][0] }}–{{ periods[index][1] }}</td>{% for item in group if item %}{% set entry = item.grid[day][index] %}<td>{% if entry %}<span class="subject">{{ entry.course.subject.name }}</span>{% endif %}</td><td>{% if entry %}<span class="class-code">{{ entry.course.school_class.code or entry.course.school_class.name }}</span>{% endif %}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td></td><td></td>{% endfor %}</tr>
+<div class="service-page">
+  <table class="service-table">
+    <thead>
+      <tr>
+        <th class="model-title" colspan="14">SERVICE DES PROFESSEURS</th>
+      </tr>
+      <tr>
+        <th class="school">L.T. DE TIBATI<br><small>{{ school_year }}</small></th>
+        <th class="hours">HEURES</th>
+        {% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}
+      </tr>
+      <tr>
+        <th class="day" rowspan="2">JOURS</th>
+        <th class="sub-head"></th>
+        {% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<th class="sub-head"></th><th class="sub-head"></th>{% endfor %}
+      </tr>
+      <tr>
+        <th class="sub-head">HEURES</th>
+        {% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<th class="sub-head"></th><th class="sub-head"></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for day in days %}
+      {% for index in range(periods|length) %}
+        {% if index == 3 %}<tr class="break-row"><td colspan="14">P R E M I È R E &nbsp; P A U S E</td></tr>{% endif %}
+        {% if index == 6 %}<tr class="break-row"><td colspan="14">D E U X I È M E &nbsp; P A U S E</td></tr>{% endif %}
+        <tr>
+          {% if index == 0 %}<th class="day" rowspan="{{ periods|length + 2 }}">{% if day == 'Lundi' %}LUNDI / MONDAY{% elif day == 'Mardi' %}MARDI / TUESDAY{% elif day == 'Mercredi' %}MERCREDI / WEDNESDAY{% elif day == 'Jeudi' %}JEUDI / THURSDAY{% elif day == 'Vendredi' %}VENDREDI / FRIDAY{% else %}{{ day.upper() }}{% endif %}</th>{% endif %}
+          <td class="period">{{ index + 1 }}H/ {{ periods[index][0] }} {{ periods[index][1] }}</td>
+          {% for item in group if item %}
+            {% set entry = item.grid[day][index] %}
+            <td>{% if entry %}<span class="subject">{{ entry.course.subject.name }}</span>{% endif %}</td>
+            <td>{% if entry %}<span class="class-code">{{ entry.course.school_class.code or entry.course.school_class.name }}</span>{% endif %}</td>
+          {% endfor %}
+          {% for _ in range(6 - (group|select|list|length)) %}<td></td><td></td>{% endfor %}
+        </tr>
+      {% endfor %}
+    {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="summary">
+        <th colspan="2">HEURES DUES</th>
+        {% for item in group if item %}<td colspan="2">{{ item.hours_due }}</td>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}
+      </tr>
+      <tr class="summary">
+        <th colspan="2">HEURES FAITES</th>
+        {% for item in group if item %}<td colspan="2">{{ item.hours_done }}</td>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}
+      </tr>
+      <tr class="summary">
+        <th colspan="2">DIFFÉRENCE + ou -</th>
+        {% for item in group if item %}<td colspan="2">{{ item.hours_done - item.hours_due }}</td>{% endfor %}
+        {% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+<div class="card-ltt text-center text-muted">Aucun enseignant accessible.</div>
 {% endfor %}
-{% endfor %}
-</tbody><tfoot>
-<tr class="summary"><th colspan="2">HEURES DUES</th>{% for item in group if item %}<td colspan="2">{{ item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
-<tr class="summary"><th colspan="2">HEURES FAITES</th>{% for item in group if item %}<td colspan="2">{{ item.hours_done }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
-<tr class="summary"><th colspan="2">DIFFÉRENCE + ou -</th>{% for item in group if item %}<td colspan="2">{{ item.hours_done - item.hours_due }}</td>{% endfor %}{% for _ in range(6 - (group|select|list|length)) %}<td colspan="2"></td>{% endfor %}</tr>
-</tfoot></table></div>
-{% else %}<div class="card-ltt text-center text-muted">Aucun enseignant accessible.</div>{% endfor %}
 {% endblock %}
