@@ -1352,7 +1352,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
     teachers = teachers_q.all()
     teacher_ids = [t.id for t in teachers]
-    courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids)) if teacher_ids else None
+    courses_q = (Course.query.join(SchoolClass).join(ScheduleEntry)
+                 .filter(Course.teacher_id.in_(teacher_ids)).distinct()) if teacher_ids else None
     if courses_q is not None and department_id:
         courses_q = courses_q.filter(SchoolClass.department_id == department_id)
     if courses_q is not None and class_ids:

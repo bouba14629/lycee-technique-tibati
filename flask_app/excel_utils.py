@@ -213,7 +213,7 @@ def indicators_workbook(rows, totals, term, custom_types=None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Indicateurs"
-    widths = [24, 14, 20, 8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7, 10, 10, 10] + [9, 9, 7] * len(custom_types)
+    widths = [24, 14, 20, 12, 8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7, 8, 8, 8, 10, 10, 10, 10, 10, 10] + [9, 9, 7] * len(custom_types)
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     _header(ws, 1, len(widths), f"SYNTHÈSE — INDICATEURS PÉDAGOGIQUES — {term}")
@@ -224,14 +224,17 @@ def indicators_workbook(rows, totals, term, custom_types=None):
         ("ENSEIGNANT", 1, 1),
         ("CODE / CLASSE", 2, 2),
         ("MATIÈRE", 3, 3),
-        ("COUVERTURE DES HEURES", 4, 6),
-        ("COUVERTURE DES PROGRAMMES", 7, 9),
-        ("LEÇONS DIGITALISÉES", 10, 12),
-        ("TRAVAUX PRATIQUES", 13, 15),
-        ("TP DIGITALISÉS", 16, 18),
-        ("MOYENNE GÉNÉRALE PAR GENRE", 19, 21),
+        ("DATE", 4, 4),
+        ("COUVERTURE DES HEURES", 5, 7),
+        ("COUVERTURE DES PROGRAMMES", 8, 10),
+        ("LEÇONS DIGITALISÉES", 11, 13),
+        ("TRAVAUX PRATIQUES", 14, 16),
+        ("TP DIGITALISÉS", 17, 19),
+        ("MOYENNES ≥ 10 PAR GENRE", 20, 22),
+        ("TAUX DE RÉUSSITE PAR GENRE", 23, 25),
+        ("MOYENNE GÉNÉRALE PAR GENRE", 26, 28),
     ]
-    col = 22
+    col = 29
     for ct in custom_types:
         groups.append((ct.label.upper(), col, col + 2))
         col += 3
@@ -243,12 +246,14 @@ def indicators_workbook(rows, totals, term, custom_types=None):
         cell.fill = PatternFill("solid", fgColor=CREAM)
         cell.alignment = Alignment(horizontal="center")
     r += 1
-    headers = ["Enseignant", "Code / Classe", "Matière",
+    headers = ["Enseignant", "Code / Classe", "Matière", "Date",
                "Dues", "Faites", "%",
                "Prévues", "Faites", "%",
                "Prévues", "Faites", "%",
                "Prévus", "Réalisés", "%",
                "Prévus", "Réalisés", "%",
+               "Filles", "Garçons", "Total",
+               "Filles", "Garçons", "Total",
                "Filles", "Garçons", "Total"]
     for ct in custom_types:
         headers += [ct.unit_planned, ct.unit_done, "%"]
@@ -261,12 +266,20 @@ def indicators_workbook(rows, totals, term, custom_types=None):
     r += 1
     for row in rows:
         ind = row["ind"]
-        vals = [row['teacher'].user.full_name, f"{row['course'].school_class.code or 'Sans code'} — {row['course'].school_class.name}", row['course'].subject.name,
+        updated_at = getattr(ind, "updated_at", None)
+        vals = [row['teacher'].user.full_name, row['course'].school_class.code or "", row['course'].subject.name,
+                updated_at.strftime("%d/%m/%Y") if updated_at else "",
                 ind.hours_due, ind.hours_done, row["pct_hours"],
                 ind.lessons_planned, ind.lessons_done, row["pct_lessons"],
                 ind.digital_lessons_planned, ind.digital_lessons_done, row["pct_digital_lessons"],
                 ind.tp_planned, ind.tp_done, row["pct_tp"],
                 ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"],
+                row.get("gender_metrics", {}).get("successful", {}).get("Filles"),
+                row.get("gender_metrics", {}).get("successful", {}).get("Garçons"),
+                row.get("gender_metrics", {}).get("successful", {}).get("Total"),
+                row.get("gender_metrics", {}).get("rates", {}).get("Filles"),
+                row.get("gender_metrics", {}).get("rates", {}).get("Garçons"),
+                row.get("gender_metrics", {}).get("rates", {}).get("Total"),
                 row.get("gender_metrics", {}).get("averages", {}).get("Filles"),
                 row.get("gender_metrics", {}).get("averages", {}).get("Garçons"),
                 row.get("gender_metrics", {}).get("averages", {}).get("Total")]
@@ -279,13 +292,13 @@ def indicators_workbook(rows, totals, term, custom_types=None):
             c.font = Font(size=9)
         r += 1
     # ligne total
-    total_vals = ["TOTAL", "", "",
+    total_vals = ["TOTAL", "", "", "",
                   totals["hours_due"], totals["hours_done"], totals["pct_hours"],
                   totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"],
                   totals["digital_lessons_planned"], totals["digital_lessons_done"], totals["pct_digital_lessons"],
                   totals["tp_planned"], totals["tp_done"], totals["pct_tp"],
                   totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"],
-                  "—", "—", "—"]
+                  "—", "—", "—", "—", "—", "—", "—", "—", "—"]
     total_vals += ["", "", ""] * len(custom_types)
     for i, v in enumerate(total_vals, start=1):
         c = ws.cell(row=r, column=i, value=v)
