@@ -114,10 +114,7 @@
 {% block content %}
 <div class="no-print d-flex justify-content-between align-items-center mb-2">
   <span class="text-muted">Modèle importé : grille hebdomadaire mise à jour depuis les emplois du temps.</span>
-  <div class="d-flex gap-2">
-    <a class="btn-ltt-navy" href="{{ url_for('censeur_teacher_service_export_xlsx') }}"><i class="bi bi-file-earmark-excel"></i> Exporter en Excel</a>
-    <button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button>
-  </div>
+  <button class="btn-ltt-navy" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer le service</button>
 </div>
 
 {% for group in services|batch(6, none) %}
@@ -125,18 +122,16 @@
   <table class="service-table">
     <thead>
       <tr>
-        <th class="school">L.T. DE TIBATI<br><small>GTHS TIBATI</small></th>
-        <th class="model-title" colspan="11">SERVICE DES PROFESSEURS</th>
-        <th class="sub-head">Année scolaire</th>
-        <th class="sub-head">{{ school_year }}</th>
+        <th class="model-title" colspan="14">SERVICE DES PROFESSEURS</th>
       </tr>
       <tr>
-        <th class="day" rowspan="3">JOURS</th>
+        <th class="school">L.T. DE TIBATI<br><small>{{ school_year }}</small></th>
         <th class="hours">HEURES</th>
         {% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}
         {% for _ in range(6 - (group|select|list|length)) %}<th colspan="2"></th>{% endfor %}
       </tr>
       <tr>
+        <th class="day" rowspan="2">JOURS</th>
         <th class="sub-head"></th>
         {% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}
         {% for _ in range(6 - (group|select|list|length)) %}<th class="sub-head"></th><th class="sub-head"></th>{% endfor %}

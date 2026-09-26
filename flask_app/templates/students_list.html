@@ -20,10 +20,14 @@
   </form>
   <table class="table-ltt">
     <thead><tr>
+      {% if current_user.role == 'directeur' %}
+      <th>Matricule</th><th>Nom (A-Z)</th><th>Date de naissance</th><th>Lieu de naissance</th>
+      {% else %}
       {{ sortable_th('Matricule', 'matricule', sort, sort_dir) }}
       {{ sortable_th('Nom', 'last_name', sort, sort_dir) }}
       {{ sortable_th('Date de naissance', 'dob', sort, sort_dir) }}
       {{ sortable_th('Lieu de naissance', 'birth_place', sort, sort_dir) }}
+      {% endif %}
       <th>Classe</th><th>Statut</th><th></th>
     </tr></thead>
     <tbody>

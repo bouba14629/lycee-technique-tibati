@@ -599,6 +599,9 @@ def students_list():
         q = q.filter(db.or_(Student.first_name.ilike(like), Student.last_name.ilike(like), Student.matricule.ilike(like)))
     sort = request.args.get("sort", "last_name")
     sort_dir = request.args.get("dir", "asc")
+    if session.get("role") == "directeur":
+        sort = "last_name"
+        sort_dir = "asc"
     if sort == "last_name" and sort_dir == "asc":
         students = q.order_by(db.func.lower(Student.last_name), db.func.lower(Student.first_name)).all()
     else:

@@ -30,7 +30,11 @@ def _subject_compatible_with_class(subject, school_class):
     return subject.department_id is None or subject.department_id == school_class.department_id
 
 
-def _teacher_service_data(user):
+@app.route("/censeur/service-des-professeurs")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_teacher_service():
+    """Grille du Service des Professeurs conforme au modèle importé, alimentée par les créneaux."""
+    user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     teachers_q = Teacher.query.join(User).order_by(User.full_name)
     if user.role == "censeur" and user.section_id:
@@ -41,18 +45,30 @@ def _teacher_service_data(user):
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     if user.role == "censeur" and user.section_id is None:
-        entries_q = entries_q.filter(Course.subject.has(and_(
-            Subject.category.in_(("Enseignements Généraux", "Enseignements Divers")),
-            ~Subject.name.ilike("%travail manuel%"),
-        )))
+        entries_q = entries_q.filter(
+            Course.subject.has(and_(
+                Subject.category.in_(("Enseignements Généraux", "Enseignements Divers")),
+                ~Subject.name.ilike("%travail manuel%"),
+            ))
+        )
     entries = entries_q.all()
     if user.role == "censeur" and user.section_id is None:
         allowed_teacher_ids = {entry.course.teacher_id for entry in entries}
         teachers = [teacher for teacher in teachers if teacher.id in allowed_teacher_ids]
+        teacher_ids = [teacher.id for teacher in teachers]
+    def duration_hours(start_time, end_time):
+        try:
+            start_minutes = int(start_time[:2]) * 60 + int(start_time[3:5])
+            end_minutes = int(end_time[:2]) * 60 + int(end_time[3:5])
+            return max(0, (end_minutes - start_minutes) / 60)
+        except (TypeError, ValueError, IndexError):
+            return 0
     by_teacher = {teacher.id: {day: [None] * len(OFFICIAL_PERIODS) for day in DAYS[:5]} for teacher in teachers}
+    # Le modèle compte les cellules occupées par une matière, pas la durée
+    # théorique du créneau ni le nombre de ScheduleEntry distincts.
     hours_done = {teacher.id: 0 for teacher in teachers}
     for entry in entries:
-        if entry.course.teacher_id not in by_teacher or entry.day not in by_teacher[entry.course.teacher_id]:
+        if entry.day not in by_teacher[entry.course.teacher_id]:
             continue
         for index, (start_time, end_time) in enumerate(OFFICIAL_PERIODS):
             if entry.start_time < end_time and start_time < entry.end_time:
@@ -64,26 +80,9 @@ def _teacher_service_data(user):
                  "hours_done": round(hours_done[teacher.id], 2), "hours_due": teacher.hours_due or 0}
                 for teacher in teachers]
     services.sort(key=lambda item: item["teacher"].user.full_name.upper())
-    return services
-
-
-@app.route("/censeur/service-des-professeurs")
-@roles_required("censeur", "censeur_crm", "directeur")
-def censeur_teacher_service():
-    user = User.query.get(session["user_id"])
-    return render_template("censeur_teacher_service.html", services=_teacher_service_data(user),
-                           days=DAYS[:5], periods=OFFICIAL_PERIODS, school_year=get_current_school_year())
-
-
-@app.route("/censeur/service-des-professeurs/export.xlsx")
-@roles_required("censeur", "censeur_crm", "directeur")
-def censeur_teacher_service_export_xlsx():
-    from flask import send_file
-    from excel_utils import teacher_service_workbook
-    user = User.query.get(session["user_id"])
-    workbook = teacher_service_workbook(_teacher_service_data(user), DAYS[:5], OFFICIAL_PERIODS, get_current_school_year())
-    return send_file(workbook, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                     as_attachment=True, download_name="service_des_professeurs.xlsx")
+    return render_template("censeur_teacher_service.html", services=services,
+                           days=DAYS[:5], periods=OFFICIAL_PERIODS,
+                           school_year=get_current_school_year())
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
