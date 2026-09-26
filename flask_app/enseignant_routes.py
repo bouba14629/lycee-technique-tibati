@@ -160,7 +160,11 @@ def teacher_grades(course_id):
         flash(f"{count} notes enregistrées.", "success")
         return redirect(url_for("teacher_grades", course_id=course_id, term=term))
 
-    students = sorted(course.school_class.students, key=lambda s: (s.last_name, s.first_name))
+    students = sorted(course.school_class.students, key=lambda s: (
+        (s.last_name or "").strip().casefold(),
+        (s.first_name or "").strip().casefold(),
+        s.id,
+    ))
     devoirs = {}
     seq_a_grades, seq_b_grades = {}, {}
     for g in Grade.query.filter_by(course_id=course.id, term=term).all():
@@ -232,7 +236,11 @@ def teacher_attendance(course_id):
         flash(f"Appel enregistré ({count} absence(s)/retard(s)).", "success")
         return redirect(url_for("teacher_attendance", course_id=course_id))
 
-    students = sorted(course.school_class.students, key=lambda s: (s.last_name, s.first_name))
+    students = sorted(course.school_class.students, key=lambda s: (
+        (s.last_name or "").strip().casefold(),
+        (s.first_name or "").strip().casefold(),
+        s.id,
+    ))
     return render_template("teacher_attendance.html", course=course, students=students,
                            today=date.today().isoformat(), scheduled_day=scheduled_day,
                            scheduled_start=scheduled_start, scheduled_end=scheduled_end,
@@ -317,7 +325,11 @@ def teacher_attendance_sheet(course_id):
     if course.teacher_id != teacher.id:
         abort(403)
     session_date = request.args.get("date") or date.today().isoformat()
-    students = sorted(course.school_class.students, key=lambda s: (s.last_name, s.first_name))
+    students = sorted(course.school_class.students, key=lambda s: (
+        (s.last_name or "").strip().casefold(),
+        (s.first_name or "").strip().casefold(),
+        s.id,
+    ))
     d = date.fromisoformat(session_date)
     recs = Attendance.query.filter_by(course_id=course.id, date=d).all()
     records = {r.student_id: r for r in recs}
@@ -340,7 +352,11 @@ def teacher_attendance_sheet_pdf(course_id):
     if course.teacher_id != teacher.id:
         abort(403)
     session_date = request.args.get("date") or date.today().isoformat()
-    students = sorted(course.school_class.students, key=lambda s: (s.last_name, s.first_name))
+    students = sorted(course.school_class.students, key=lambda s: (
+        (s.last_name or "").strip().casefold(),
+        (s.first_name or "").strip().casefold(),
+        s.id,
+    ))
     d = date.fromisoformat(session_date)
     recs = Attendance.query.filter_by(course_id=course.id, date=d).all()
     records = {r.student_id: r for r in recs}

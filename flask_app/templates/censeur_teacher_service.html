@@ -5,10 +5,19 @@
 {% block extra_css %}
 <style>
 @media print {
-  @page { size: landscape; margin: 5mm; }
+  @page { size: A4 landscape; margin: 4mm; }
   .no-print { display: none !important; }
-  .service-page { break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+  .service-page { height: 190mm; max-height: 190mm; margin: 0; overflow: hidden; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
   .service-page:last-child { break-after: auto; page-break-after: auto; }
+  .service-table { height: 188mm; max-height: 188mm; }
+  .service-table th, .service-table td { padding: 0; line-height: .9; }
+  .service-table .model-title { height: 11px; font-size: 7px; }
+  .service-table .teacher-head { height: 12px; font-size: 6px; }
+  .service-table .sub-head { height: 9px; font-size: 4.7px; }
+  .service-table .period { height: 10px; font-size: 5.4px; }
+  .service-table .subject, .service-table .class-code { font-size: 5.3px; line-height: .9; }
+  .service-table .break-row td { height: 10px; font-size: 5.2px; }
+  .service-table .summary th, .service-table .summary td { height: 10px; font-size: 5.4px; }
 }
 .service-page { margin-bottom: 20px; break-inside: avoid; page-break-inside: avoid; }
 .service-table {
