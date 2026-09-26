@@ -2,6 +2,15 @@
 {% block title %}Saisie des notes{% endblock %}
 {% block page_title %}Saisie des notes — {{ course.subject.name }}{% endblock %}
 {% block page_subtitle %}{{ course.school_class.name }}{% endblock %}
+{% block extra_css %}
+<style>
+  .alphabet-index { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:0 0 14px; }
+  .alphabet-index .index-label { color:var(--navy-800); font-size:12px; font-weight:700; margin-right:4px; }
+  .alphabet-index button { background:#fff; border:1px solid rgba(11,37,69,.2); border-radius:6px; color:var(--navy-800); font-size:12px; font-weight:700; min-width:28px; padding:4px 7px; }
+  .alphabet-index button:hover, .alphabet-index button.is-active { background:var(--navy-900); color:#fff; }
+  .alphabet-index button:focus-visible { outline:3px solid rgba(201,162,39,.45); outline-offset:2px; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card-ltt">
   <form method="GET" class="d-flex gap-2 mb-3 align-items-center">
@@ -33,6 +42,12 @@
       </div>
       <div class="col-md-3"><label>Date</label><input type="date" name="date" class="form-control" value="{{ now.strftime('%Y-%m-%d') }}"></div>
     </div>
+    <div class="alphabet-index" data-alphabet-index data-target="#grades-students-body" aria-label="Filtrer les élèves par première lettre du nom">
+      <span class="index-label">Nom :</span>
+      <button type="button" class="is-active" data-letter="" aria-pressed="true">Tous</button>
+      {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}<button type="button" data-letter="{{ letter }}" aria-pressed="false">{{ letter }}</button>{% endfor %}
+      <span class="text-muted" data-alphabet-count style="font-size:11px; margin-left:4px;"></span>
+    </div>
     <table class="table-ltt">
       <thead><tr><th>
         Élève
@@ -50,9 +65,9 @@
         <th class="text-muted" style="font-size:11px;">Éval. {{ seq_b }}</th>
         <th class="text-muted" style="font-size:11px;">Appréciation (auto)</th>
       </tr></thead>
-      <tbody>
+      <tbody id="grades-students-body">
       {% for s in students %}
-        <tr>
+        <tr data-student-last-name="{{ s.last_name }}">
           <td>{{ s.full_name }}</td>
           <td class="text-muted"><code>{{ s.matricule }}</code></td>
           <td class="text-muted" style="font-size:11.5px;">{{ s.dob.strftime('%d/%m/%Y') if s.dob else '—' }}{{ ' à ' + s.birth_place if s.birth_place else '' }}</td>
@@ -69,4 +84,34 @@
     <span class="text-muted ms-2" style="font-size:12px;">La Note Trimestrielle n'est jamais saisie directement : elle se calcule automatiquement — la moyenne des deux évaluations si les deux sont saisies, ou la seule évaluation renseignée si une seule l'est. L'appréciation est calculée automatiquement à partir de cette moyenne et apparaît telle quelle sur le bulletin.</span>
   </form>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  const index = document.querySelector('[data-alphabet-index]');
+  const body = document.querySelector('#grades-students-body');
+  if (!index || !body) return;
+  const rows = Array.from(body.querySelectorAll('tr[data-student-last-name]'));
+  const buttons = Array.from(index.querySelectorAll('button[data-letter]'));
+  const count = index.querySelector('[data-alphabet-count]');
+  const normalize = value => (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  const apply = letter => {
+    let visible = 0;
+    rows.forEach(row => {
+      const first = normalize(row.dataset.studentLastName).charAt(0);
+      const show = !letter || first === letter;
+      row.hidden = !show;
+      if (show) visible += 1;
+    });
+    buttons.forEach(button => {
+      const active = button.dataset.letter === letter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (count) count.textContent = `${visible} élève${visible > 1 ? 's' : ''}`;
+  };
+  buttons.forEach(button => button.addEventListener('click', () => apply(button.dataset.letter)));
+  apply('');
+}());
+</script>
 {% endblock %}

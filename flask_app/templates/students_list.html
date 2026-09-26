@@ -2,6 +2,15 @@
 {% from "_macros.html" import sortable_th %}
 {% block title %}Élèves{% endblock %}
 {% block page_title %}Dossiers des élèves{% endblock %}
+{% block extra_css %}
+<style>
+  .alphabet-index { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:0 0 14px; }
+  .alphabet-index .index-label { color:var(--navy-800); font-size:12px; font-weight:700; margin-right:4px; }
+  .alphabet-index button { background:#fff; border:1px solid rgba(11,37,69,.2); border-radius:6px; color:var(--navy-800); font-size:12px; font-weight:700; min-width:28px; padding:4px 7px; }
+  .alphabet-index button:hover, .alphabet-index button.is-active { background:var(--navy-900); color:#fff; }
+  .alphabet-index button:focus-visible { outline:3px solid rgba(201,162,39,.45); outline-offset:2px; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="card-ltt">
   <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
@@ -18,6 +27,12 @@
     <a href="{{ url_for('student_enroll') }}" class="btn-ltt-gold ms-auto"><i class="bi bi-clipboard2-plus-fill"></i> Nouvelle inscription</a>
     {% endif %}
   </form>
+  {% if current_user.role == 'directeur' %}<div class="alphabet-index" data-alphabet-index data-target="#students-list-body" aria-label="Filtrer les élèves par première lettre du nom">
+    <span class="index-label">Nom :</span>
+    <button type="button" class="is-active" data-letter="" aria-pressed="true">Tous</button>
+    {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}<button type="button" data-letter="{{ letter }}" aria-pressed="false">{{ letter }}</button>{% endfor %}
+    <span class="text-muted" data-alphabet-count style="font-size:11px; margin-left:4px;"></span>
+  </div>{% endif %}
   <table class="table-ltt">
     <thead><tr>
       {% if current_user.role == 'directeur' %}
@@ -30,9 +45,9 @@
       {% endif %}
       <th>Classe</th><th>Statut</th><th></th>
     </tr></thead>
-    <tbody>
+    <tbody id="students-list-body">
     {% for s in students %}
-      <tr>
+      <tr data-student-last-name="{{ s.last_name }}">
         <td><code>{{ s.matricule }}</code></td>
         <td class="fw-semibold">{{ s.full_name }}</td>
         <td class="text-muted">{{ s.dob.strftime('%d/%m/%Y') if s.dob else '—' }}</td>
@@ -47,4 +62,36 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
+{% block extra_js %}
+{% if current_user.role == 'directeur' %}
+<script>
+(function () {
+  const index = document.querySelector('[data-alphabet-index]');
+  const body = document.querySelector('#students-list-body');
+  if (!index || !body) return;
+  const rows = Array.from(body.querySelectorAll('tr[data-student-last-name]'));
+  const buttons = Array.from(index.querySelectorAll('button[data-letter]'));
+  const count = index.querySelector('[data-alphabet-count]');
+  const normalize = value => (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  const apply = letter => {
+    let visible = 0;
+    rows.forEach(row => {
+      const first = normalize(row.dataset.studentLastName).charAt(0);
+      const show = !letter || first === letter;
+      row.hidden = !show;
+      if (show) visible += 1;
+    });
+    buttons.forEach(button => {
+      const active = button.dataset.letter === letter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (count) count.textContent = `${visible} élève${visible > 1 ? 's' : ''}`;
+  };
+  buttons.forEach(button => button.addEventListener('click', () => apply(button.dataset.letter)));
+  apply('');
+}());
+</script>
+{% endif %}
 {% endblock %}
