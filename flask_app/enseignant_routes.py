@@ -84,6 +84,9 @@ def teacher_grades(course_id):
     if course.teacher_id != teacher.id:
         abort(403)
     term = request.args.get("term", TERMS[0])
+    student_sort = request.args.get("student_sort", "asc")
+    if student_sort not in {"asc", "desc"}:
+        student_sort = "asc"
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
 
     if request.method == "POST":
@@ -164,7 +167,7 @@ def teacher_grades(course_id):
         (s.last_name or "").strip().casefold(),
         (s.first_name or "").strip().casefold(),
         s.id,
-    ))
+    ), reverse=student_sort == "desc")
     devoirs = {}
     seq_a_grades, seq_b_grades = {}, {}
     for g in Grade.query.filter_by(course_id=course.id, term=term).all():
@@ -190,7 +193,8 @@ def teacher_grades(course_id):
                             terms=TERMS, seq_a=seq_a, seq_b=seq_b, notes_trim_preview=notes_trim_preview,
                             seq_a_grades=seq_a_grades, seq_b_grades=seq_b_grades,
                             auto_appreciations=auto_appreciations, course_class_avg=course_class_avg,
-                            nb_evaluated=len(class_avgs), planned_assessments=planned_assessments)
+                            nb_evaluated=len(class_avgs), planned_assessments=planned_assessments,
+                            student_sort=student_sort)
 
 
 @app.route("/enseignant/appel/<int:course_id>", methods=["GET", "POST"])

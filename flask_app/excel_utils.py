@@ -609,3 +609,93 @@ def demographics_workbook(demographics, title="Effectifs par genre"):
     wb.save(output)
     output.seek(0)
     return output
+
+
+def teacher_service_workbook(services, days, periods, school_year):
+    """Export Excel de la grille du Service des Professeurs, synchronisée avec les créneaux."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Service professeurs"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.freeze_panes = "C4"
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=2 + 2 * len(services))
+    ws.cell(1, 1, "SERVICE DES PROFESSEURS").font = Font(bold=True, size=14, color="FFFFFF")
+    ws.cell(1, 1).fill = PatternFill("solid", fgColor=NAVY)
+    ws.cell(1, 1).alignment = Alignment(horizontal="center")
+    ws.cell(2, 1, "L.T. DE TIBATI")
+    ws.cell(2, 2, f"Année scolaire {school_year}")
+    for cell in ws[2]:
+        cell.font = Font(bold=True, size=10)
+    ws.cell(3, 1, "JOURS")
+    ws.cell(3, 2, "HEURES")
+    for idx, item in enumerate(services):
+        i = 3 + 2 * idx
+        c1 = ws.cell(2, i, item["teacher"].user.full_name)
+        c1.font = Font(bold=True, size=9)
+        c1.alignment = Alignment(horizontal="center")
+        ws.merge_cells(start_row=2, start_column=i, end_row=2, end_column=i+1)
+        ws.cell(3, i, "DISCIPLINE")
+        ws.cell(3, i+1, "CLASSE")
+    for row in ws[3]:
+        row.font = Font(bold=True, size=8, color=NAVY)
+        row.fill = PatternFill("solid", fgColor=CREAM)
+        row.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        row.border = BORDER
+    r = 4
+    for day in days:
+        day_start = r
+        for index, period in enumerate(periods):
+            if index == 3:
+                ws.cell(r, 2, "PREMIÈRE PAUSE")
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=2 + 2 * len(services))
+                r += 1
+            if index == 6:
+                ws.cell(r, 2, "DEUXIÈME PAUSE")
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=2 + 2 * len(services))
+                r += 1
+            ws.cell(r, 2, f"{index+1}H/ {period[0]} {period[1]}")
+            for idx, item in enumerate(services):
+                i = 3 + 2 * idx
+                entry = item["grid"].get(day, [None] * len(periods))[index]
+                ws.cell(r, i, entry.course.subject.name if entry else "")
+                ws.cell(r, i+1, (entry.course.school_class.code or entry.course.school_class.name) if entry else "")
+            r += 1
+        ws.cell(day_start, 1, day.upper())
+        ws.merge_cells(start_row=day_start, start_column=1, end_row=r-1, end_column=1)
+    for idx, item in enumerate(services):
+        i = 3 + 2 * idx
+        ws.cell(r, 1, "HEURES DUES") if i == 3 else None
+        ws.cell(r, i, item["hours_due"])
+        ws.merge_cells(start_row=r, start_column=i, end_row=r, end_column=i+1)
+    r += 1
+    for idx, item in enumerate(services):
+        i = 3 + 2 * idx
+        ws.cell(r, 1, "HEURES FAITES") if i == 3 else None
+        ws.cell(r, i, item["hours_done"])
+        ws.merge_cells(start_row=r, start_column=i, end_row=r, end_column=i+1)
+    r += 1
+    for idx, item in enumerate(services):
+        i = 3 + 2 * idx
+        ws.cell(r, 1, "DIFFÉRENCE + ou -") if i == 3 else None
+        ws.cell(r, i, item["hours_done"] - item["hours_due"])
+        ws.merge_cells(start_row=r, start_column=i, end_row=r, end_column=i+1)
+    for row in ws.iter_rows(min_row=4, max_row=r, min_col=1, max_col=2 + 2 * len(services)):
+        for cell in row:
+            cell.border = BORDER
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            if cell.row in {r-2, r-1, r} or cell.value in {"PREMIÈRE PAUSE", "DEUXIÈME PAUSE"}:
+                cell.fill = PatternFill("solid", fgColor="D9D9D9")
+                cell.font = Font(bold=True, size=8)
+    for col in range(1, 3 + 2 * len(services)):
+        ws.column_dimensions[get_column_letter(col)].width = 13 if col > 2 else (18 if col == 2 else 14)
+    ws.print_title_rows = "1:3"
+    ws.print_area = f"A1:{get_column_letter(2 + 2 * len(services))}{r}"
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    wb_io = BytesIO()
+    wb.save(wb_io)
+    wb_io.seek(0)
+    return wb_io

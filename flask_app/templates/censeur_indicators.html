@@ -209,11 +209,11 @@ function populateGenericIndicator(select) {
         <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong></td>
         <td>{{ row.course.subject.name }}</td>
         <td>{{ row.ind.updated_at.strftime("%d/%m/%Y") if row.ind.updated_at else "—" }}</td>
-        <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ row.pct_hours if row.pct_hours is not none else '—' }}%</td>
-        <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ row.pct_lessons if row.pct_lessons is not none else '—' }}%</td>
-        <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ row.pct_digital_lessons if row.pct_digital_lessons is not none else '—' }}%</td>
-        <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ row.pct_tp if row.pct_tp is not none else '—' }}%</td>
-        <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ row.pct_digital_tp if row.pct_digital_tp is not none else '—' }}%</td>
+        <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ '-' if row.ind.hours_due == 0 and row.ind.hours_done == 0 else (row.pct_hours if row.pct_hours is not none else '—') ~ '%' }}</td>
+        <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ '-' if row.ind.lessons_planned == 0 and row.ind.lessons_done == 0 else (row.pct_lessons if row.pct_lessons is not none else '—') ~ '%' }}</td>
+        <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ '-' if row.ind.digital_lessons_planned == 0 and row.ind.digital_lessons_done == 0 else (row.pct_digital_lessons if row.pct_digital_lessons is not none else '—') ~ '%' }}</td>
+        <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ '-' if row.ind.tp_planned == 0 and row.ind.tp_done == 0 else (row.pct_tp if row.pct_tp is not none else '—') ~ '%' }}</td>
+        <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ '-' if row.ind.digital_tp_planned == 0 and row.ind.digital_tp_done == 0 else (row.pct_digital_tp if row.pct_digital_tp is not none else '—') ~ '%' }}</td>
         <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
         <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
         <td>{{ row.gender_metrics.averages.Filles if row.gender_metrics.averages.Filles is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Garçons if row.gender_metrics.averages.Garçons is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Total if row.gender_metrics.averages.Total is not none else '—' }}</td>
@@ -243,11 +243,11 @@ function populateGenericIndicator(select) {
     <tfoot>
       <tr class="fw-bold" style="background:var(--cream);">
         <td colspan="4">TOTAL</td>
-        <td>{{ totals.hours_due }}</td><td>{{ totals.hours_done }}</td><td>{{ totals.pct_hours if totals.pct_hours is not none else '—' }}%</td>
-        <td>{{ totals.lessons_planned }}</td><td>{{ totals.lessons_done }}</td><td>{{ totals.pct_lessons if totals.pct_lessons is not none else '—' }}%</td>
-        <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—' }}%</td>
-        <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ totals.pct_tp if totals.pct_tp is not none else '—' }}%</td>
-        <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ totals.pct_digital_tp if totals.pct_digital_tp is not none else '—' }}%</td>
+        <td>{{ totals.hours_due }}</td><td>{{ totals.hours_done }}</td><td>{{ '-' if totals.hours_due == 0 and totals.hours_done == 0 else (totals.pct_hours if totals.pct_hours is not none else '—') ~ '%' }}</td>
+        <td>{{ totals.lessons_planned }}</td><td>{{ totals.lessons_done }}</td><td>{{ '-' if totals.lessons_planned == 0 and totals.lessons_done == 0 else (totals.pct_lessons if totals.pct_lessons is not none else '—') ~ '%' }}</td>
+        <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ '-' if totals.digital_lessons_planned == 0 and totals.digital_lessons_done == 0 else (totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—') ~ '%' }}</td>
+        <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ '-' if totals.tp_planned == 0 and totals.tp_done == 0 else (totals.pct_tp if totals.pct_tp is not none else '—') ~ '%' }}</td>
+        <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ '-' if totals.digital_tp_planned == 0 and totals.digital_tp_done == 0 else (totals.pct_digital_tp if totals.pct_digital_tp is not none else '—') ~ '%' }}</td>
         <td colspan="3">—</td>
         {% for ct in custom_types %}<td colspan="3"></td>{% endfor %}
         {% if current_user.role in ['censeur', 'conseiller_orientation'] %}<td class="no-print"></td>{% endif %}

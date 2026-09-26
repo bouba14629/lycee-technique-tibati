@@ -34,7 +34,17 @@
       <div class="col-md-3"><label>Date</label><input type="date" name="date" class="form-control" value="{{ now.strftime('%Y-%m-%d') }}"></div>
     </div>
     <table class="table-ltt">
-      <thead><tr><th>Élève</th><th style="width:130px;">Matricule</th><th style="width:150px;">Né(e) le / à</th><th style="width:110px;">Note /20</th>
+      <thead><tr><th>
+        Élève
+        <span class="ms-1" style="white-space:nowrap;">
+          <a href="{{ url_for('teacher_grades', course_id=course.id, term=term, student_sort='asc') }}"
+             class="text-decoration-none {{ 'text-dark' if student_sort == 'asc' else 'text-muted' }}"
+             title="Trier A à Z" aria-label="Trier les élèves de A à Z">▲</a>
+          <a href="{{ url_for('teacher_grades', course_id=course.id, term=term, student_sort='desc') }}"
+             class="text-decoration-none {{ 'text-dark' if student_sort == 'desc' else 'text-muted' }}"
+             title="Trier Z à A" aria-label="Trier les élèves de Z à A">▼</a>
+        </span>
+      </th><th style="width:130px;">Matricule</th><th style="width:150px;">Né(e) le / à</th><th style="width:110px;">Note /20</th>
         <th class="text-muted" style="font-size:11px;">Notes Trim. (auto)</th>
         <th class="text-muted" style="font-size:11px;">Éval. {{ seq_a }}</th>
         <th class="text-muted" style="font-size:11px;">Éval. {{ seq_b }}</th>
