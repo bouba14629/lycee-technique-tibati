@@ -164,8 +164,8 @@ def teacher_grades(course_id):
         return redirect(url_for("teacher_grades", course_id=course_id, term=term))
 
     students = sorted(course.school_class.students, key=lambda s: (
-        (s.last_name or "").strip().casefold(),
         (s.first_name or "").strip().casefold(),
+        (s.last_name or "").strip().casefold(),
         s.id,
     ), reverse=student_sort == "desc")
     devoirs = {}

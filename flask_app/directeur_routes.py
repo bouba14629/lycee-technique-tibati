@@ -600,9 +600,11 @@ def students_list():
     sort = request.args.get("sort", "last_name")
     sort_dir = request.args.get("dir", "asc")
     if session.get("role") == "directeur":
-        sort = "last_name"
+        sort = "first_name"
         sort_dir = "asc"
-    if sort == "last_name" and sort_dir == "asc":
+    if sort == "first_name" and sort_dir == "asc":
+        students = q.order_by(db.func.lower(Student.first_name), db.func.lower(Student.last_name)).all()
+    elif sort == "last_name" and sort_dir == "asc":
         students = q.order_by(db.func.lower(Student.last_name), db.func.lower(Student.first_name)).all()
     else:
         sort_col = {"last_name": Student.last_name, "matricule": Student.matricule,

@@ -54,10 +54,10 @@
         <span class="ms-1" style="white-space:nowrap;">
           <a href="{{ url_for('teacher_grades', course_id=course.id, term=term, student_sort='asc') }}"
              class="text-decoration-none {{ 'text-dark' if student_sort == 'asc' else 'text-muted' }}"
-             title="Trier A à Z" aria-label="Trier les élèves de A à Z">▲</a>
+             title="Trier les prénoms de A à Z" aria-label="Trier les prénoms des élèves de A à Z">▲</a>
           <a href="{{ url_for('teacher_grades', course_id=course.id, term=term, student_sort='desc') }}"
              class="text-decoration-none {{ 'text-dark' if student_sort == 'desc' else 'text-muted' }}"
-             title="Trier Z à A" aria-label="Trier les élèves de Z à A">▼</a>
+             title="Trier les prénoms de Z à A" aria-label="Trier les prénoms des élèves de Z à A">▼</a>
         </span>
       </th><th style="width:130px;">Matricule</th><th style="width:150px;">Né(e) le / à</th><th style="width:110px;">Note /20</th>
         <th class="text-muted" style="font-size:11px;">Notes Trim. (auto)</th>
