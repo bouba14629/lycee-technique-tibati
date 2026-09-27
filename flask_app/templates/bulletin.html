@@ -119,10 +119,10 @@
       <td colspan="3" style="border:1px solid #CFCFCF; vertical-align:top; padding:6px; font-size:10px;">
         <table class="profile-grid" style="width:100%; margin-top:3px;">
           <tr><th colspan="2" style="color:var(--navy-900); font-size:10.5px; text-align:left;">TRAVAIL DE L’ÉLÈVE</th><th colspan="2" style="color:var(--navy-900); font-size:10.5px; text-align:left;">PROFIL DE LA CLASSE</th></tr>
-          <tr><td>Total des points</td><td class="fw-semibold">{{ data.overall_points }}</td><td>Moyenne Générale de la classe</td><td class="fw-semibold">{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
+          <tr><td>Total Points</td><td class="fw-semibold">{{ data.overall_points }}</td><td>Moy.Gén. Classe</td><td class="fw-semibold">{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
           <tr><td>Coefficient</td><td class="fw-semibold">{{ data.overall_coef }}</td><td>Moyenne du premier</td><td class="fw-semibold">{{ data.highest_avg if data.highest_avg is not none else '—' }}</td></tr>
           <tr><td>Moyenne trimestrielle</td><td class="fw-semibold">{{ data.overall_avg if data.overall_avg is not none else '—' }}</td><td>Moyenne du dernier</td><td class="fw-semibold">{{ data.lowest_avg if data.lowest_avg is not none else '—' }}</td></tr>
-          <tr><td>Rang</td><td class="fw-semibold">{{ data.rank if data.rank is not none else '—' }}{{ 'e' if data.rank }}/{{ data.class_size }}</td><td>Moyennes ≥ 10</td><td class="fw-semibold">{{ data.nb_above_10 }}/{{ data.class_size }}</td></tr>
+          <tr><td>Rang</td><td class="fw-semibold">{{ data.rank if data.rank is not none else '—' }}{{ 'e' if data.rank }}/{{ data.class_size }}</td><td>Nombre de Moy.</td><td class="fw-semibold">{{ data.nb_above_10 }}/{{ data.class_size }}</td></tr>
           <tr><td>Éval.{{ data.term_seq_a }}</td><td class="fw-semibold">{{ data.class_eval_a_avg if data.class_eval_a_avg is not none else '—' }}</td><td>Taux de Réussite</td><td class="fw-semibold">{{ data.success_rate if data.success_rate is not none else '—' }}%</td></tr>
           <tr><td>Éval.{{ data.term_seq_b }}</td><td class="fw-semibold">{{ data.class_eval_b_avg if data.class_eval_b_avg is not none else '—' }}</td><td></td><td></td></tr>
         </table>
@@ -194,7 +194,7 @@
         <span style="font-size:9.5px; font-weight:600; color:var(--navy-900);">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span>
       </td>
       <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
-        VISA DU CHEF D'ÉTABLISSEMENT<br><span style="font-size:9px; color:var(--muted);">TIBATI, le ______</span>
+        <span style="font-size:9px; color:var(--muted);">TIBATI, le ______</span><br><strong>LE PROVISEUR</strong>
       </td>
     </tr>
   </table>
