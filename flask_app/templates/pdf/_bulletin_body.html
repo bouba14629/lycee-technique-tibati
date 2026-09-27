@@ -22,7 +22,7 @@
       <div>BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
       <small>SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</small>
     </td>
-    <td class="heading-photo"><div class="photo-box"><img src="{{ student_photo_path or avatar_path }}" /></div></td>
+    <td class="heading-photo"><div class="photo-box">{% if student_photo_path %}<img src="{{ student_photo_path }}" />{% elif avatar_path %}<img src="{{ avatar_path }}" />{% else %}<span>PHOTO</span>{% endif %}</div></td>
   </tr>
 </table>
 
@@ -67,11 +67,11 @@
 
 <table class="profile-table profile-block">
   <tr><th colspan="2">TRAVAIL DE L'ÉLÈVE</th><th colspan="2">PROFIL DE LA CLASSE</th></tr>
-  <tr><td>Moy.Gén. Classe</td><td>{{ data.class_avg if data.class_avg is not none else '—' }}</td><td>Total Points</td><td>{{ data.overall_points }}</td></tr>
+  <tr><td>Total Points</td><td>{{ data.overall_points }}</td><td>Moy.Gén. Classe</td><td>{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
   <tr><td>Coefficient</td><td>{{ data.overall_coef }}</td><td>Moyenne du premier</td><td>{{ data.highest_avg if data.highest_avg is not none else '—' }}</td></tr>
-  <tr><td>Moyenne du dernier</td><td>{{ data.lowest_avg if data.lowest_avg is not none else '—' }}</td><td>Moyenne trimestrielle</td><td class="term-average">{{ data.overall_avg if data.overall_avg is not none else '—' }}</td></tr>
-  <tr><td>Nombre de Moy.</td><td>{{ data.nb_above_10 }}/{{ data.class_size }}</td><td>Rang</td><td>{{ data.rank if data.rank is not none else '—' }}/{{ data.class_size }}</td></tr>
-  <tr><td>Taux de Réussite</td><td>{{ data.success_rate if data.success_rate is not none else '—' }}{% if data.success_rate is not none %}%{% endif %}</td><td>Éval. {{ data.term_seq_a }}</td><td>{{ data.class_eval_a_avg if data.class_eval_a_avg is not none else '—' }}</td></tr>
+  <tr><td>Moyenne trimestrielle</td><td class="term-average">{{ data.overall_avg if data.overall_avg is not none else '—' }}</td><td>Moyenne du dernier</td><td>{{ data.lowest_avg if data.lowest_avg is not none else '—' }}</td></tr>
+  <tr><td>Rang</td><td>{{ data.rank if data.rank is not none else '—' }}/{{ data.class_size }}</td><td>Nombre de Moy.</td><td>{{ data.nb_above_10 }}/{{ data.class_size }}</td></tr>
+  <tr><td>Éval. {{ data.term_seq_a }}</td><td>{{ data.class_eval_a_avg if data.class_eval_a_avg is not none else '—' }}</td><td>Taux de Réussite</td><td>{{ data.success_rate if data.success_rate is not none else '—' }}{% if data.success_rate is not none %}%{% endif %}</td></tr>
   <tr><td>Éval. {{ data.term_seq_b }}</td><td>{{ data.class_eval_b_avg if data.class_eval_b_avg is not none else '—' }}</td><td>Travail de l'élève</td><td>Rang : {{ data.rank if data.rank is not none else '—' }}</td></tr>
 </table>
 <!-- profile-table colspan="4" -->
@@ -102,5 +102,5 @@
   <td style="width:28%;height:42pt"><strong>APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br><em>{{ data.work_appreciation or '' }}</em></td>
   <td style="width:24%;height:42pt;text-align:center">VISA DU PARENT</td>
   <td style="width:24%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU CHEF D'ÉTABLISSEMENT<br>VISA DU PROVISEUR<br>TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
+  <td style="width:24%;height:42pt;text-align:center">TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
 </tr></table>
