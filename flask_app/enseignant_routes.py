@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from app import app, db
 from models import Course, Grade, Attendance, Student, Availability, ActivityLog, PlannedAssessment, User
@@ -211,34 +211,66 @@ def teacher_attendance(course_id):
     scheduled_end = schedule_entry.end_time if schedule_entry else "09:30"
     scheduled_day = schedule_entry.day if schedule_entry else ""
 
+    call_key = f"Appel effectué — {course.subject.name} / {course.school_class.name}"
+
+    def _call_time(log):
+        marker = "[appel_at="
+        if not log or marker not in (log.description or ""):
+            return None
+        raw = log.description.split(marker, 1)[1].split("]", 1)[0]
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+
+    session_date_value = request.values.get("date") or date.today().isoformat()
+    try:
+        session_date_obj = date.fromisoformat(session_date_value)
+    except ValueError:
+        session_date_value = date.today().isoformat()
+        session_date_obj = date.today()
+    call_log = (ActivityLog.query.filter_by(user_id=session["user_id"], date=session_date_obj,
+                                             category="pédagogique")
+                .filter(ActivityLog.description.like(call_key + "%"))
+                .order_by(ActivityLog.id.desc()).first())
+    recorded_at = _call_time(call_log)
+    editable = bool(recorded_at and datetime.utcnow() - recorded_at <= timedelta(hours=2))
+    existing = Attendance.query.filter_by(course_id=course.id, date=session_date_obj,
+                                           start_time=scheduled_start, end_time=scheduled_end,
+                                           recorded_by_id=session["user_id"]).all()
+    existing_statuses = {record.student_id: {"type": record.type, "reason": record.reason or ""}
+                         for record in existing}
+
     if request.method == "POST":
+        if call_log and not editable:
+            flash("Le délai de modification de 2 heures est dépassé : cet appel est verrouillé.", "warning")
+            return redirect(url_for("teacher_attendance", course_id=course_id, date=session_date_value))
+        if call_log:
+            Attendance.query.filter_by(course_id=course.id, date=session_date_obj,
+                                       start_time=scheduled_start, end_time=scheduled_end,
+                                       recorded_by_id=session["user_id"]).delete(synchronize_session=False)
+        call_time = datetime.utcnow()
+        log_description = f"{call_key} [appel_at={call_time.isoformat(timespec='seconds')}]"
         session_date = request.form.get("date") or date.today().isoformat()
         start = scheduled_start
         end = scheduled_end
-        call_description = f"Appel effectué — {course.subject.name} / {course.school_class.name}"
-        already_called = ActivityLog.query.filter_by(
-            user_id=session["user_id"], date=date.fromisoformat(session_date),
-            description=call_description, category="pédagogique"
-        ).first()
-        if already_called:
-            flash("Cet appel a déjà été enregistré pour cette classe, cette heure et cette matière.", "warning")
-            return redirect(url_for("teacher_attendance", course_id=course_id))
         count = 0
         for student in course.school_class.students:
             status = request.form.get(f"status_{student.id}", "Présent")
             if status != "Présent":
                 db.session.add(Attendance(date=date.fromisoformat(session_date), start_time=start, end_time=end,
                                            type=status, reason=request.form.get(f"reason_{student.id}", ""),
-                                           justified=False, student_id=student.id, course_id=course.id))
+                                           justified=False, recorded_by_id=session["user_id"],
+                                           student_id=student.id, course_id=course.id))
                 for p in student.parents:
                     notify(p.user_id, f"{student.full_name} : {status.lower()} enregistré(e) le {session_date} en {course.subject.name}.")
                 count += 1
         db.session.add(ActivityLog(user_id=session["user_id"],
-                                    description=call_description,
+                                    date=session_date_obj, description=log_description,
                                     category="pédagogique"))
         db.session.commit()
-        flash(f"Appel enregistré ({count} absence(s)/retard(s)).", "success")
-        return redirect(url_for("teacher_attendance", course_id=course_id))
+        flash(f"Appel {'modifié' if call_log else 'enregistré'} ({count} absence(s)/retard(s)).", "success")
+        return redirect(url_for("teacher_attendance", course_id=course_id, date=session_date_value))
 
     students = sorted(course.school_class.students, key=lambda s: (
         (s.last_name or "").strip().casefold(),
@@ -248,7 +280,9 @@ def teacher_attendance(course_id):
     return render_template("teacher_attendance.html", course=course, students=students,
                            today=date.today().isoformat(), scheduled_day=scheduled_day,
                            scheduled_start=scheduled_start, scheduled_end=scheduled_end,
-                           schedule_entry=schedule_entry)
+                           schedule_entry=schedule_entry, existing_statuses=existing_statuses,
+                           call_recorded_at=recorded_at, call_editable=editable,
+                           call_locked=bool(call_log and not editable))
 
 
 def _teacher_schedule_data():
