@@ -1,7 +1,7 @@
 from flask import render_template, request, abort, session, url_for, send_file
 from app import app, db
 from models import User, Grade, Attendance, ScheduleEntry, Course, Sanction, Reward, Student, BulletinApproval
-from utils import roles_required, general_average, subject_averages, bulletin_data, DAYS, TERMS
+from utils import roles_required, general_average, subject_averages, bulletin_data, DAYS, TERMS, get_current_school_year
 
 
 def current_student():
@@ -82,7 +82,7 @@ def _bulletin_pdf_response(student, term=None):
     bulletin_ref = f"{student.matricule}-T{T.index(term)+1}-2025"
     pdf = render_pdf("pdf/bulletin_pdf.html", student=student, data=data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                      bulletin_ref=bulletin_ref, approval=approval,
+                      bulletin_ref=bulletin_ref, approval=approval, school_year=get_current_school_year(),
                       student_photo_path=student_photo_pdf_path(student.photo))
     if not pdf:
         abort(500)

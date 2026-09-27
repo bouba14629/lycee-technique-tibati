@@ -7,9 +7,10 @@
 @media print {
   @page { size: A4 landscape; margin: 4mm; }
   .no-print { display: none !important; }
-  .service-page { height: 190mm; max-height: 190mm; margin: 0; overflow: hidden; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+  .service-page { display: block; height: 202mm; max-height: 202mm; margin: 0; overflow: hidden; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
   .service-page:last-child { break-after: auto; page-break-after: auto; }
-  .service-table { height: 188mm; max-height: 188mm; }
+  .service-table { height: 202mm; max-height: 202mm; }
+  .service-table thead, .service-table tbody, .service-table tfoot { break-inside: avoid; page-break-inside: avoid; }
   .service-table th, .service-table td { padding: 0; line-height: .9; }
   .service-table .model-title { height: 11px; font-size: 7px; }
   .service-table .teacher-head { height: 12px; font-size: 6px; }

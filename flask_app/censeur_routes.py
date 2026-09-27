@@ -1224,7 +1224,8 @@ def censeur_bulletins_class_pdf(class_id):
             "photo_path": student_photo_pdf_path(st.photo),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
-                      TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""), approval=approval)
+                      TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
+                      approval=approval, school_year=get_current_school_year())
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
