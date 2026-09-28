@@ -320,7 +320,7 @@ def _dashboard_filter_context(user):
 
     scoped_ids = user_scoped_class_ids(user) if user.role in ("censeur", "censeur_crm", "chef_orientation", "surveillant_general") else None
     teacher_course_ids = None
-    if user.role == "enseignant" and user.teacher_profile:
+    if user.role in ("enseignant", "conseiller_orientation") and user.teacher_profile:
         teacher_course_ids = {course.class_id for course in user.teacher_profile.courses if course.class_id}
         scoped_ids = teacher_course_ids
     class_query = SchoolClass.query
@@ -358,7 +358,7 @@ def _dashboard_filter_context(user):
     subject_class_ids = selected_class_ids if selected_class_ids else filtered_class_ids
     if subject_class_ids:
         subjects_query = Subject.query.join(Course).filter(Course.class_id.in_(subject_class_ids))
-        if user.role == "enseignant":
+        if user.role in ("enseignant", "conseiller_orientation") and user.teacher_profile:
             subjects_query = subjects_query.filter(Course.teacher_id == user.teacher_profile.id)
         subjects = (subjects_query
                     .order_by(Subject.name).distinct().all())
@@ -571,19 +571,6 @@ def dashboard():
                                 recent_absences=recent_absences, recent_sanctions=recent_sanctions,
                                 life_alerts=dashboard_alerts(class_ids=scoped_ids), dashboard_filters=dashboard_filters)
 
-    if role == "conseiller_orientation":
-        stats = dict(students=Student.query.count(), teachers=Teacher.query.count(), rooms=Room.query.count(),
-                     demographics=student_demographics(dashboard_filters["class_ids"]))
-        recent_absences = Attendance.query.order_by(Attendance.date.desc()).limit(10).all()
-        recent_sanctions = Sanction.query.order_by(Sanction.date.desc()).limit(5).all()
-        from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
-        return render_template("dashboard_censeur.html", rates=dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"]),
-                                success_by_dept=department_success_rates(), evolution=evolution_series(),
-                                alerts=dashboard_alerts(), activities=recent_activity_feed(),
-                                recent_absences=recent_absences, recent_sanctions=recent_sanctions, stats=stats,
-                                calendar_events=dashboard_calendar_events(), dashboard_filters=dashboard_filters,
-                                orientation_read_only=True)
-
     if role in ("chef_travaux", "chef_crm"):
         from utils import user_scoped_department_ids
         scoped_ids = user_scoped_department_ids(user) if role == "chef_travaux" else None
@@ -609,8 +596,15 @@ def dashboard():
         rates = equipment_rates(room_ids)
         return render_template("dashboard_chef_travaux.html", stats=stats, recent_maintenance=recent_maintenance, rates=rates)
 
-    if role == "enseignant":
+    if role in ("enseignant", "conseiller_orientation"):
         teacher = user.teacher_profile
+        if not teacher and role == "conseiller_orientation":
+            # Un conseiller affecté à des cours dispose du même profil pédagogique
+            # qu’un enseignant ; la création ne touche pas à ses identifiants.
+            teacher = Teacher(user_id=user.id, specialty="Orientation Scolaire",
+                              grade=user.grade or "", hours_due=0)
+            db.session.add(teacher)
+            db.session.commit()
         courses = teacher.courses if teacher else []
         my_schedule = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all() if teacher else []
         teacher_class_ids = sorted({course.class_id for course in courses if course.class_id})

@@ -110,13 +110,7 @@
       <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement pour l'emploi du temps et les matières — la construction relève des Censeurs de section et du Censeur Enseignements Généraux. Fiche statistique et indicateurs pédagogiques : vue complète de l'établissement.</div>
       {% endif %}
 
-      {% if current_user and current_user.role == 'conseiller_orientation' %}
-      <div class="sidebar-section-title">Consultation scolaire</div>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_schedule','class_schedule_official','class_schedule_official_pdf','class_schedule_official_xlsx'] }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps par classe</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-person-lines-fill"></i> Emploi du temps individuel</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
-      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement — la construction des emplois du temps reste réservée aux Censeurs et au Directeur.</div>
-      {% endif %}
+      
 
       {% if current_user and current_user.role == 'surveillant_general' %}
       <div class="sidebar-section-title">Discipline &amp; absences</div>
@@ -126,18 +120,14 @@
       <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves (sanctions/récompenses)</a>
       {% endif %}
 
-      {% if current_user and current_user.role == 'conseiller_orientation' %}
-      <div class="sidebar-section-title">Consultation</div>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves &amp; bulletins</a>
-      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Les comptes, la discipline et les modifications restent réservés aux rôles habilités.</div>
-      {% endif %}
+      
 
       {% if current_user and current_user.role in ['chef_travaux','chef_crm'] %}
       <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers & équipements' }}</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles, ateliers &amp; labos</a>
       {% endif %}
 
-      {% if current_user and current_user.role == 'enseignant' %}
+      {% if current_user and current_user.role in ['enseignant','conseiller_orientation'] %}
       <div class="sidebar-section-title">Pédagogie</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_courses' }}" href="{{ url_for('teacher_courses') }}"><i class="bi bi-journal-bookmark-fill"></i> Mes classes</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_schedule' }}" href="{{ url_for('teacher_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Mon emploi du temps</a>

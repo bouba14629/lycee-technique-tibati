@@ -15,7 +15,7 @@ def current_teacher():
 
 
 @app.route("/enseignant/mes-classes")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_courses():
     from models import ScheduleEntry
     teacher = current_teacher()
@@ -42,7 +42,7 @@ def teacher_courses():
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_devoir_list(course_id, student_id):
     """Détail des notes de contrôle continu d'un élève pour permettre de corriger une erreur de saisie
     (suppression d'une note précise) — la Note Trimestrielle étant désormais une moyenne automatique,
@@ -59,7 +59,7 @@ def teacher_devoir_list(course_id, student_id):
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:grade_id>/supprimer")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_devoir_delete(course_id, grade_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
@@ -77,7 +77,7 @@ def teacher_devoir_delete(course_id, grade_id):
 
 
 @app.route("/enseignant/notes/<int:course_id>", methods=["GET", "POST"])
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_grades(course_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
@@ -198,7 +198,7 @@ def teacher_grades(course_id):
 
 
 @app.route("/enseignant/appel/<int:course_id>", methods=["GET", "POST"])
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_attendance(course_id):
     from models import ScheduleEntry
     teacher = current_teacher()
@@ -327,7 +327,7 @@ def _teacher_schedule_data():
 
 
 @app.route("/enseignant/emploi-du-temps")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_schedule():
     from utils import DAYS
     teacher, entries, schedule_filters = _teacher_schedule_data()
@@ -341,7 +341,7 @@ def teacher_schedule():
 
 
 @app.route("/enseignant/disponibilites", methods=["GET", "POST"])
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_availability():
     teacher = current_teacher()
     if request.method == "POST":
@@ -356,7 +356,7 @@ def teacher_availability():
 
 
 @app.route("/enseignant/appel/<int:course_id>/fiche")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_attendance_sheet(course_id):
     teacher = current_teacher()
     course = Course.query.get_or_404(course_id)
@@ -381,7 +381,7 @@ def teacher_attendance_sheet(course_id):
 
 
 @app.route("/enseignant/appel/<int:course_id>/fiche.pdf")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_attendance_sheet_pdf(course_id):
     from flask import send_file
     from pdf_utils import render_pdf
@@ -411,7 +411,7 @@ def teacher_attendance_sheet_pdf(course_id):
 
 
 @app.route("/enseignant/activites", methods=["GET", "POST"])
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_activities():
     if request.method == "POST":
         db.session.add(ActivityLog(user_id=session["user_id"], description=request.form.get("description"),
@@ -424,7 +424,7 @@ def teacher_activities():
 
 
 @app.route("/enseignant/emploi-du-temps/officiel")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_schedule_official():
     from utils import filled_official_slots
     teacher, entries, _filters = _teacher_schedule_data()
@@ -440,7 +440,7 @@ def teacher_schedule_official():
 
 
 @app.route("/enseignant/emploi-du-temps/officiel.pdf")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_schedule_official_pdf():
     from flask import send_file
     from pdf_utils import render_pdf
@@ -460,7 +460,7 @@ def teacher_schedule_official_pdf():
 
 
 @app.route("/enseignant/emploi-du-temps/officiel.xlsx")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_schedule_official_xlsx():
     from flask import send_file
     from excel_utils import teacher_schedule_workbook
@@ -478,7 +478,7 @@ def teacher_schedule_official_xlsx():
 
 
 @app.route("/enseignant/indicateurs", methods=["GET", "POST"])
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_indicators():
     from models import TeacherIndicator, Course, CustomIndicatorType, CustomIndicatorValue
     teacher = current_teacher()

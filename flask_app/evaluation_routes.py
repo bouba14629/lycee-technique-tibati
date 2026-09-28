@@ -82,7 +82,7 @@ def evaluation_plan():
 
 
 @app.route("/enseignant/evaluations")
-@roles_required("enseignant")
+@roles_required("enseignant", "conseiller_orientation")
 def teacher_assessments():
     user = User.query.get_or_404(session["user_id"])
     if not user.teacher_profile:
