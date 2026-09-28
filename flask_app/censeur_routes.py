@@ -100,6 +100,17 @@ def censeur_schedule():
             subjects = subjects_q.order_by(Subject.name).all()
     else:
         subjects = []
+    # Les Conseillers d’orientation peuvent aussi être affectés à un créneau.
+    # Les profils Teacher manquants sont créés sans modifier leur compte ni leur mot de passe.
+    orientation_users = User.query.filter_by(role="conseiller_orientation").all()
+    created_orientation_profiles = False
+    for orientation_user in orientation_users:
+        if orientation_user.teacher_profile is None:
+            db.session.add(Teacher(user_id=orientation_user.id, specialty="Orientation Scolaire",
+                                   grade=orientation_user.grade or "", hours_due=0))
+            created_orientation_profiles = True
+    if created_orientation_profiles:
+        db.session.commit()
     all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
     # Les troncs communs réunissent des classes du même niveau ; le périmètre du censeur reste appliqué.
     tronc_commun_classes = []

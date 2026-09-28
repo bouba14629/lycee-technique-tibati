@@ -355,6 +355,12 @@ def dir_user_delete(user_id):
         teacher = u.teacher_profile
         course_ids = [course.id for course in teacher.courses]
         if course_ids:
+            # Nettoyer explicitement toutes les dépendances avant de supprimer
+            # les cours, y compris les créneaux déjà programmés. Les suppressions
+            # bulk SQL ne déclenchent pas les cascades ORM de Course.
+            ScheduleEntry.query.filter(ScheduleEntry.course_id.in_(course_ids)).delete(synchronize_session=False)
+            Grade.query.filter(Grade.course_id.in_(course_ids)).delete(synchronize_session=False)
+            Attendance.query.filter(Attendance.course_id.in_(course_ids)).delete(synchronize_session=False)
             CustomIndicatorValue.query.filter(CustomIndicatorValue.course_id.in_(course_ids)).delete(synchronize_session=False)
             TeacherIndicator.query.filter(TeacherIndicator.course_id.in_(course_ids)).delete(synchronize_session=False)
             PlannedAssessment.query.filter(PlannedAssessment.course_id.in_(course_ids)).delete(synchronize_session=False)
