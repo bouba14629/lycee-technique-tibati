@@ -1345,9 +1345,15 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
     scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     teachers_q = Teacher.query
+    if user.role == "conseiller_orientation" and getattr(user, "teacher_profile", None):
+        teachers_q = teachers_q.filter(Teacher.id == user.teacher_profile.id)
     if scoped_dept_ids is not None:
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
     teachers = teachers_q.all()
+    if user.role == "chef_orientation":
+        # Les saisies des conseillers sont centralisées exclusivement ici.
+        counselor_teachers = Teacher.query.join(User).filter(User.role == "conseiller_orientation").all()
+        teachers = list({teacher.id: teacher for teacher in teachers + counselor_teachers}.values())
     teacher_ids = [t.id for t in teachers]
     courses_q = (Course.query.join(SchoolClass).join(ScheduleEntry)
                  .filter(Course.teacher_id.in_(teacher_ids)).distinct()) if teacher_ids else None
@@ -1363,6 +1369,12 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     if user.role == "censeur" and user.section_id is None:
         # Censeur Enseignements Généraux : uniquement ses propres matières, quelle que soit la section
         courses = [c for c in courses if c.subject.category == "Enseignements Généraux"]
+    orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
+    if orientation_mode:
+        courses = [c for c in courses if (c.subject.name or "").strip().casefold() == "orientation scolaire"]
+    elif user.role in ("directeur", "censeur", "censeur_crm"):
+        # Les saisies du conseiller sont réservées au Chef de Service Orientation.
+        courses = [c for c in courses if c.teacher.user.role != "conseiller_orientation"]
     indicators_q = TeacherIndicator.query.filter(TeacherIndicator.teacher_id.in_(teacher_ids), TeacherIndicator.term == term) if teacher_ids else None
     if indicators_q is not None and date_from:
         indicators_q = indicators_q.filter(TeacherIndicator.updated_at >= datetime.combine(date_from, datetime.min.time()))
@@ -1459,7 +1471,7 @@ def censeur_indicators():
     if department_id:
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
     available_subjects = subjects_q.all()
-    orientation_mode = user.role == "conseiller_orientation"
+    orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if orientation_mode:
         available_subjects = [item for item in available_subjects if (item.name or "").strip().casefold() == "orientation scolaire"]
         allowed_subject_ids = {item.id for item in available_subjects}
@@ -1611,7 +1623,11 @@ def censeur_indicator_edit(course_id):
     user = User.query.get(session["user_id"])
     course = Course.query.get_or_404(course_id)
     teacher = course.teacher
-    if user.role == "conseiller_orientation" and (course.subject.name or "").strip().casefold() != "orientation scolaire":
+    if user.role in ("conseiller_orientation", "chef_orientation") and (course.subject.name or "").strip().casefold() != "orientation scolaire":
+        abort(403)
+    if user.role == "conseiller_orientation" and course.teacher_id != getattr(user.teacher_profile, "id", None):
+        abort(403)
+    if user.role in ("directeur", "censeur", "censeur_crm") and course.teacher.user.role == "conseiller_orientation":
         abort(403)
     scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_dept_ids is not None and teacher.department_id not in scoped_dept_ids:
@@ -1623,6 +1639,9 @@ def censeur_indicator_edit(course_id):
         db.session.add(ind)
     planned_fields = ["hours_due", "lessons_planned", "digital_lessons_planned", "tp_planned", "digital_tp_planned"]
     done_fields = ["hours_done", "lessons_done", "digital_lessons_done", "tp_done", "digital_tp_done"]
+    if user.role in ("conseiller_orientation", "chef_orientation"):
+        planned_fields = ["hours_due", "lessons_planned", "tp_planned"]
+        done_fields = ["hours_done", "lessons_done", "tp_done"]
     values = {field: request.form.get(field, 0, type=int) for field in planned_fields + done_fields}
     for field, value in values.items():
         setattr(ind, field, value)

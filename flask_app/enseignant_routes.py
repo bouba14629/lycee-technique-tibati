@@ -486,10 +486,15 @@ def teacher_indicators():
     course_id = request.args.get("course_id", type=int) if request.method == "GET" else request.form.get("course_id", type=int)
     courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
                      key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
+    # Le conseiller ne renseigne que les cours Orientation Scolaire.
+    if session.get("role") == "conseiller_orientation":
+        courses = [c for c in courses if (c.subject.name or "").strip().casefold() == "orientation scolaire"]
     course = None
     if course_id:
         course = Course.query.get(course_id)
         if not course or course.teacher_id != teacher.id:
+            abort(403)
+        if session.get("role") == "conseiller_orientation" and (course.subject.name or "").strip().casefold() != "orientation scolaire":
             abort(403)
 
     custom_types = []
@@ -517,13 +522,17 @@ def teacher_indicators():
         planned_fields = {"hours_due", "lessons_planned", "digital_lessons_planned",
                           "tp_planned", "digital_tp_planned"}
         editable_fields = ["hours_done", "lessons_done", "digital_lessons_done",
-                           "tp_done", "digital_tp_done"]
+                           "tp_done"]
+        if session.get("role") != "conseiller_orientation":
+            editable_fields.append("digital_tp_done")
         planned_values = {field: (getattr(ind, field) if ind.id else request.form.get(field, 0, type=int))
                           for field in planned_fields}
         done_values = {field: request.form.get(field, 0, type=int) for field in editable_fields}
         pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
                  ("digital_lessons_planned", "digital_lessons_done"),
-                 ("tp_planned", "tp_done"), ("digital_tp_planned", "digital_tp_done")]
+                 ("tp_planned", "tp_done")]
+        if session.get("role") != "conseiller_orientation":
+            pairs.append(("digital_tp_planned", "digital_tp_done"))
         if any(done_values[done] > planned_values[planned] for planned, done in pairs):
             flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
             return redirect(url_for("teacher_indicators", course_id=course.id))

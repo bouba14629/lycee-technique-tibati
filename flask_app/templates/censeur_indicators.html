@@ -49,10 +49,10 @@
   <div class="col-6"><label style="font-size:11px;">Leçons faites</label><input type="number" name="lessons_done" class="form-control form-control-sm" value="{{ ind.lessons_done if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">Leçons digital. prévues</label><input type="number" name="digital_lessons_planned" class="form-control form-control-sm" value="{{ ind.digital_lessons_planned if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">Leçons digital. faites</label><input type="number" name="digital_lessons_done" class="form-control form-control-sm" value="{{ ind.digital_lessons_done if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">TP prévus</label><input type="number" name="tp_planned" class="form-control form-control-sm" value="{{ ind.tp_planned if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">TP réalisés</label><input type="number" name="tp_done" class="form-control form-control-sm" value="{{ ind.tp_done if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">TP digital. prévus</label><input type="number" name="digital_tp_planned" class="form-control form-control-sm" value="{{ ind.digital_tp_planned if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">TP digital. réalisés</label><input type="number" name="digital_tp_done" class="form-control form-control-sm" value="{{ ind.digital_tp_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">{{ "Prévues" if orientation_mode else "TP prévus" }}</label><input type="number" name="tp_planned" class="form-control form-control-sm" value="{{ ind.tp_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">{{ "Faites" if orientation_mode else "TP réalisés" }}</label><input type="number" name="tp_done" class="form-control form-control-sm" value="{{ ind.tp_done if ind else 0 }}"></div>
+  {% if not orientation_mode %}<div class="col-6"><label style="font-size:11px;">TP digital. prévus</label><input type="number" name="digital_tp_planned" class="form-control form-control-sm" value="{{ ind.digital_tp_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">TP digital. réalisés</label><input type="number" name="digital_tp_done" class="form-control form-control-sm" value="{{ ind.digital_tp_done if ind else 0 }}"></div>{% endif %}
 </div>
 {% endmacro %}
 
@@ -144,14 +144,14 @@ function populateGenericIndicator(select) {
         <th colspan="3" class="text-center">Couverture des programmes</th>
         <th colspan="3" class="text-center">Leçons digitalisées</th>
         <th colspan="3" class="text-center">Travaux pratiques</th>
-        <th colspan="3" class="text-center">TP digitalisés</th>
+        {% if not orientation_mode %}<th colspan="3" class="text-center">TP digitalisés</th>{% endif %}
       </tr>
       <tr>
         <th>Dues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
-        <th>Prévus</th><th>Réalisés</th><th>%</th>
-        <th>Prévus</th><th>Réalisés</th><th>%</th>
+        <th>{{ "Prévues" if orientation_mode else "Prévus" }}</th><th>{{ "Faites" if orientation_mode else "Réalisés" }}</th><th>%</th>
+        {% if not orientation_mode %}<th>Prévus</th><th>Réalisés</th><th>%</th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -162,7 +162,7 @@ function populateGenericIndicator(select) {
         <td>{{ e.lessons_planned }}</td><td>{{ e.lessons_done }}</td><td>{{ e.pct_lessons if e.pct_lessons is not none else '—' }}%</td>
         <td>{{ e.digital_lessons_planned }}</td><td>{{ e.digital_lessons_done }}</td><td>{{ e.pct_digital_lessons if e.pct_digital_lessons is not none else '—' }}%</td>
         <td>{{ e.tp_planned }}</td><td>{{ e.tp_done }}</td><td>{{ e.pct_tp if e.pct_tp is not none else '—' }}%</td>
-        <td>{{ e.digital_tp_planned }}</td><td>{{ e.digital_tp_done }}</td><td>{{ e.pct_digital_tp if e.pct_digital_tp is not none else '—' }}%</td>
+        {% if not orientation_mode %}<td>{{ e.digital_tp_planned }}</td><td>{{ e.digital_tp_done }}</td><td>{{ e.pct_digital_tp if e.pct_digital_tp is not none else '—' }}%</td>{% endif %}
       </tr>
     {% else %}
       <tr><td colspan="16" class="text-muted text-center py-4">Aucun indicateur renseigné pour ce trimestre.</td></tr>
@@ -183,7 +183,7 @@ function populateGenericIndicator(select) {
         <th colspan="3" class="text-center">Couverture des programmes</th>
         <th colspan="3" class="text-center">Leçons digitalisées</th>
         <th colspan="3" class="text-center">Travaux pratiques</th>
-        <th colspan="3" class="text-center">TP digitalisés</th>
+        {% if not orientation_mode %}<th colspan="3" class="text-center">TP digitalisés</th>{% endif %}
         <th colspan="3" class="text-center">Moyennes ≥ 10 par genre</th>
         <th colspan="3" class="text-center">Taux de réussite par genre</th>
         <th colspan="4" class="text-center">Moyenne générale par genre</th>
@@ -194,8 +194,8 @@ function populateGenericIndicator(select) {
         <th>Dues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
-        <th>Prévus</th><th>Réalisés</th><th>%</th>
-        <th>Prévus</th><th>Réalisés</th><th>%</th>
+        <th>{{ "Prévues" if orientation_mode else "Prévus" }}</th><th>{{ "Faites" if orientation_mode else "Réalisés" }}</th><th>%</th>
+        {% if not orientation_mode %}<th>Prévus</th><th>Réalisés</th><th>%</th>{% endif %}
         <th>Filles</th><th>Garçons</th><th>Total</th>
         <th>Filles</th><th>Garçons</th><th>Total</th>
         <th>Filles</th><th>Garçons</th><th>Total</th>
@@ -213,7 +213,7 @@ function populateGenericIndicator(select) {
         <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ '-' if row.ind.lessons_planned == 0 and row.ind.lessons_done == 0 else (row.pct_lessons if row.pct_lessons is not none else '—') ~ '%' }}</td>
         <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ '-' if row.ind.digital_lessons_planned == 0 and row.ind.digital_lessons_done == 0 else (row.pct_digital_lessons if row.pct_digital_lessons is not none else '—') ~ '%' }}</td>
         <td>{{ row.ind.tp_planned }}</td><td>{{ row.ind.tp_done }}</td><td>{{ '-' if row.ind.tp_planned == 0 and row.ind.tp_done == 0 else (row.pct_tp if row.pct_tp is not none else '—') ~ '%' }}</td>
-        <td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ '-' if row.ind.digital_tp_planned == 0 and row.ind.digital_tp_done == 0 else (row.pct_digital_tp if row.pct_digital_tp is not none else '—') ~ '%' }}</td>
+        {% if not orientation_mode %}<td>{{ row.ind.digital_tp_planned }}</td><td>{{ row.ind.digital_tp_done }}</td><td>{{ '-' if row.ind.digital_tp_planned == 0 and row.ind.digital_tp_done == 0 else (row.pct_digital_tp if row.pct_digital_tp is not none else '—') ~ '%' }}</td>{% endif %}
         <td>{{ row.gender_metrics.successful.Filles }}</td><td>{{ row.gender_metrics.successful.Garçons }}</td><td>{{ row.gender_metrics.successful.Total }}</td>
         <td>{{ row.gender_metrics.rates.Filles if row.gender_metrics.rates.Filles is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Garçons if row.gender_metrics.rates.Garçons is not none else '—' }}%</td><td>{{ row.gender_metrics.rates.Total if row.gender_metrics.rates.Total is not none else '—' }}%</td>
         <td>{{ row.gender_metrics.averages.Filles if row.gender_metrics.averages.Filles is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Garçons if row.gender_metrics.averages.Garçons is not none else '—' }}</td><td>{{ row.gender_metrics.averages.Total if row.gender_metrics.averages.Total is not none else '—' }}</td>
@@ -247,7 +247,7 @@ function populateGenericIndicator(select) {
         <td>{{ totals.lessons_planned }}</td><td>{{ totals.lessons_done }}</td><td>{{ '-' if totals.lessons_planned == 0 and totals.lessons_done == 0 else (totals.pct_lessons if totals.pct_lessons is not none else '—') ~ '%' }}</td>
         <td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ '-' if totals.digital_lessons_planned == 0 and totals.digital_lessons_done == 0 else (totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—') ~ '%' }}</td>
         <td>{{ totals.tp_planned }}</td><td>{{ totals.tp_done }}</td><td>{{ '-' if totals.tp_planned == 0 and totals.tp_done == 0 else (totals.pct_tp if totals.pct_tp is not none else '—') ~ '%' }}</td>
-        <td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ '-' if totals.digital_tp_planned == 0 and totals.digital_tp_done == 0 else (totals.pct_digital_tp if totals.pct_digital_tp is not none else '—') ~ '%' }}</td>
+        {% if not orientation_mode %}<td>{{ totals.digital_tp_planned }}</td><td>{{ totals.digital_tp_done }}</td><td>{{ '-' if totals.digital_tp_planned == 0 and totals.digital_tp_done == 0 else (totals.pct_digital_tp if totals.pct_digital_tp is not none else '—') ~ '%' }}</td>{% endif %}
         <td colspan="3">—</td>
         {% for ct in custom_types %}<td colspan="3"></td>{% endfor %}
         {% if current_user.role in ['censeur', 'chef_orientation', 'conseiller_orientation'] %}<td class="no-print"></td>{% endif %}

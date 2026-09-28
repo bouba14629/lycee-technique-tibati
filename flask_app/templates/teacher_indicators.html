@@ -40,12 +40,14 @@
       <div class="col-md-6"><label>Leçons digitalisées faites</label><input type="number" name="digital_lessons_done" class="form-control" value="{{ indicator.digital_lessons_done|default(0, true) if indicator else 0 }}"></div>
     </div>
 
-    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>
+    {% if current_user.role == "conseiller_orientation" %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Session de formation</h3>{% else %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>{% endif %}
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Nombre de TP prévus</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
-      <div class="col-md-6"><label>Nombre de TP réalisés</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done|default(0, true) if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>{{ "Prévues" if current_user.role == "conseiller_orientation" else "Nombre de TP prévus" }}</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
+      <div class="col-md-6"><label>{{ "Faites" if current_user.role == "conseiller_orientation" else "Nombre de TP réalisés" }}</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done|default(0, true) if indicator else 0 }}"></div>
+{% if current_user.role != "conseiller_orientation" %}
       <div class="col-md-6"><label>TP digitalisés prévus</label><input type="number" name="digital_tp_planned" class="form-control" value="{{ indicator.digital_tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>TP digitalisés réalisés</label><input type="number" name="digital_tp_done" class="form-control" value="{{ indicator.digital_tp_done|default(0, true) if indicator else 0 }}"></div>
+      {% endif %}
     </div>
 
     {% if custom_types %}
