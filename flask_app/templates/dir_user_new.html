@@ -10,12 +10,13 @@
       <div class="col-md-6"><label>Nom complet</label><input type="text" name="full_name" class="form-control" required></div>
       <div class="col-md-4">
         <label>Niveau d'accréditation (rôle)</label>
-        <select name="role" class="form-select" id="roleSelect" onchange="document.getElementById('teacherFields').style.display = this.value=='enseignant' ? 'flex' : 'none'; document.getElementById('sectionFields').style.display = ['censeur','surveillant_general','chef_travaux'].includes(this.value) ? 'block' : 'none';">
+        <select name="role" class="form-select" id="roleSelect" onchange="document.getElementById('teacherFields').style.display = this.value=='enseignant' ? 'flex' : 'none'; document.getElementById('sectionFields').style.display = ['censeur','chef_orientation','surveillant_general','chef_travaux'].includes(this.value) ? 'block' : 'none';">
           <option value="enseignant">Enseignant</option>
           <option value="censeur">Censeur</option>
           <option value="censeur_crm">Censeur CRM</option>
           <option value="surveillant_general">Surveillant Général</option>
           <option value="conseiller_orientation">Conseiller d'Orientation</option>
+          <option value="chef_orientation">Chef de Service de l'Orientation Scolaire</option>
           <option value="chef_travaux">Chef des Travaux</option>
           <option value="chef_crm">Chef de Centre CRM</option>
           <option value="directeur">Proviseur</option>

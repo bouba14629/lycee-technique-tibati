@@ -22,7 +22,7 @@ def _safe_drop_all(*args, **kwargs):
 
 db.drop_all = _safe_drop_all
 
-ROLES = ["directeur", "censeur", "censeur_crm", "surveillant_general", "conseiller_orientation", "chef_travaux", "chef_crm", "enseignant", "eleve", "parent"]
+ROLES = ["directeur", "censeur", "censeur_crm", "surveillant_general", "conseiller_orientation", "chef_orientation", "chef_travaux", "chef_crm", "enseignant", "eleve", "parent"]
 STAFF_GRADES = ["Instituteur", "PLEG", "PLET", "PCEG", "PCET", "IGE", "IPR", "CPE"]
 ROLE_LABELS = {
     "directeur": "Proviseur",
@@ -30,6 +30,7 @@ ROLE_LABELS = {
     "censeur_crm": "Censeur CRM",
     "surveillant_general": "Surveillant Général",
     "conseiller_orientation": "Conseiller d'Orientation",
+    "chef_orientation": "Chef de Service de l'Orientation Scolaire",
     "chef_travaux": "Chef des Travaux",
     "chef_crm": "Chef de Centre CRM",
     "enseignant": "Enseignant",
@@ -511,7 +512,7 @@ class Announcement(db.Model):
     body = db.Column(db.Text, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    target_role = db.Column(db.String(20), default="tous")  # tous/enseignant/eleve/parent
+    target_role = db.Column(db.String(20), default="tous")  # tous/enseignant/eleve/parent/censeur/chef_travaux
     author = db.relationship("User")
 
 

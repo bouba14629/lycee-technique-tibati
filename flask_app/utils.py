@@ -511,7 +511,7 @@ def section_department_ids(section_id):
 def user_scoped_department_ids(user):
     """Départements accessibles à un compte scopé par section (Censeur/Surveillant Général/Chef des Travaux).
     Renvoie None si le compte n'est pas limité à une section (portée transversale, ex. Censeur Enseignements Généraux)."""
-    if user.role in ("censeur", "surveillant_general", "chef_travaux") and user.section_id:
+    if user.role in ("censeur", "chef_orientation", "surveillant_general", "chef_travaux") and user.section_id:
         return section_department_ids(user.section_id)
     return None
 

@@ -26,7 +26,7 @@
   </form>
 </div>
 {% endif %}
-{% if current_user.role == 'censeur' %}
+{% if current_user.role in ['censeur','chef_orientation'] %}
   <div class="card-ltt">
     <div class="section-title"><h2><i class="bi bi-book-fill me-1" style="color:var(--gold-500);"></i> Ajouter une matière ou un tronc commun</h2></div>
     <p class="text-muted mb-2" style="font-size:12px;">Choisissez « Tronc commun » pour créer la même matière dans plusieurs classes de même niveau. Elle pourra ensuite être programmée simultanément dans l’emploi du temps.</p>
@@ -165,7 +165,7 @@
           {% endfor %}
         </div>
 
-        {% if (current_user.role == 'directeur' or (current_user.role == 'censeur' and scoped_dept_ids is none) or (current_user.role == 'censeur' and scoped_dept_ids is not none and dept.id in scoped_dept_ids)) and dept.subjects %}
+        {% if (current_user.role == 'directeur' or (current_user.role in ['censeur','chef_orientation'] and scoped_dept_ids is none) or (current_user.role in ['censeur','chef_orientation'] and scoped_dept_ids is not none and dept.id in scoped_dept_ids)) and dept.subjects %}
         <div class="mb-2" style="font-size:11px; max-height:140px; overflow-y:auto;">
           {% for subj in dept.subjects %}
           <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">

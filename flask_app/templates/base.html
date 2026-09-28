@@ -83,7 +83,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       {% endif %}
 
-      {% if current_user and current_user.role == 'censeur' %}
+      {% if current_user and current_user.role in ['censeur','chef_orientation'] %}
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>

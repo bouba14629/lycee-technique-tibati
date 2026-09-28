@@ -318,7 +318,7 @@ def _dashboard_filter_context(user):
     """Construit les filtres de pilotage en respectant la portée du compte."""
     from utils import user_scoped_class_ids
 
-    scoped_ids = user_scoped_class_ids(user) if user.role in ("censeur", "censeur_crm", "surveillant_general") else None
+    scoped_ids = user_scoped_class_ids(user) if user.role in ("censeur", "censeur_crm", "chef_orientation", "surveillant_general") else None
     teacher_course_ids = None
     if user.role == "enseignant" and user.teacher_profile:
         teacher_course_ids = {course.class_id for course in user.teacher_profile.courses if course.class_id}
@@ -384,7 +384,7 @@ def _dashboard_filter_context(user):
 @login_required
 def dashboard_demographics_export():
     user = User.query.get(session["user_id"])
-    if user.role not in {"directeur", "censeur", "censeur_crm", "conseiller_orientation", "surveillant_general"}:
+    if user.role not in {"directeur", "censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "surveillant_general"}:
         abort(403)
     class_ids = list(dict.fromkeys(request.args.getlist("attendance_class_id", type=int)))
     scoped = user_scoped_class_ids(user) if user.role in {"censeur", "surveillant_general"} else None
@@ -495,7 +495,7 @@ def dashboard():
                                 is_founder_setup=User.query.count() == 1 and stats["students"] == 0,
                                 dashboard_filters=dashboard_filters)
 
-    if role == "censeur":
+    if role in ("censeur", "chef_orientation"):
         from utils import user_scoped_class_ids, user_scoped_department_ids
         scoped_ids = user_scoped_class_ids(user)
         if scoped_ids is not None:
@@ -740,22 +740,25 @@ def message_view(msg_id):
 @login_required
 def announcements():
     user = User.query.get(session["user_id"])
-    if request.method == "POST" and user.role in ("directeur", "censeur"):
+    if request.method == "POST" and user.role in ("directeur", "censeur", "chef_orientation"):
         title = request.form.get("title", "").strip()
         body = request.form.get("body", "").strip()
         target = request.form.get("target_role", "tous")
         if title and body:
+            allowed_targets = {"tous", "enseignant", "eleve", "parent", "censeur", "chef_travaux"}
+            if target not in allowed_targets:
+                target = "tous"
             announcement = Announcement(title=title, body=body, author_id=user.id, target_role=target)
             db.session.add(announcement)
             db.session.flush()
-            if target in ("tous", "enseignant"):
-                for teacher_user in User.query.filter_by(role="enseignant", active=True).all():
-                    notify(teacher_user.id, f"Nouvelle annonce : {title}", "/annonces")
+            target_roles = {"directeur", "censeur", "chef_travaux", "chef_orientation", "enseignant", "eleve", "parent"} if target == "tous" else {target}
+            for recipient in User.query.filter(User.active == True, User.role.in_(target_roles)).all():  # noqa: E712
+                notify(recipient.id, f"Nouvelle annonce : {title}", "/annonces")
             db.session.commit()
             flash("Annonce publiée.", "success")
         return redirect(url_for("announcements"))
 
-    if user.role in ("directeur", "censeur"):
+    if user.role in ("directeur", "censeur", "chef_orientation"):
         items = Announcement.query.order_by(Announcement.date.desc()).all()
     else:
         items = Announcement.query.filter(Announcement.target_role.in_(["tous", user.role])).order_by(Announcement.date.desc()).all()

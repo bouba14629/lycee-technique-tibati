@@ -12,7 +12,7 @@
   </form>
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div class="btn-group flex-wrap">
-      {% for r, label in [('', 'Tous'), ('directeur','Proviseurs'), ('censeur','Censeurs'), ('censeur_crm','Censeur CRM'), ('surveillant_general','Surveillants'), ('conseiller_orientation','Conseillers'), ('chef_travaux','Chefs des Travaux'), ('chef_crm','Chef CRM'), ('enseignant','Enseignants'), ('eleve','Élèves'), ('parent','Parents')] %}
+      {% for r, label in [('', 'Tous'), ('directeur','Proviseurs'), ('censeur','Censeurs'), ('censeur_crm','Censeur CRM'), ('surveillant_general','Surveillants'), ('conseiller_orientation','Conseillers'), ('chef_orientation','Chef Service Orientation'), ('chef_travaux','Chefs des Travaux'), ('chef_crm','Chef CRM'), ('enseignant','Enseignants'), ('eleve','Élèves'), ('parent','Parents')] %}
       <a href="{{ url_for('dir_users', role=r, q=search) }}" class="btn-ltt-outline me-1 mb-1" style="{{ 'background:var(--navy-900);color:#fff;' if role_filter==r }}">{{ label }}</a>
       {% endfor %}
     </div>
@@ -92,7 +92,7 @@
             <input type="text" name="grade" class="form-control mb-1" list="teacher-grade-suggestions-{{ u.id }}" value="{{ u.teacher_profile.grade if u.role=='enseignant' and u.teacher_profile else u.grade or '' }}" placeholder="Saisir le grade">
             <datalist id="teacher-grade-suggestions-{{ u.id }}"><option value="Instituteur">{% for g in ['PLEG', 'PLET', 'PCEG', 'PCET', 'IGE', 'IPR', 'CPE'] %}<option value="{{ g }}">{% endfor %}</datalist>
             <div class="text-muted mb-2" style="font-size:11px;">Saisie libre : les suggestions restent facultatives.</div>
-            {% if u.role in ['censeur','surveillant_general','chef_travaux'] %}
+            {% if u.role in ['censeur','chef_orientation','surveillant_general','chef_travaux'] %}
             <label>Section (portée)</label>
             <select name="section_id" class="form-select mb-2">
               <option value="">— Portée transversale —</option>

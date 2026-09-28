@@ -31,13 +31,13 @@ def _subject_compatible_with_class(subject, school_class):
 
 
 @app.route("/censeur/service-des-professeurs")
-@roles_required("censeur", "censeur_crm", "directeur")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "directeur")
 def censeur_teacher_service():
     """Grille du Service des Professeurs conforme au modèle importé, alimentée par les créneaux."""
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     teachers_q = Teacher.query.join(User).order_by(User.full_name)
-    if user.role == "censeur" and user.section_id:
+    if user.role in ("censeur", "chef_orientation") and user.section_id:
         teachers_q = teachers_q.filter(Teacher.department.has(section_id=user.section_id))
     teachers = teachers_q.all()
     teacher_ids = [teacher.id for teacher in teachers]
@@ -71,13 +71,13 @@ def censeur_teacher_service():
 
 
 @app.route("/censeur/emplois-du-temps", methods=["GET", "POST"])
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule():
     import uuid
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     # Le directeur et tous les censeurs construisent ; le conseiller d’orientation reste en consultation seule.
-    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}
+    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "chef_orientation", "censeur_crm", "conseiller_orientation"}
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -220,12 +220,12 @@ def censeur_schedule():
 
 
 @app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule_edit(entry_id):
     import uuid
     user = User.query.get(session["user_id"])
     entry = ScheduleEntry.query.get_or_404(entry_id)
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and entry.course.class_id not in scoped_class_ids:
         abort(403)
 
@@ -340,7 +340,7 @@ def _teacher_schedule_context(teacher):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_list():
     user = User.query.get(session["user_id"])
     teachers_q = Teacher.query.join(User)
@@ -352,7 +352,7 @@ def censeur_teacher_schedule_list():
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official(teacher_id):
     user = User.query.get(session["user_id"])
     teacher = Teacher.query.get_or_404(teacher_id)
@@ -367,7 +367,7 @@ def censeur_teacher_schedule_official(teacher_id):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>/officiel.pdf")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official_pdf(teacher_id):
     from flask import send_file
     from pdf_utils import render_pdf
@@ -385,7 +385,7 @@ def censeur_teacher_schedule_official_pdf(teacher_id):
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>/officiel.xlsx")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official_xlsx(teacher_id):
     from flask import send_file
     from excel_utils import teacher_schedule_workbook
@@ -644,7 +644,7 @@ def censeur_absence_justify(att_id):
 @roles_required("censeur", "directeur")
 def censeur_conseil():
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
@@ -751,10 +751,10 @@ def class_schedule_official_xlsx(class_id):
 
 
 @app.route("/censeur/bulletins")
-@roles_required("censeur", "directeur")
+@roles_required("censeur", "chef_orientation", "directeur")
 def censeur_bulletins():
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
@@ -867,7 +867,7 @@ def _honor_recipients(school_class, term):
 
 
 def _honor_classes(user):
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level, SchoolClass.name)
     if scoped_class_ids is not None:
         classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
@@ -895,7 +895,7 @@ def _honor_scope(user, term, class_id=None):
 @roles_required("censeur", "directeur")
 def censeur_honor_roll_preview(class_id):
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
         abort(403)
     school_class = SchoolClass.query.get_or_404(class_id)
@@ -912,7 +912,7 @@ def censeur_honor_roll_preview(class_id):
 def censeur_honor_roll_student_preview(student_id):
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and student.class_id not in scoped_class_ids:
         abort(403)
     term = request.args.get("term", TERMS[0])
@@ -929,7 +929,7 @@ def censeur_honor_roll_pdf(class_id):
     from flask import send_file
     from pdf_utils import render_pdf
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
         abort(403)
     school_class = SchoolClass.query.get_or_404(class_id)
@@ -999,7 +999,7 @@ def censeur_annual_bulletin_pdf(student_id):
     from pdf_utils import render_pdf, student_photo_pdf_path
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and student.class_id not in scoped_class_ids:
         abort(403)
     data = annual_bulletin_data(student)
@@ -1020,7 +1020,7 @@ def censeur_annual_bulletin_pdf(student_id):
 def censeur_annual_bulletin_preview(student_id):
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and student.class_id not in scoped_class_ids:
         abort(403)
     data = annual_bulletin_data(student)
@@ -1037,7 +1037,7 @@ def censeur_annual_bulletin_preview(student_id):
 def censeur_annual_bulletins_generation_preview(class_id):
     """Prépare les données annuelles de toute une classe avant l’impression individuelle par le Censeur."""
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
         abort(403)
     school_class = SchoolClass.query.get_or_404(class_id)
@@ -1182,7 +1182,7 @@ def censeur_bulletins_class_pdf(class_id):
     from pdf_utils import render_pdf, student_photo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
         abort(403)
     cls = SchoolClass.query.get_or_404(class_id)
@@ -1332,7 +1332,7 @@ def _gender_course_metrics(course, term):
 
 def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None, date_from=None, date_to=None):
     from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     teachers_q = Teacher.query
     if scoped_dept_ids is not None:
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
@@ -1360,7 +1360,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     inds = {i.course_id: i for i in indicators_q.all()} if indicators_q is not None else {}
 
     custom_types_q = CustomIndicatorType.query
-    if user.role == "censeur" and user.section_id:
+    if user.role in ("censeur", "chef_orientation") and user.section_id:
         custom_types_q = custom_types_q.filter(db.or_(CustomIndicatorType.section_id == user.section_id,
                                                         CustomIndicatorType.section_id.is_(None)))
     custom_types = custom_types_q.order_by(CustomIndicatorType.label).all()
@@ -1401,7 +1401,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 
 
 @app.route("/censeur/indicateurs")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators():
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
@@ -1426,8 +1426,8 @@ def censeur_indicators():
     valid_sequences = TERM_SEQUENCES.get(term, ())
     if sequence not in valid_sequences:
         sequence = None
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     departments_q = Department.query.order_by(Department.name)
     if scoped_dept_ids is not None:
         departments_q = departments_q.filter(Department.id.in_(scoped_dept_ids))
@@ -1557,7 +1557,7 @@ def censeur_indicators():
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators_export():
     from flask import send_file
     from excel_utils import indicators_workbook
@@ -1578,7 +1578,7 @@ def censeur_indicators_export():
         class_ids.append(class_id)
     subject_ids = list(dict.fromkeys(request.args.getlist("subject_ids", type=int)))
     course_id = request.args.get("course_id", type=int)
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if department_id:
         department = Department.query.get_or_404(department_id)
         if scoped_dept_ids is not None and department.id not in scoped_dept_ids:
@@ -1594,7 +1594,7 @@ def censeur_indicators_export():
 
 
 @app.route("/censeur/indicateurs/<int:course_id>/modifier", methods=["POST"])
-@roles_required("censeur", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "conseiller_orientation", "directeur")
 def censeur_indicator_edit(course_id):
     from models import TeacherIndicator, Course
     user = User.query.get(session["user_id"])
@@ -1602,7 +1602,7 @@ def censeur_indicator_edit(course_id):
     teacher = course.teacher
     if user.role == "conseiller_orientation" and (course.subject.name or "").strip().casefold() != "orientation scolaire":
         abort(403)
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_dept_ids is not None and teacher.department_id not in scoped_dept_ids:
         abort(403)
     term = request.form.get("term", TERMS[0])
@@ -1628,8 +1628,8 @@ def censeur_council_stats():
     sequence = request.args.get("sequence", type=int)
     if sequence not in TERM_SEQUENCES.get(term, ()):
         sequence = None
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     subject_category = "Enseignements Généraux" if (user.role == "censeur" and user.section_id is None) else None
     department_id = request.args.get("department_id", type=int)
     departments_q = Department.query.order_by(Department.name)
@@ -1703,8 +1703,8 @@ def censeur_council_stats_export():
     sequence = request.args.get("sequence", type=int)
     if sequence not in TERM_SEQUENCES.get(term, ()):
         sequence = None
-    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role == "censeur" else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
     subject_category = "Enseignements Généraux" if (user.role == "censeur" and user.section_id is None) else None
     department_id = request.args.get("department_id", type=int)
     departments_q = Department.query.order_by(Department.name)
@@ -1767,7 +1767,7 @@ def censeur_council_stats_export():
 
 
 @app.route("/censeur/indicateurs/types/nouveau", methods=["POST"])
-@roles_required("censeur", "directeur")
+@roles_required("censeur", "chef_orientation", "directeur")
 def censeur_indicator_type_new():
     from models import CustomIndicatorType
     user = User.query.get(session["user_id"])
@@ -1778,7 +1778,7 @@ def censeur_indicator_type_new():
         flash("Le libellé de l'indicateur est obligatoire.", "warning")
         return redirect(url_for("censeur_indicators"))
     it = CustomIndicatorType(label=label, unit_planned=unit_planned, unit_done=unit_done,
-                              section_id=user.section_id if user.role == "censeur" else None,
+                              section_id=user.section_id if user.role in ("censeur", "chef_orientation") else None,
                               created_by_id=user.id)
     db.session.add(it)
     db.session.commit()
@@ -1787,7 +1787,7 @@ def censeur_indicator_type_new():
 
 
 @app.route("/censeur/indicateurs/types/<int:type_id>/supprimer")
-@roles_required("censeur", "directeur")
+@roles_required("censeur", "chef_orientation", "directeur")
 def censeur_indicator_type_delete(type_id):
     from models import CustomIndicatorType
     user = User.query.get(session["user_id"])

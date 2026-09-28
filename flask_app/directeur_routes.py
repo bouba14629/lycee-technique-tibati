@@ -93,7 +93,7 @@ def save_student_photo(file_storage, matricule):
 
 # ----------------------------------------------------------- utilisateurs ---
 @app.route("/directeur/utilisateurs")
-@roles_required("directeur", "censeur", "conseiller_orientation")
+@roles_required("directeur", "censeur", "chef_orientation", "conseiller_orientation")
 def dir_users():
     from models import STAFF_GRADES
     role_filter = request.args.get("role", "")
@@ -153,7 +153,7 @@ def dir_user_new():
         section_id = request.form.get("section_id", type=int)
         grade = request.form.get("grade", "").strip()
         valid_roles = ("directeur", "censeur", "censeur_crm", "surveillant_general", "conseiller_orientation",
-                        "chef_travaux", "chef_crm", "enseignant")
+                        "chef_orientation", "chef_travaux", "chef_crm", "enseignant")
         if not full_name or role not in valid_roles:
             flash("Nom complet et rôle valides requis (les élèves/parents sont créés via Inscription).", "warning")
             return redirect(url_for("dir_user_new"))
@@ -164,7 +164,7 @@ def dir_user_new():
         temp_pw = generate_account_password(full_name, role)
         u = User(username=uname, role=role, full_name=full_name, email=email, phone=phone, civility=civility or None,
                  must_change_password=True,
-                 section_id=section_id if role in ("censeur", "surveillant_general", "chef_travaux") else None,
+                 section_id=section_id if role in ("censeur", "chef_orientation", "surveillant_general", "chef_travaux") else None,
                  grade=grade if role != "enseignant" else None)
         u.set_password(temp_pw)
         db.session.add(u)
@@ -852,7 +852,7 @@ def dir_class_homeroom(class_id):
 
 
 @app.route("/directeur/structure")
-@roles_required("directeur", "censeur", "censeur_crm")
+@roles_required("directeur", "censeur", "chef_orientation", "censeur_crm")
 def dir_structure():
     from utils import user_scoped_department_ids
     user = User.query.get(session["user_id"])
@@ -1071,7 +1071,7 @@ def _subject_duplicate_for_class(name, school_class, exclude_id=None):
 
 
 @app.route("/directeur/structure/matiere/nouvelle", methods=["POST"])
-@roles_required("censeur")
+@roles_required("censeur", "chef_orientation")
 def dir_subject_new():
     from utils import user_scoped_department_ids
     name = request.form.get("name", "").strip()
@@ -1141,14 +1141,14 @@ def _subject_in_scope(subject, user):
     scoped_ids = user_scoped_department_ids(user)
     if scoped_ids is not None:
         return subject.department_id in scoped_ids
-    if user.role == "censeur":
-        # portée transversale réservée au Censeur Enseignements Généraux, mais uniquement pour les matières générales
-        return subject.category == "Enseignements Généraux"
+    if user.role in ("censeur", "chef_orientation"):
+        # Les comptes pédagogiques peuvent gérer les matières de leur périmètre.
+        return subject.category == "Enseignements Généraux" if user.role == "censeur" and scoped_ids is None else True
     return False  # Censeur CRM = consultation seule désormais
 
 
 @app.route("/directeur/structure/matiere/<int:subject_id>/modifier", methods=["POST"])
-@roles_required("directeur", "censeur", "censeur_crm")
+@roles_required("directeur", "censeur", "chef_orientation", "censeur_crm")
 def dir_subject_edit(subject_id):
     subject = Subject.query.get_or_404(subject_id)
     user = User.query.get(session["user_id"])
@@ -1173,7 +1173,7 @@ def dir_subject_edit(subject_id):
 
 
 @app.route("/directeur/structure/matiere/<int:subject_id>/supprimer")
-@roles_required("directeur", "censeur", "censeur_crm")
+@roles_required("directeur", "censeur", "chef_orientation", "censeur_crm")
 def dir_subject_delete(subject_id):
     subject = Subject.query.get_or_404(subject_id)
     user = User.query.get(session["user_id"])
