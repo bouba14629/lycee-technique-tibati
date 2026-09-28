@@ -376,7 +376,7 @@ def dir_user_delete(user_id):
 
 # -------------------------------------------------------- inscription élèves ---
 @app.route("/parents/nouveau", methods=["GET", "POST"])
-@roles_required("directeur", "conseiller_orientation")
+@roles_required("directeur", "conseiller_orientation", "chef_orientation")
 def parent_new():
     search = request.args.get("q", "").strip()
     students = []
@@ -858,7 +858,7 @@ def dir_class_homeroom(class_id):
 
 
 @app.route("/directeur/structure")
-@roles_required("directeur", "censeur", "chef_orientation", "censeur_crm")
+@roles_required("directeur", "censeur", "censeur_crm")
 def dir_structure():
     from utils import user_scoped_department_ids
     user = User.query.get(session["user_id"])

@@ -83,7 +83,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       {% endif %}
 
-      {% if current_user and current_user.role in ['censeur','chef_orientation'] %}
+      {% if current_user and current_user.role == 'censeur' %}
       <div class="sidebar-section-title">Organisation pédagogique</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels enseignants</a>
@@ -97,6 +97,15 @@
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_honor_roll_register','censeur_honor_roll_register_export'] }}" href="{{ url_for('censeur_honor_roll_register') }}"><i class="bi bi-award-fill"></i> Tableaux d’honneur</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_users' }}" href="{{ url_for('dir_users', role='enseignant') }}"><i class="bi bi-person-workspace"></i> Enseignants</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles &amp; équipements</a>
+      {% endif %}
+
+      {% if current_user and current_user.role == 'chef_orientation' %}
+      <div class="sidebar-section-title">Orientation scolaire</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels des conseillers</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='parent_new' }}" href="{{ url_for('parent_new') }}"><i class="bi bi-person-plus-fill"></i> Parents</a>
+      <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation uniquement des emplois du temps des conseillers d’orientation.</div>
       {% endif %}
 
       {% if current_user and current_user.role == 'censeur_crm' %}

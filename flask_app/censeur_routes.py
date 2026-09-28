@@ -31,7 +31,7 @@ def _subject_compatible_with_class(subject, school_class):
 
 
 @app.route("/censeur/service-des-professeurs")
-@roles_required("censeur", "chef_orientation", "censeur_crm", "directeur")
+@roles_required("censeur", "censeur_crm", "directeur")
 def censeur_teacher_service():
     """Grille du Service des Professeurs conforme au modèle importé, alimentée par les créneaux."""
     user = User.query.get(session["user_id"])
@@ -77,7 +77,7 @@ def censeur_schedule():
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     # Le directeur et tous les censeurs construisent ; le conseiller d’orientation reste en consultation seule.
-    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "chef_orientation", "censeur_crm", "conseiller_orientation"}
+    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -90,7 +90,7 @@ def censeur_schedule():
     current_class = SchoolClass.query.get(class_id) if class_id else None
     can_create_tronc_commun = bool(current_class) and can_build_schedule
     if current_class:
-        if user.role == "conseiller_orientation":
+        if user.role in ("conseiller_orientation", "chef_orientation"):
             subjects = Subject.query.filter(db.func.lower(Subject.name) == "orientation scolaire").order_by(Subject.name).all()
         else:
             subjects_q = Subject.query.filter(or_(
@@ -112,6 +112,8 @@ def censeur_schedule():
     if created_orientation_profiles:
         db.session.commit()
     all_teachers = Teacher.query.join(User).order_by(User.full_name).all()
+    if user.role == "chef_orientation":
+        all_teachers = [teacher for teacher in all_teachers if teacher.user.role == "conseiller_orientation"]
     # Les troncs communs réunissent des classes du même niveau ; le périmètre du censeur reste appliqué.
     tronc_commun_classes = []
     if can_create_tronc_commun:
@@ -211,6 +213,8 @@ def censeur_schedule():
         return redirect(url_for("censeur_schedule", class_id=class_id))
 
     schedule = ScheduleEntry.query.join(Course).filter(Course.class_id == class_id).all() if class_id else []
+    if user.role == "chef_orientation":
+        schedule = [entry for entry in schedule if entry.course.teacher.user.role == "conseiller_orientation"]
     edit_entry = None
     edit_entry_id = request.args.get("edit_entry_id", type=int)
     if edit_entry_id:
@@ -231,7 +235,7 @@ def censeur_schedule():
 
 
 @app.route("/censeur/emplois-du-temps/<int:entry_id>/modifier", methods=["POST"])
-@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_schedule_edit(entry_id):
     import uuid
     user = User.query.get(session["user_id"])
@@ -359,6 +363,8 @@ def censeur_teacher_schedule_list():
     if scoped_dept_ids is not None:
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
     teachers = teachers_q.order_by(db.func.lower(User.full_name)).all()
+    if user.role == "chef_orientation":
+        teachers = [teacher for teacher in teachers if teacher.user.role == "conseiller_orientation"]
     return render_template("censeur_teacher_schedule_list.html", teachers=teachers)
 
 
@@ -367,6 +373,8 @@ def censeur_teacher_schedule_list():
 def censeur_teacher_schedule_official(teacher_id):
     user = User.query.get(session["user_id"])
     teacher = Teacher.query.get_or_404(teacher_id)
+    if user.role == "chef_orientation" and teacher.user.role != "conseiller_orientation":
+        abort(403)
     if not _censeur_teacher_schedule_in_scope(teacher, user):
         abort(403)
     context = _teacher_schedule_context(teacher)
@@ -384,6 +392,8 @@ def censeur_teacher_schedule_official_pdf(teacher_id):
     from pdf_utils import render_pdf
     user = User.query.get(session["user_id"])
     teacher = Teacher.query.get_or_404(teacher_id)
+    if user.role == "chef_orientation" and teacher.user.role != "conseiller_orientation":
+        abort(403)
     if not _censeur_teacher_schedule_in_scope(teacher, user):
         abort(403)
     context = _teacher_schedule_context(teacher)
@@ -403,6 +413,8 @@ def censeur_teacher_schedule_official_xlsx(teacher_id):
     from utils import OFFICIAL_PERIODS
     user = User.query.get(session["user_id"])
     teacher = Teacher.query.get_or_404(teacher_id)
+    if user.role == "chef_orientation" and teacher.user.role != "conseiller_orientation":
+        abort(403)
     if not _censeur_teacher_schedule_in_scope(teacher, user):
         abort(403)
     context = _teacher_schedule_context(teacher)
@@ -762,7 +774,7 @@ def class_schedule_official_xlsx(class_id):
 
 
 @app.route("/censeur/bulletins")
-@roles_required("censeur", "chef_orientation", "directeur")
+@roles_required("censeur", "directeur")
 def censeur_bulletins():
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
