@@ -543,6 +543,8 @@ def teacher_indicators():
             setattr(ind, field, value)
         for field, value in done_values.items():
             setattr(ind, field, value)
+        if session.get("role") == "conseiller_orientation":
+            ind.observations = request.form.get("observations", "").strip()
         for ct in custom_types:
             cv = CustomIndicatorValue.query.filter_by(indicator_type_id=ct.id, course_id=course.id, term=term).first()
             if not cv:

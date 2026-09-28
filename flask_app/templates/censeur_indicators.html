@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Synthèse des indicateurs pédagogiques{% endblock %}
 {% block page_title %}Synthèse — {{ "Indicateurs pédagogiques — Orientation Scolaire" if orientation_mode else "Indicateurs pédagogiques" }}{% endblock %}
-{% block page_subtitle %}Couverture des heures, des programmes et des travaux pratiques — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
+{% block page_subtitle %}{{ "Sessions de formation, consultations par genre et heures" if orientation_mode else "Couverture des heures, des programmes et des travaux pratiques" }} — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
 {% block content %}
 <div class="mb-3 no-print d-flex justify-content-end gap-2">
   {% if current_user.role in ['censeur', 'chef_orientation', 'conseiller_orientation'] %}
@@ -45,14 +45,15 @@
 <div class="row g-2 mb-2">
   <div class="col-6"><label style="font-size:11px;">Heures dues</label><input type="number" name="hours_due" class="form-control form-control-sm" value="{{ ind.hours_due if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">Heures faites</label><input type="number" name="hours_done" class="form-control form-control-sm" value="{{ ind.hours_done if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">Leçons prévues</label><input type="number" name="lessons_planned" class="form-control form-control-sm" value="{{ ind.lessons_planned if ind else 0 }}"></div>
-  <div class="col-6"><label style="font-size:11px;">Leçons faites</label><input type="number" name="lessons_done" class="form-control form-control-sm" value="{{ ind.lessons_done if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">{{ "Prévues" if orientation_mode else "Leçons prévues" }}</label><input type="number" name="lessons_planned" class="form-control form-control-sm" value="{{ ind.lessons_planned if ind else 0 }}"></div>
+  <div class="col-6"><label style="font-size:11px;">{{ "Faites" if orientation_mode else "Leçons faites" }}</label><input type="number" name="lessons_done" class="form-control form-control-sm" value="{{ ind.lessons_done if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">Leçons digital. prévues</label><input type="number" name="digital_lessons_planned" class="form-control form-control-sm" value="{{ ind.digital_lessons_planned if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">Leçons digital. faites</label><input type="number" name="digital_lessons_done" class="form-control form-control-sm" value="{{ ind.digital_lessons_done if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">{{ "Prévues" if orientation_mode else "TP prévus" }}</label><input type="number" name="tp_planned" class="form-control form-control-sm" value="{{ ind.tp_planned if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">{{ "Faites" if orientation_mode else "TP réalisés" }}</label><input type="number" name="tp_done" class="form-control form-control-sm" value="{{ ind.tp_done if ind else 0 }}"></div>
   {% if not orientation_mode %}<div class="col-6"><label style="font-size:11px;">TP digital. prévus</label><input type="number" name="digital_tp_planned" class="form-control form-control-sm" value="{{ ind.digital_tp_planned if ind else 0 }}"></div>
   <div class="col-6"><label style="font-size:11px;">TP digital. réalisés</label><input type="number" name="digital_tp_done" class="form-control form-control-sm" value="{{ ind.digital_tp_done if ind else 0 }}"></div>{% endif %}
+  {% if orientation_mode %}<div class="col-12"><label style="font-size:11px;">Observations</label><textarea name="observations" class="form-control form-control-sm" rows="2">{{ ind.observations if ind else "" }}</textarea></div>{% endif %}
 </div>
 {% endmacro %}
 
@@ -65,8 +66,8 @@
       <label>Classe / Matière / Enseignant</label>
       <select id="genericCourseSelect" class="form-select mb-2" onchange="populateGenericIndicator(this); document.getElementById('genericIndForm').action='/censeur/indicateurs/'+this.value+'/modifier'">
         <option value="">— Choisir —</option>
-        {% for row in rows %}<option value="{{ row.course.id }}" data-hours-due="{{ row.ind.hours_due }}" data-hours-done="{{ row.ind.hours_done }}" data-lessons-planned="{{ row.ind.lessons_planned }}" data-lessons-done="{{ row.ind.lessons_done }}" data-digital-lessons-planned="{{ row.ind.digital_lessons_planned }}" data-digital-lessons-done="{{ row.ind.digital_lessons_done }}" data-tp-planned="{{ row.ind.tp_planned }}" data-tp-done="{{ row.ind.tp_done }}" data-digital-tp-planned="{{ row.ind.digital_tp_planned }}" data-digital-tp-done="{{ row.ind.digital_tp_done }}">{{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
-        {% for c in missing %}<option value="{{ c.id }}" data-hours-due="0" data-hours-done="0" data-lessons-planned="0" data-lessons-done="0" data-digital-lessons-planned="0" data-digital-lessons-done="0" data-tp-planned="0" data-tp-done="0" data-digital-tp-planned="0" data-digital-tp-done="0">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
+        {% for row in rows %}<option value="{{ row.course.id }}" data-hours-due="{{ row.ind.hours_due }}" data-hours-done="{{ row.ind.hours_done }}" data-lessons-planned="{{ row.ind.lessons_planned }}" data-lessons-done="{{ row.ind.lessons_done }}" data-digital-lessons-planned="{{ row.ind.digital_lessons_planned }}" data-digital-lessons-done="{{ row.ind.digital_lessons_done }}" data-tp-planned="{{ row.ind.tp_planned }}" data-tp-done="{{ row.ind.tp_done }}" data-digital-tp-planned="{{ row.ind.digital_tp_planned }}" data-digital-tp-done="{{ row.ind.digital_tp_done }}" data-observations="{{ row.ind.observations|default("", true)|e }}">{{ row.course.school_class.code or 'Sans code' }} — {{ row.course.subject.name }} ({{ row.teacher.user.full_name }}) — déjà saisi</option>{% endfor %}
+        {% for c in missing %}<option value="{{ c.id }}" data-hours-due="0" data-hours-done="0" data-lessons-planned="0" data-lessons-done="0" data-digital-lessons-planned="0" data-digital-lessons-done="0" data-tp-planned="0" data-tp-done="0" data-digital-tp-planned="0" data-digital-tp-done="0" data-observations="">{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }} ({{ c.teacher.user.full_name }}) — non saisi</option>{% endfor %}
       </select>
       {{ ind_fields(none) }}
       <div class="text-muted mb-2" style="font-size:11px;">Les valeurs enregistrées sont chargées directement et peuvent être modifiées par le censeur sans restriction.</div>
@@ -79,7 +80,7 @@ function populateGenericIndicator(select) {
   const option = select.options[select.selectedIndex];
   if (!option || !option.value) return;
   const form = document.getElementById('genericIndForm');
-  const fields = ['hours_due', 'hours_done', 'lessons_planned', 'lessons_done', 'digital_lessons_planned', 'digital_lessons_done', 'tp_planned', 'tp_done', 'digital_tp_planned', 'digital_tp_done'];
+  const fields = ['hours_due', 'hours_done', 'lessons_planned', 'lessons_done', 'digital_lessons_planned', 'digital_lessons_done', 'tp_planned', 'tp_done', 'digital_tp_planned', 'digital_tp_done', 'observations'];
   fields.forEach(field => { const input = form.elements[field]; const key = field.replaceAll('_', '-'); const value = option.getAttribute('data-' + key); if (input && value !== null) input.value = value; });
 }
 </script>
@@ -141,16 +142,16 @@ function populateGenericIndicator(select) {
       <tr>
         <th rowspan="2">Département</th>
         <th colspan="3" class="text-center">Couverture des heures</th>
-        <th colspan="3" class="text-center">Couverture des programmes</th>
+        <th colspan="3" class="text-center">{{ "Sessions de formation" if orientation_mode else "Couverture des programmes" }}</th>
         <th colspan="3" class="text-center">Leçons digitalisées</th>
-        <th colspan="3" class="text-center">Travaux pratiques</th>
+        <th colspan="3" class="text-center">{{ "Consultations par genre" if orientation_mode else "Travaux pratiques" }}</th>
         {% if not orientation_mode %}<th colspan="3" class="text-center">TP digitalisés</th>{% endif %}
       </tr>
       <tr>
         <th>Dues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
-        <th>{{ "Prévues" if orientation_mode else "Prévus" }}</th><th>{{ "Faites" if orientation_mode else "Réalisés" }}</th><th>%</th>
+        <th>{{ "Filles" if orientation_mode else "Prévus" }}</th><th>{{ "Garçons" if orientation_mode else "Réalisés" }}</th><th>%</th>
         {% if not orientation_mode %}<th>Prévus</th><th>Réalisés</th><th>%</th>{% endif %}
       </tr>
     </thead>
@@ -179,10 +180,11 @@ function populateGenericIndicator(select) {
         <th rowspan="2">Code / Classe</th>
         <th rowspan="2">Matière</th>
         <th rowspan="2">Date</th>
+        {% if orientation_mode %}<th rowspan="2">Observations</th>{% endif %}
         <th colspan="3" class="text-center">Couverture des heures</th>
-        <th colspan="3" class="text-center">Couverture des programmes</th>
+        <th colspan="3" class="text-center">{{ "Sessions de formation" if orientation_mode else "Couverture des programmes" }}</th>
         <th colspan="3" class="text-center">Leçons digitalisées</th>
-        <th colspan="3" class="text-center">Travaux pratiques</th>
+        <th colspan="3" class="text-center">{{ "Consultations par genre" if orientation_mode else "Travaux pratiques" }}</th>
         {% if not orientation_mode %}<th colspan="3" class="text-center">TP digitalisés</th>{% endif %}
         <th colspan="3" class="text-center">Moyennes ≥ 10 par genre</th>
         <th colspan="3" class="text-center">Taux de réussite par genre</th>
@@ -194,7 +196,7 @@ function populateGenericIndicator(select) {
         <th>Dues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
         <th>Prévues</th><th>Faites</th><th>%</th>
-        <th>{{ "Prévues" if orientation_mode else "Prévus" }}</th><th>{{ "Faites" if orientation_mode else "Réalisés" }}</th><th>%</th>
+        <th>{{ "Filles" if orientation_mode else "Prévus" }}</th><th>{{ "Garçons" if orientation_mode else "Réalisés" }}</th><th>%</th>
         {% if not orientation_mode %}<th>Prévus</th><th>Réalisés</th><th>%</th>{% endif %}
         <th>Filles</th><th>Garçons</th><th>Total</th>
         <th>Filles</th><th>Garçons</th><th>Total</th>
@@ -209,6 +211,7 @@ function populateGenericIndicator(select) {
         <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong></td>
         <td>{{ row.course.subject.name }}</td>
         <td>{{ row.ind.updated_at.strftime("%d/%m/%Y") if row.ind.updated_at else "—" }}</td>
+        {% if orientation_mode %}<td>{{ row.ind.observations or "—" }}</td>{% endif %}
         <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ '-' if row.ind.hours_due == 0 and row.ind.hours_done == 0 else (row.pct_hours if row.pct_hours is not none else '—') ~ '%' }}</td>
         <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ '-' if row.ind.lessons_planned == 0 and row.ind.lessons_done == 0 else (row.pct_lessons if row.pct_lessons is not none else '—') ~ '%' }}</td>
         <td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ '-' if row.ind.digital_lessons_planned == 0 and row.ind.digital_lessons_done == 0 else (row.pct_digital_lessons if row.pct_digital_lessons is not none else '—') ~ '%' }}</td>

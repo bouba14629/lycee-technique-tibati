@@ -187,6 +187,7 @@ class TeacherIndicator(db.Model):
     tp_done = db.Column(db.Integer, default=0)
     digital_tp_planned = db.Column(db.Integer, default=0)
     digital_tp_done = db.Column(db.Integer, default=0)
+    observations = db.Column(db.Text, default="")
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     teacher = db.relationship("Teacher", backref="indicators")
     course = db.relationship("Course")

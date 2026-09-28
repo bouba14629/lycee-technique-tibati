@@ -8,18 +8,19 @@
   .no-print { display:none !important; }
   .service-page { break-after: page; page-break-after: always; margin:0; }
   .service-page:last-child { break-after:auto; page-break-after:auto; }
+  .service-table .break-row td, .service-table .summary th, .service-table .summary td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 .service-page { margin-bottom:16px; }
-.service-table { width:100%; border-collapse:collapse; table-layout:fixed; color:#000; font-family:Arial, Helvetica, sans-serif; font-size:7px; }
-.service-table th,.service-table td { border:1px solid #111; padding:1px; text-align:center; vertical-align:middle; line-height:1; }
+.service-table { width:100%; border-collapse:collapse; table-layout:fixed; color:#000; font-family:Arial, Helvetica, sans-serif; font-size:6px; }
+.service-table th,.service-table td { border:1px solid #111; padding:0.5px; text-align:center; vertical-align:middle; line-height:.95; }
 .service-table .school { width:7%; font-size:7px; font-weight:700; }
 .service-table .hours { width:7%; font-size:7px; font-weight:700; }
-.service-table .teacher-head { font-size:7px; font-weight:700; text-transform:uppercase; }
-.service-table .sub-head { font-size:5.5px; font-weight:700; }
+.service-table .teacher-head { font-size:6px; font-weight:700; text-transform:uppercase; }
+.service-table .sub-head { font-size:5px; font-weight:700; }
 .service-table .day { width:6%; font-size:6.5px; font-weight:700; }
-.service-table .period { height:16px; font-size:6px; }
-.service-table .subject { font-weight:700; font-size:6px; }
-.service-table .class-code { font-size:6px; font-weight:700; }
+.service-table .period { height:14px; font-size:5.5px; }
+.service-table .subject { font-weight:700; font-size:5.5px; }
+.service-table .class-code { font-size:5.5px; font-weight:700; }
 .service-table .break-row td { background:#bdbdbd; font-weight:700; letter-spacing:4px; height:9px; }
 .service-table .summary th,.service-table .summary td { font-weight:700; background:#ededed; height:11px; }
 </style>{% endblock %}
@@ -30,9 +31,8 @@
 {% set day_rowspan = periods|length + 2 %}
 <div class="service-page"><table class="service-table">
 <thead>
-<tr><th class="school" rowspan="3">L.T. DE TIBATI<br><strong>{{ school_year }}</strong></th><th class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - teacher_count) %}<th colspan="2"></th>{% endfor %}</tr>
+<tr><th class="school" rowspan="2">L.T. DE TIBATI<br><strong>{{ school_year }}</strong></th><th class="hours">HEURES</th>{% for item in group if item %}<th colspan="2" class="teacher-head">{{ item.teacher.user.full_name }}</th>{% endfor %}{% for _ in range(6 - teacher_count) %}<th colspan="2"></th>{% endfor %}</tr>
 <tr><th></th>{% for item in group if item %}<th class="sub-head">DISCIPLINE</th><th class="sub-head">CLASSE</th>{% endfor %}{% for _ in range(6 - teacher_count) %}<th></th><th></th>{% endfor %}</tr>
-<tr><th class="sub-head">HEURES</th>{% for item in group if item %}<th class="sub-head">SUBJECT</th><th class="sub-head">FORM</th>{% endfor %}{% for _ in range(6 - teacher_count) %}<th></th><th></th>{% endfor %}</tr>
 </thead><tbody>
 {% for day in days %}
 {% for index in range(periods|length) %}

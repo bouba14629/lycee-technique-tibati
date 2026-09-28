@@ -174,6 +174,14 @@ db.init_app(app)
 with app.app_context():
     os.makedirs(os.path.join(BASE_DIR, "instance"), exist_ok=True)
     db.create_all()
+    # Migration additive et non destructive pour les observations Orientation.
+    try:
+        from sqlalchemy import inspect, text
+        if "observations" not in {col["name"] for col in inspect(db.engine).get_columns("teacher_indicator")}:
+            with db.engine.begin() as connection:
+                connection.execute(text("ALTER TABLE teacher_indicator ADD COLUMN observations TEXT NULL" if db.engine.dialect.name == "mysql" else "ALTER TABLE teacher_indicator ADD COLUMN observations TEXT DEFAULT ''"))
+    except Exception:
+        app.logger.exception("Impossible d'ajouter la colonne observations")
     if os.getenv("LTT_BOOTSTRAP_MODE", "founder") == "demo":
         seed_module.seed()
     else:

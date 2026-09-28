@@ -1655,6 +1655,8 @@ def censeur_indicator_edit(course_id):
         planned_fields = ["hours_due", "lessons_planned", "tp_planned"]
         done_fields = ["hours_done", "lessons_done", "tp_done"]
     values = {field: request.form.get(field, 0, type=int) for field in planned_fields + done_fields}
+    if user.role in ("conseiller_orientation", "chef_orientation"):
+        ind.observations = request.form.get("observations", "").strip()
     for field, value in values.items():
         setattr(ind, field, value)
     db.session.commit()

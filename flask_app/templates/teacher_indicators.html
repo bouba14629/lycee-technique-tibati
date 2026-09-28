@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Indicateurs pédagogiques{% endblock %}
 {% block page_title %}Indicateurs pédagogiques{% endblock %}
-{% block page_subtitle %}Couverture des heures, des programmes et des travaux pratiques — à renseigner par classe et par matière{% endblock %}
+{% block page_subtitle %}Sessions de formation, consultations par genre et heures — à renseigner par classe et par matière{% endblock %}
 {% block content %}
 <div class="card-ltt" style="max-width:760px;">
   <form method="GET" class="row g-2 mb-3">
@@ -32,23 +32,25 @@
       <div class="col-md-6"><label>Heures faites</label><input type="number" name="hours_done" class="form-control" value="{{ indicator.hours_done|default(0, true) if indicator else 0 }}"></div>
     </div>
 
-    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des programmes</h3>
+    <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Sessions de formation</h3>
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>Nombre de leçons prévues</label><input type="number" name="lessons_planned" class="form-control" value="{{ indicator.lessons_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
-      <div class="col-md-6"><label>Nombre de leçons faites</label><input type="number" name="lessons_done" class="form-control" value="{{ indicator.lessons_done|default(0, true) if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>{{ "Prévues" if current_user.role == "conseiller_orientation" else "Nombre de leçons prévues" }}</label><input type="number" name="lessons_planned" class="form-control" value="{{ indicator.lessons_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
+      <div class="col-md-6"><label>{{ "Faites" if current_user.role == "conseiller_orientation" else "Nombre de leçons faites" }}</label><input type="number" name="lessons_done" class="form-control" value="{{ indicator.lessons_done|default(0, true) if indicator else 0 }}"></div>
       <div class="col-md-6"><label>Leçons digitalisées prévues</label><input type="number" name="digital_lessons_planned" class="form-control" value="{{ indicator.digital_lessons_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>Leçons digitalisées faites</label><input type="number" name="digital_lessons_done" class="form-control" value="{{ indicator.digital_lessons_done|default(0, true) if indicator else 0 }}"></div>
     </div>
 
-    {% if current_user.role == "conseiller_orientation" %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Session de formation</h3>{% else %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>{% endif %}
+    {% if current_user.role == "conseiller_orientation" %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Consultations par genre</h3>{% else %}<h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Réalisation des travaux pratiques</h3>{% endif %}
     <div class="row g-3 mb-3">
-      <div class="col-md-6"><label>{{ "Prévues" if current_user.role == "conseiller_orientation" else "Nombre de TP prévus" }}</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
-      <div class="col-md-6"><label>{{ "Faites" if current_user.role == "conseiller_orientation" else "Nombre de TP réalisés" }}</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done|default(0, true) if indicator else 0 }}"></div>
+      <div class="col-md-6"><label>{{ "Filles" if current_user.role == "conseiller_orientation" else "Nombre de TP prévus" }}</label><input type="number" name="tp_planned" class="form-control" value="{{ indicator.tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
+      <div class="col-md-6"><label>{{ "Garçons" if current_user.role == "conseiller_orientation" else "Nombre de TP réalisés" }}</label><input type="number" name="tp_done" class="form-control" value="{{ indicator.tp_done|default(0, true) if indicator else 0 }}"></div>
 {% if current_user.role != "conseiller_orientation" %}
       <div class="col-md-6"><label>TP digitalisés prévus</label><input type="number" name="digital_tp_planned" class="form-control" value="{{ indicator.digital_tp_planned|default(0, true) if indicator else 0 }}" {{ 'readonly' if indicator else '' }}></div>
       <div class="col-md-6"><label>TP digitalisés réalisés</label><input type="number" name="digital_tp_done" class="form-control" value="{{ indicator.digital_tp_done|default(0, true) if indicator else 0 }}"></div>
       {% endif %}
     </div>
+
+    {% if current_user.role == "conseiller_orientation" %}<div class="mb-3"><label>Observations</label><textarea name="observations" class="form-control" rows="3">{{ indicator.observations|default("", true) if indicator else "" }}</textarea></div>{% endif %}
 
     {% if custom_types %}
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;"><i class="bi bi-stars"></i> Indicateurs supplémentaires (ajoutés par le Censeur)</h3>
