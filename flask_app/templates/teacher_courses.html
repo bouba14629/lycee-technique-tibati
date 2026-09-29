@@ -20,7 +20,7 @@
       </ol>
     </details>
     <div class="d-grid gap-2">
-      <a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>
+      {% if current_user.role != 'conseiller_orientation' %}<a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>{% endif %}
       <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
     </div>
   </div>
