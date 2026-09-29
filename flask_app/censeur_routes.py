@@ -45,22 +45,17 @@ def censeur_teacher_service():
     if scoped_class_ids is not None:
         entries_q = entries_q.filter(Course.class_id.in_(scoped_class_ids))
     entries = entries_q.all()
-    def duration_hours(start_time, end_time):
-        try:
-            start_minutes = int(start_time[:2]) * 60 + int(start_time[3:5])
-            end_minutes = int(end_time[:2]) * 60 + int(end_time[3:5])
-            return max(0, (end_minutes - start_minutes) / 60)
-        except (TypeError, ValueError, IndexError):
-            return 0
     by_teacher = {teacher.id: {day: [None] * len(OFFICIAL_PERIODS) for day in DAYS[:5]} for teacher in teachers}
     hours_done = {teacher.id: 0.0 for teacher in teachers}
     for entry in entries:
         if entry.day not in by_teacher[entry.course.teacher_id]:
             continue
-        hours_done[entry.course.teacher_id] += duration_hours(entry.start_time, entry.end_time)
+        # Une heure faite correspond à une matière programmée dans une cellule officielle.
         for index, (start_time, end_time) in enumerate(OFFICIAL_PERIODS):
             if entry.start_time < end_time and start_time < entry.end_time:
-                by_teacher[entry.course.teacher_id][entry.day][index] = entry
+                if by_teacher[entry.course.teacher_id][entry.day][index] is None:
+                    by_teacher[entry.course.teacher_id][entry.day][index] = entry
+                    hours_done[entry.course.teacher_id] += 1
     services = [{"teacher": teacher, "grid": by_teacher[teacher.id],
                  "hours_done": round(hours_done[teacher.id], 2), "hours_due": teacher.hours_due or 0}
                 for teacher in teachers]
@@ -1622,7 +1617,8 @@ def censeur_indicators_export():
         user, term, department_id=department_id, class_ids=class_ids, subject_ids=subject_ids, course_id=course_id,
         date_from=date_from, date_to=date_to
     )
-    wb_io = indicators_workbook(rows, totals, term, custom_types)
+    wb_io = indicators_workbook(rows, totals, term, custom_types,
+                                include_gender=user.role != "chef_orientation")
     filename = f"LTT_indicateurs_{term}.xlsx".replace(" ", "_")
     return send_file(wb_io, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                       as_attachment=True, download_name=filename)
