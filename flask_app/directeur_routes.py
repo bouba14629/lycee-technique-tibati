@@ -671,6 +671,9 @@ def students_export_pdf():
 def student_detail(student_id):
     from utils import general_average, subject_averages, user_scoped_class_ids
     student = Student.query.get_or_404(student_id)
+    return_class_id = request.args.get("return_class_id", type=int)
+    if return_class_id and not SchoolClass.query.get(return_class_id):
+        return_class_id = None
     user = User.query.get(session["user_id"])
     if session.get("role") == "enseignant" and student.class_id not in _teacher_class_ids():
         abort(403)
@@ -680,7 +683,8 @@ def student_detail(student_id):
             abort(403)
     avg = general_average(student.id)
     subj_avgs = subject_averages(student.id)
-    return render_template("student_detail.html", student=student, avg=avg, subj_avgs=subj_avgs)
+    return render_template("student_detail.html", student=student, avg=avg, subj_avgs=subj_avgs,
+                           return_class_id=return_class_id)
 
 
 @app.route("/eleves/<int:student_id>/carte")
@@ -732,6 +736,9 @@ def student_card_verify(token):
 @roles_required("directeur")
 def student_edit(student_id):
     student = Student.query.get_or_404(student_id)
+    return_class_id = request.form.get("return_class_id", type=int)
+    if return_class_id and not SchoolClass.query.get(return_class_id):
+        return_class_id = None
     student.first_name = request.form.get("first_name", student.first_name).strip()
     student.last_name = request.form.get("last_name", student.last_name).strip()
     student.sex = request.form.get("sex", student.sex)
@@ -741,14 +748,16 @@ def student_edit(student_id):
             student.dob = date.fromisoformat(raw_dob) if raw_dob else None
         except ValueError:
             flash("La date de naissance est invalide. Utilisez le format JJ/MM/AAAA ou AAAA-MM-JJ.", "danger")
-            return redirect(url_for("student_detail", student_id=student.id))
+            return redirect(url_for("student_detail", student_id=student.id,
+                                    return_class_id=return_class_id))
     student.birth_place = request.form.get("birth_place", student.birth_place)
     student.is_repeater = request.form.get("is_repeater") == "1"
     new_matricule = request.form.get("matricule", "").strip()
     if new_matricule and new_matricule != student.matricule:
         if Student.query.filter(Student.matricule == new_matricule, Student.id != student.id).first():
             flash(f"Le matricule « {new_matricule} » est déjà utilisé par un autre élève.", "danger")
-            return redirect(url_for("student_detail", student_id=student.id))
+            return redirect(url_for("student_detail", student_id=student.id,
+                                    return_class_id=return_class_id))
         student.matricule = new_matricule
     class_id = request.form.get("class_id", type=int)
     if class_id:
@@ -765,6 +774,8 @@ def student_edit(student_id):
         student.user.full_name = f"{student.first_name} {student.last_name}"
     db.session.commit()
     flash("Fiche élève modifiée.", "success")
+    if return_class_id:
+        return redirect(url_for("students_list", class_id=return_class_id))
     return redirect(url_for("student_detail", student_id=student.id))
 
 
@@ -773,6 +784,9 @@ def student_edit(student_id):
 def student_delete(student_id):
     from models import Grade, Attendance, Sanction, Reward
     student = Student.query.get_or_404(student_id)
+    return_class_id = request.args.get("return_class_id", type=int)
+    if return_class_id and not SchoolClass.query.get(return_class_id):
+        return_class_id = None
     name = student.full_name
     Grade.query.filter_by(student_id=student.id).delete()
     Attendance.query.filter_by(student_id=student.id).delete()
@@ -784,7 +798,7 @@ def student_delete(student_id):
         db.session.delete(user)
     db.session.commit()
     flash(f"Élève « {name} » et toutes ses données ont été supprimés.", "info")
-    return redirect(url_for("students_list"))
+    return redirect(url_for("students_list", class_id=return_class_id))
 
 
 @app.route("/eleves/<int:student_id>/sanction", methods=["POST"])

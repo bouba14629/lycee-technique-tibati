@@ -54,7 +54,7 @@
         <td class="text-muted">{{ s.birth_place or '—' }}</td>
         <td><span class="badge-ltt badge-navy">{{ s.school_class.name if s.school_class }}</span></td>
         <td><span class="badge-ltt badge-success">{{ s.status }}</span></td>
-        <td class="text-end"><a href="{{ url_for('student_detail', student_id=s.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-folder2-open"></i> Dossier</a></td>
+        <td class="text-end"><a href="{{ url_for('student_detail', student_id=s.id, return_class_id=class_id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-folder2-open"></i> Dossier</a></td>
       </tr>
     {% else %}
       <tr><td colspan="5" class="text-muted text-center py-4">Aucun élève trouvé.</td></tr>

@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-end gap-2 mb-3 no-print">
   {% if current_user.role == 'directeur' %}
   <button class="btn-ltt-outline" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="bi bi-pencil-square"></i> Modifier</button>
-  <a href="{{ url_for('student_delete', student_id=student.id) }}" class="btn-ltt-outline text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer définitivement {{ student.full_name }} et toutes ses données (notes, absences, sanctions) ? Cette action est irréversible.'"><i class="bi bi-trash"></i> Supprimer</a>
+  <a href="{{ url_for('student_delete', student_id=student.id, return_class_id=return_class_id) }}" class="btn-ltt-outline text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer définitivement {{ student.full_name }} et toutes ses données (notes, absences, sanctions) ? Cette action est irréversible.'"><i class="bi bi-trash"></i> Supprimer</a>
   {% endif %}
   <a href="{{ url_for('student_card_preview', student_id=student.id) }}" class="btn-ltt-gold"><i class="bi bi-person-vcard-fill"></i> Carte scolaire</a>
   <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Aperçu &amp; imprimer le dossier</button>
@@ -17,6 +17,7 @@
   <div class="modal-header"><h5 class="modal-title">Modifier {{ student.full_name }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <form method="POST" action="{{ url_for('student_edit', student_id=student.id) }}" class="form-ltt" enctype="multipart/form-data">
+      {% if return_class_id %}<input type="hidden" name="return_class_id" value="{{ return_class_id }}">{% endif %}
       <div class="row g-2">
         <div class="col-12 text-center mb-2">
           <div style="width:90px; height:108px; border:2px solid var(--navy-900); background:var(--cream); margin:0 auto 6px; border-radius:6px; overflow:hidden;">
