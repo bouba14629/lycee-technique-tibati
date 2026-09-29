@@ -7,6 +7,7 @@ from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIOD
 DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi": "THURSDAY",
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
 ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
+COUNSELOR_ALLOWED_HOURS_DUE = (22, 25, 36, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 
 
 def current_teacher():
@@ -480,39 +481,86 @@ def teacher_schedule_official_xlsx():
 @app.route("/enseignant/indicateurs", methods=["GET", "POST"])
 @roles_required("enseignant", "conseiller_orientation")
 def teacher_indicators():
-    from models import TeacherIndicator, Course, CustomIndicatorType, CustomIndicatorValue
+    from models import (TeacherIndicator, Course, CustomIndicatorType, CustomIndicatorValue,
+                        Department, SchoolClass, Subject)
     teacher = current_teacher()
     term = TERMS[0]
+    is_counselor = session.get("role") == "conseiller_orientation"
+    allowed_hours_due = COUNSELOR_ALLOWED_HOURS_DUE if is_counselor else ALLOWED_HOURS_DUE
     course_id = request.args.get("course_id", type=int) if request.method == "GET" else request.form.get("course_id", type=int)
-    courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
-                     key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
-    # Le conseiller ne renseigne que les cours Orientation Scolaire.
-    if session.get("role") == "conseiller_orientation":
-        courses = [c for c in courses if (c.subject.name or "").strip().casefold() == "orientation scolaire"]
+    selected_class_id = (request.args.get("class_id", type=int) if request.method == "GET"
+                         else request.form.get("class_id", type=int))
+    indicator_classes = []
+    selected_class = None
+    courses = []
     course = None
-    if course_id:
-        course = Course.query.get(course_id)
-        if not course or course.teacher_id != teacher.id:
-            abort(403)
-        if session.get("role") == "conseiller_orientation" and (course.subject.name or "").strip().casefold() != "orientation scolaire":
-            abort(403)
+    if is_counselor:
+        # Les indicateurs d'orientation concernent toutes les classes, même sans créneau
+        # programmé pour ce conseiller. Le cours technique n'est créé qu'au premier
+        # enregistrement afin qu'une simple consultation ne modifie aucune donnée.
+        indicator_classes = (SchoolClass.query.join(Department)
+                             .order_by(Department.name, SchoolClass.level, SchoolClass.name).all())
+        orientation_courses = (Course.query.join(Subject)
+                               .filter(Course.teacher_id == teacher.id,
+                                       db.func.lower(db.func.trim(Subject.name)) == "orientation scolaire")
+                               .order_by(Course.class_id, Course.id).all())
+        courses_by_class = {}
+        for orientation_course in orientation_courses:
+            courses_by_class.setdefault(orientation_course.class_id, orientation_course)
+        if course_id and not selected_class_id:
+            legacy_course = Course.query.get(course_id)
+            if (not legacy_course or legacy_course.teacher_id != teacher.id
+                    or (legacy_course.subject.name or "").strip().casefold() != "orientation scolaire"):
+                abort(403)
+            selected_class_id = legacy_course.class_id
+        if selected_class_id:
+            selected_class = SchoolClass.query.get_or_404(selected_class_id)
+            course = courses_by_class.get(selected_class.id)
+    else:
+        courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
+                         key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
+        if course_id:
+            course = Course.query.get(course_id)
+            if not course or course.teacher_id != teacher.id:
+                abort(403)
 
     custom_types = []
-    if course:
-        teacher_section_id = course.school_class.department.section_id
+    indicator_class = selected_class if is_counselor else (course.school_class if course else None)
+    if indicator_class:
+        teacher_section_id = indicator_class.department.section_id
         custom_types_q = CustomIndicatorType.query
         custom_types_q = custom_types_q.filter(db.or_(CustomIndicatorType.section_id == teacher_section_id,
                                                         CustomIndicatorType.section_id.is_(None)))
         custom_types = custom_types_q.order_by(CustomIndicatorType.label).all()
 
     if request.method == "POST":
+        if is_counselor and not selected_class:
+            flash("Veuillez choisir une classe.", "warning")
+            return redirect(url_for("teacher_indicators"))
+        if is_counselor and not course:
+            orientation_subjects = (Subject.query
+                                    .filter(db.func.lower(db.func.trim(Subject.name)) == "orientation scolaire")
+                                    .order_by(Subject.id).all())
+            subject = next((item for item in orientation_subjects if item.class_id == selected_class.id), None)
+            if not subject:
+                subject = next((item for item in orientation_subjects
+                                if item.class_id is None and item.department_id == selected_class.department_id), None)
+            if not subject:
+                subject = next((item for item in orientation_subjects
+                                if item.class_id is None and item.department_id is None), None)
+            if not subject:
+                flash("Aucune matière Orientation Scolaire compatible n'est configurée pour cette classe.", "danger")
+                return redirect(url_for("teacher_indicators", class_id=selected_class.id))
+            course = Course(subject_id=subject.id, teacher_id=teacher.id, class_id=selected_class.id)
+            db.session.add(course)
+            db.session.flush()
         if not course:
             flash("Veuillez choisir une classe et une matière.", "warning")
             return redirect(url_for("teacher_indicators"))
         submitted_hours_due = request.form.get("hours_due", type=int)
-        if submitted_hours_due not in ALLOWED_HOURS_DUE:
+        if submitted_hours_due not in allowed_hours_due:
             flash("Les heures dues doivent être choisies dans la liste autorisée.", "danger")
-            return redirect(url_for("teacher_indicators", course_id=course.id))
+            return redirect(url_for("teacher_indicators", **({"class_id": course.class_id} if is_counselor else {"course_id": course.id})))
         ind = TeacherIndicator.query.filter_by(course_id=course.id, term=term).first()
         if not ind:
             ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
@@ -535,10 +583,10 @@ def teacher_indicators():
             pairs.append(("digital_tp_planned", "digital_tp_done"))
         if any(done_values[done] > planned_values[planned] for planned, done in pairs):
             flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante.", "danger")
-            return redirect(url_for("teacher_indicators", course_id=course.id))
+            return redirect(url_for("teacher_indicators", **({"class_id": course.class_id} if is_counselor else {"course_id": course.id})))
         if ind.id and any(done_values[done] < getattr(ind, done, 0) for _planned, done in pairs):
             flash("Une valeur réalisée déjà enregistrée ne peut pas être diminuée.", "danger")
-            return redirect(url_for("teacher_indicators", course_id=course.id))
+            return redirect(url_for("teacher_indicators", **({"class_id": course.class_id} if is_counselor else {"course_id": course.id})))
         for field, value in planned_values.items():
             setattr(ind, field, value)
         for field, value in done_values.items():
@@ -554,7 +602,7 @@ def teacher_indicators():
             cv.done = request.form.get(f"custom_{ct.id}_done", 0, type=int)
         db.session.commit()
         flash("Indicateurs pédagogiques enregistrés.", "success")
-        return redirect(url_for("teacher_indicators", course_id=course.id))
+        return redirect(url_for("teacher_indicators", **({"class_id": course.class_id} if is_counselor else {"course_id": course.id})))
 
     ind = TeacherIndicator.query.filter_by(course_id=course.id, term=term).first() if course else None
     custom_values = {}
@@ -562,7 +610,11 @@ def teacher_indicators():
         for ct in custom_types:
             custom_values[ct.id] = CustomIndicatorValue.query.filter_by(indicator_type_id=ct.id, course_id=course.id, term=term).first()
     filled_course_ids = {i.course_id for i in TeacherIndicator.query.filter_by(teacher_id=teacher.id, term=term).all()}
+    filled_class_ids = {item.course.class_id for item in TeacherIndicator.query.filter_by(teacher_id=teacher.id, term=term).all()
+                        if item.course is not None}
     return render_template("teacher_indicators.html", indicator=ind, term=term, terms=TERMS, teacher=teacher,
                             courses=courses, course=course, filled_course_ids=filled_course_ids,
+                            indicator_classes=indicator_classes, selected_class=selected_class,
+                            filled_class_ids=filled_class_ids,
                             custom_types=custom_types, custom_values=custom_values,
-                            allowed_hours_due=ALLOWED_HOURS_DUE)
+                            allowed_hours_due=allowed_hours_due)

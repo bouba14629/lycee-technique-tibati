@@ -1362,8 +1362,15 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         counselor_teachers = Teacher.query.join(User).filter(User.role == "conseiller_orientation").all()
         teachers = list({teacher.id: teacher for teacher in teachers + counselor_teachers}.values())
     teacher_ids = [t.id for t in teachers]
-    courses_q = (Course.query.join(SchoolClass).join(ScheduleEntry)
-                 .filter(Course.teacher_id.in_(teacher_ids)).distinct()) if teacher_ids else None
+    orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
+    if teacher_ids:
+        courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids))
+        # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
+        # y compris lorsqu'aucun créneau du conseiller n'y est encore programmé.
+        if not orientation_mode:
+            courses_q = courses_q.join(ScheduleEntry).distinct()
+    else:
+        courses_q = None
     if courses_q is not None and department_id:
         courses_q = courses_q.filter(SchoolClass.department_id == department_id)
     if courses_q is not None and class_ids:
@@ -1376,7 +1383,6 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     if user.role == "censeur" and user.section_id is None:
         # Censeur Enseignements Généraux : uniquement ses propres matières, quelle que soit la section
         courses = [c for c in courses if c.subject.category == "Enseignements Généraux"]
-    orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if orientation_mode:
         courses = [c for c in courses if (c.subject.name or "").strip().casefold() == "orientation scolaire"]
     elif user.role in ("directeur", "censeur", "censeur_crm"):

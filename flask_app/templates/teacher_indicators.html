@@ -6,25 +6,41 @@
 <div class="card-ltt" style="max-width:760px;">
   <form method="GET" class="row g-2 mb-3">
     <div class="col-md-5">
-      <label style="font-size:11px;">Classe / Matière</label>
+      <label style="font-size:11px;">{{ "Classe" if current_user.role == "conseiller_orientation" else "Classe / Matière" }}</label>
+      {% if current_user.role == "conseiller_orientation" %}
+      <select name="class_id" class="form-select" onchange="this.form.submit()">
+        <option value="">— Choisir —</option>
+        {% for cls in indicator_classes %}
+        <option value="{{ cls.id }}" {{ 'selected' if selected_class and selected_class.id==cls.id }}>{{ cls.code or cls.name }}{{ (' — ' ~ cls.name) if cls.code and cls.code != cls.name else '' }}{{ ' ✓' if cls.id in filled_class_ids }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
       <select name="course_id" class="form-select" onchange="this.form.submit()">
         <option value="">— Choisir —</option>
         {% for c in courses %}
         <option value="{{ c.id }}" {{ 'selected' if course and course.id==c.id }}>{{ c.school_class.code or 'Sans code' }} — {{ c.subject.name }}{{ ' ✓' if c.id in filled_course_ids }}</option>
         {% endfor %}
       </select>
+      {% endif %}
     </div>
-    {% if course %}<input type="hidden" name="course_id" value="{{ course.id }}">{% endif %}
   </form>
 
-  {% if not courses %}
+  {% if current_user.role == "conseiller_orientation" and not indicator_classes %}
+  <p class="text-muted">Aucune classe n'est configurée pour le moment.</p>
+  {% elif current_user.role != "conseiller_orientation" and not courses %}
   <p class="text-muted">Aucune classe/matière ne vous est assignée pour le moment.</p>
-  {% elif not course %}
+  {% elif current_user.role == "conseiller_orientation" and not selected_class %}
+  <p class="text-muted">Choisissez une classe ci-dessus pour renseigner les indicateurs d'Orientation Scolaire. Toutes les classes de l'établissement sont proposées. (✓ = déjà renseigné)</p>
+  {% elif current_user.role != "conseiller_orientation" and not course %}
   <p class="text-muted">Choisissez une classe et une matière ci-dessus pour renseigner vos indicateurs. (✓ = déjà renseigné)</p>
   {% else %}
   <form method="POST" class="form-ltt">
     <input type="hidden" name="term" value="{{ term }}">
+    {% if current_user.role == "conseiller_orientation" %}
+    <input type="hidden" name="class_id" value="{{ selected_class.id }}">
+    {% else %}
     <input type="hidden" name="course_id" value="{{ course.id }}">
+    {% endif %}
 
     <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Couverture des heures</h3>
     <div class="row g-3 mb-3">
