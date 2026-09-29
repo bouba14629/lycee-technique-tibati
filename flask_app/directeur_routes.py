@@ -675,6 +675,7 @@ def students_export_pdf():
 def student_detail(student_id):
     from utils import general_average, subject_averages, user_scoped_class_ids
     student = Student.query.get_or_404(student_id)
+    classes = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level, SchoolClass.name).all()
     return_class_id = request.args.get("return_class_id", type=int)
     if return_class_id and not SchoolClass.query.get(return_class_id):
         return_class_id = None
@@ -687,8 +688,8 @@ def student_detail(student_id):
             abort(403)
     avg = general_average(student.id)
     subj_avgs = subject_averages(student.id)
-    return render_template("student_detail.html", student=student, avg=avg, subj_avgs=subj_avgs,
-                           return_class_id=return_class_id)
+    return render_template("student_detail.html", student=student, classes=classes, avg=avg,
+                           subj_avgs=subj_avgs, return_class_id=return_class_id)
 
 
 @app.route("/eleves/<int:student_id>/carte")

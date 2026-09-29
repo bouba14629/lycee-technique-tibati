@@ -40,7 +40,7 @@
         <div class="col-6">
           <label>Classe</label>
           <select name="class_id" class="form-select">
-            {% if student.school_class %}{% for c in student.school_class.department.classes %}<option value="{{ c.id }}" {{ 'selected' if student.class_id==c.id }}>{{ c.name }}</option>{% endfor %}{% endif %}
+            {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if student.class_id==c.id }}>{{ c.code or c.name }}{% if c.code %} — {{ c.name }}{% endif %} — {{ c.department.name }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-6"><label>Lieu de naissance</label><input type="text" name="birth_place" class="form-control" value="{{ student.birth_place or '' }}"></div>
