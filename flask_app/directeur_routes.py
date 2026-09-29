@@ -418,6 +418,9 @@ def parent_new():
 def student_enroll():
     classes = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level).all()
     existing_parents = Parent.query.join(User).order_by(User.full_name).all()
+    return_class_id = request.values.get("return_class_id", type=int)
+    if return_class_id and not SchoolClass.query.get(return_class_id):
+        return_class_id = None
     if request.method == "POST":
         first = request.form.get("first_name", "").strip()
         last = request.form.get("last_name", "").strip()
@@ -435,13 +438,13 @@ def student_enroll():
 
         if not (first and last and matricule and class_id):
             flash("Nom, prénom, matricule et classe sont obligatoires.", "warning")
-            return redirect(url_for("student_enroll"))
+            return redirect(url_for("student_enroll", return_class_id=return_class_id))
         if len(matricule) > 30:
             flash("Le matricule ne peut pas dépasser 30 caractères.", "warning")
-            return redirect(url_for("student_enroll"))
+            return redirect(url_for("student_enroll", return_class_id=return_class_id))
         if Student.query.filter_by(matricule=matricule).first():
             flash(f"Le matricule « {matricule} » est déjà utilisé par un autre élève.", "danger")
-            return redirect(url_for("student_enroll"))
+            return redirect(url_for("student_enroll", return_class_id=return_class_id))
 
         # Compte de connexion de l'élève — exclusif, pour qu'il consulte uniquement ses propres informations
         student_uname = gen_username(f"{first} {last}")
@@ -488,8 +491,9 @@ def student_enroll():
 
         db.session.commit()
         flash(msg, "success")
-        return redirect(url_for("students_list"))
-    return render_template("student_enroll.html", classes=classes, existing_parents=existing_parents)
+        return redirect(url_for("students_list", class_id=return_class_id))
+    return render_template("student_enroll.html", classes=classes, existing_parents=existing_parents,
+                           return_class_id=return_class_id)
 
 
 @app.route("/eleves/import", methods=["POST"])

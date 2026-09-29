@@ -27,7 +27,8 @@
 </div></div></div>
 
 <div class="card-ltt" style="max-width:760px;">
-  <form method="POST" class="form-ltt" enctype="multipart/form-data">
+    <form method="POST" class="form-ltt" enctype="multipart/form-data">
+      {% if return_class_id %}<input type="hidden" name="return_class_id" value="{{ return_class_id }}">{% endif %}
     <h3 style="font-size:14px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Informations de l'élève</h3>
     <div class="row g-3 mb-3">
       <div class="col-md-3 text-center">
@@ -60,7 +61,7 @@
       <div class="col-md-6">
         <label>Classe</label>
         <select name="class_id" class="form-select" required>
-          {% for c in classes %}<option value="{{ c.id }}">{{ c.name }} — {{ c.department.name }}</option>{% endfor %}
+          {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if return_class_id == c.id }}>{{ c.name }} — {{ c.department.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="col-md-6"><label>Lieu de naissance</label><input type="text" name="birth_place" class="form-control"></div>
