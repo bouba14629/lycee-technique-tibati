@@ -124,7 +124,7 @@ function populateGenericIndicator(select) {
     {% endif %}
   </form>
 
-  <section class="mb-3">
+  {% if current_user.role != "chef_orientation" %}<section class="mb-3">
     <div class="section-title"><h2>Résultats des évaluations</h2><span class="text-muted" style="font-size:12px;">{{ term }}{{ ' · Séquence ' ~ sequence if sequence else '' }}</span></div>
     <div class="row g-2 mb-3">
       <div class="col-6 col-lg-3"><div class="metric-card"><span>Évaluations</span><strong>{{ evaluation_totals.planned }}</strong></div></div>
@@ -133,7 +133,7 @@ function populateGenericIndicator(select) {
       <div class="col-6 col-lg-3"><div class="metric-card"><span>Notes saisies</span><strong>{{ evaluation_totals.submitted }}/{{ evaluation_totals.expected }}</strong></div></div>
     </div>
     <div class="table-responsive"><table class="table-ltt" style="font-size:12px;"><thead><tr><th>Évaluation</th><th>Classe / matière</th><th>Échéance</th><th>Notes</th><th>Moyenne</th><th>Réussite</th><th>État</th></tr></thead><tbody>{% for row in evaluation_rows %}<tr><td><strong>S{{ row.assessment.sequence }}</strong><div class="text-muted">{{ row.assessment.title }}</div></td><td><strong>{{ row.assessment.course.school_class.code or 'Sans code' }}</strong><div class="text-muted">{{ row.assessment.course.subject.name }}</div></td><td>{{ row.assessment.scheduled_date.strftime('%d/%m/%Y') }}</td><td>{{ row.submitted }}/{{ row.expected }}</td><td>{{ row.average if row.average is not none else '—' }}{{ '/20' if row.average is not none }}</td><td>{{ row.success_rate if row.success_rate is not none else '—' }}{{ '%' if row.success_rate is not none }}</td><td><span class="badge-ltt {{ 'badge-success' if row.assessment.status=='Saisie complète' else 'badge-warning' if row.assessment.status=='Saisie en cours' else 'badge-danger' }}">{{ row.assessment.status }}</span></td></tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucune évaluation ne correspond aux filtres sélectionnés.</td></tr>{% endfor %}</tbody></table></div>
-  </section>
+  </section>{% endif %}
 
   {% if view == 'departement' %}
   <div style="overflow-x:auto;">
