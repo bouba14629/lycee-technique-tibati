@@ -59,7 +59,10 @@ with app.app_context():
         assert b"telecharger.pdf?term=Annuel" in annual_list.data
         assert b"Trimestre 3" not in annual_list.data
         quarterly_list = client.get(f"/censeur/bulletins?class_id={class_id}&term=Trimestre+1")
-        assert quarterly_list.status_code == 200 and b"Appr\xc3\xa9cier" in quarterly_list.data
+        assert quarterly_list.status_code == 200
+        assert b"Appr\xc3\xa9cier" not in quarterly_list.data
+        assert b"Valider la remise" not in quarterly_list.data
+        assert b'official_release_date' not in quarterly_list.data
         appreciation_update = client.post(f"/censeur/bulletins/{student_id}/appreciation", data={
             "term": "Trimestre 1", "content": "Efforts réguliers attendus pour consolider les acquis.",
         })
@@ -78,7 +81,7 @@ with app.app_context():
         assert b"R\xc3\xa9f. :" not in preview.data
         assert b"SECTION :" not in preview.data
         assert b"Section Section Delivery" not in preview.data
-        assert b"Efforts r\xc3\xa9guliers attendus" in preview.data
+        assert b"Efforts r\xc3\xa9guliers attendus" not in preview.data
         assert b"Mme. enseignant.delivery" in preview.data
         assert b"2CE1TEFD110320092" in preview.data
         quarterly_template = open("templates/pdf/_bulletin_body.html", encoding="utf-8").read()
@@ -88,8 +91,8 @@ with app.app_context():
         preview_template = open("templates/bulletin.html", encoding="utf-8").read()
         assert "profile-table profile-block" in quarterly_template and "term-average" in quarterly_template and "colspan=\"4\"" in quarterly_template
         assert "Moyenne trimestrielle" in quarterly_template and "Notes trimestrielles" in quarterly_template
-        assert 'width="8%">Notes trimestrielles' in quarterly_template and 'width="36%">Appréciations/Signatures' in quarterly_template
-        assert 'width:34%">Appréciations/Signatures' in annual_pdf_template
+        assert 'Appréciations' not in quarterly_template
+        assert 'Appréciations/Signatures' not in annual_pdf_template
         assert quarterly_template.count('font-size:6.3pt;">Mle : 2CE1TEFD110320092') == 2 and 'width="64"' in quarterly_template
         assert 'padding-left:10pt;' in quarterly_template and 'meta-table td:last-child { padding-left:10pt; }' in quarterly_pdf_template
         assert preview_template.count('font-size:9.5px;">Mle : 2CE1TEFD110320092') == 2 and 'width="68"' in preview_template

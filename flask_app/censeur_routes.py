@@ -1210,7 +1210,7 @@ def censeur_bulletins_class_pdf(class_id):
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first()
     students = sorted(cls.students, key=lambda s: (s.last_name, s.first_name))
     if term == "Annuel":
-        students_data = [{"student": st, "data": annual_bulletin_data(st), "photo_path": student_photo_pdf_path(st.photo)} for st in students]
+        students_data = [{"student": st, "data": annual_bulletin_data(st), "photo_path": student_photo_pdf_path(st.photo, lightweight=True)} for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
         if not pdf:
@@ -1224,7 +1224,7 @@ def censeur_bulletins_class_pdf(class_id):
             "student": st,
             "data": bulletin_data(st, term=term),
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
-            "photo_path": student_photo_pdf_path(st.photo),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),

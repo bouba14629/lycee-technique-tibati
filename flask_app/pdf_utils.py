@@ -4,6 +4,7 @@ from io import BytesIO
 from urllib.request import urlopen
 from flask import render_template
 from xhtml2pdf import pisa
+from PIL import Image
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,12 +36,13 @@ def pdf_asset(local_parts, storage_path):
     return asset_path(*local_parts)
 
 
-def student_photo_pdf_path(photo):
+def student_photo_pdf_path(photo, lightweight=False):
     """Retourne un chemin local utilisable par xhtml2pdf pour une photo élève."""
     if not photo:
         return None
     if photo.startswith("/manus-storage/"):
-        return pdf_asset(("img", "avatar_placeholder.png"), photo)
+        path = pdf_asset(("img", "avatar_placeholder.png"), photo)
+        return _lightweight_photo_path(path) if lightweight and path else path
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
@@ -52,9 +54,32 @@ def student_photo_pdf_path(photo):
                         output.write(response.read())
             except Exception:
                 return None
-        return cache_path if os.path.exists(cache_path) else None
+        path = cache_path if os.path.exists(cache_path) else None
+        return _lightweight_photo_path(path) if lightweight and path else path
     local_path = asset_path("uploads", "students", os.path.basename(photo))
-    return local_path if os.path.exists(local_path) else None
+    if not os.path.exists(local_path):
+        return None
+    if not lightweight:
+        return local_path
+    return _lightweight_photo_path(local_path)
+
+
+def _lightweight_photo_path(source_path):
+    """Crée une vignette JPEG réutilisable pour les PDF groupés."""
+    cache_dir = "/tmp/ltt-pdf-assets/lightweight-students"
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + ".jpg")
+    try:
+        source_mtime = os.path.getmtime(source_path)
+        if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= source_mtime:
+            return cache_path
+        with Image.open(source_path) as image:
+            image = image.convert("RGB")
+            image.thumbnail((320, 400), Image.Resampling.LANCZOS)
+            image.save(cache_path, format="JPEG", quality=72, optimize=True)
+        return cache_path
+    except Exception:
+        return source_path
 
 
 def render_pdf(template_name, **context):

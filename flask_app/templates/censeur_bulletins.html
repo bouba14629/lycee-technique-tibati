@@ -2,6 +2,7 @@
 {% block title %}Bulletins{% endblock %}
 {% block page_title %}Bulletins{% endblock %}
 {% block page_subtitle %}Consultez et imprimez le bulletin d'un élève{% endblock %}
+{% block extra_css %}<style>.bulk-print-action{min-height:42px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 3px 10px rgba(11,37,69,.12)}.bulk-print-action:focus-visible{outline:3px solid rgba(201,162,39,.55);outline-offset:2px}</style>{% endblock %}
 {% block content %}
 <div class="card-ltt">
   <div class="d-flex gap-2 mb-3 flex-wrap align-items-start">
@@ -33,22 +34,8 @@
     </form>
     {% if class_id and current_user.role == 'censeur' %}
     <div class="d-flex gap-2 flex-wrap align-items-center ms-auto">
-      <a href="{{ url_for('censeur_bulletins_class_pdf', class_id=class_id, term=term) }}" class="btn-ltt-gold"><i class="bi bi-printer-fill"></i> {{ 'Imprimer tous les annuels' if term == 'Annuel' else 'Imprimer tous — ' ~ term }}</a>
+      <a href="{{ url_for('censeur_bulletins_class_pdf', class_id=class_id, term=term) }}" class="btn-ltt-gold bulk-print-action" aria-label="Imprimer tous les bulletins de la classe"><i class="bi bi-printer-fill"></i> {{ 'Imprimer tous les annuels' if term == 'Annuel' else 'Imprimer tous — ' ~ term }}</a>
       <a href="{{ url_for('dir_structure') }}" class="btn-ltt-outline"><i class="bi bi-person-badge-fill"></i> Prof. principal</a>
-      {% if term == 'Annuel' %}
-      {% if approval %}
-      <span class="badge-ltt badge-success">Bulletins annuels validés : {{ approval.official_release_date.strftime('%d/%m/%Y') if approval.official_release_date else 'date à définir' }}</span>
-      {% else %}
-      <form method="POST" action="{{ url_for('censeur_bulletins_validate_annual', class_id=class_id) }}" class="d-flex gap-1"><input type="date" name="official_release_date" class="form-control form-control-sm" required><button class="btn-ltt-outline" onclick="return confirm('Valider les bulletins annuels de cette classe ?')"><i class="bi bi-patch-check"></i> Valider les annuels</button></form>
-      {% endif %}
-      {% else %}
-      {% if approval %}
-      <span class="badge-ltt badge-success">Remise officielle : {{ approval.official_release_date.strftime('%d/%m/%Y') if approval.official_release_date else 'à définir' }}</span>
-      <form method="POST" action="{{ url_for('censeur_bulletins_revoke_validation', class_id=class_id) }}" class="d-flex gap-1"><input type="hidden" name="term" value="{{ term }}"><input type="text" name="reason" class="form-control form-control-sm" style="max-width:190px;" placeholder="Motif du retrait" required><button class="btn-ltt-outline text-danger" onclick="return confirm('Retirer la validation et bloquer la diffusion ?')"><i class="bi bi-arrow-counterclockwise"></i> Retirer</button></form>
-      {% else %}
-      <form method="POST" action="{{ url_for('censeur_bulletins_validate', class_id=class_id) }}" class="d-flex gap-1"><input type="hidden" name="term" value="{{ term }}"><input type="date" name="official_release_date" class="form-control form-control-sm" required><button class="btn-ltt-outline" onclick="return confirm('Valider la diffusion et fixer la date officielle de remise ?')"><i class="bi bi-check2-circle"></i> Valider la remise</button></form>
-      {% endif %}
-      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -57,7 +44,7 @@
   <div class="p-3 mb-3" style="background:var(--cream); border:1px solid #eadba9; border-left:4px solid var(--gold-500); border-radius:10px; font-size:12px;">
     {% if term == 'Annuel' %}
     <strong><i class="bi bi-calendar-range-fill me-1"></i> Bulletin de fin d’année</strong>
-    <span class="d-block mt-1">Consultez l’aperçu annuel de chaque élève si nécessaire, validez les bulletins annuels puis utilisez <strong>Imprimer tous les annuels</strong> pour obtenir un seul PDF de toute la classe.</span>
+    <span class="d-block mt-1">Consultez l’aperçu annuel de chaque élève si nécessaire, puis utilisez <strong>Imprimer tous les annuels</strong> pour obtenir un seul PDF de toute la classe.</span>
     {% else %}
     <strong><i class="bi bi-info-circle-fill me-1"></i> Bulletins trimestriels</strong>
     <span class="d-block mt-1">Sélectionnez le trimestre, contrôlez les bulletins puis utilisez le bouton d’impression groupée pour la classe entière.</span>
@@ -73,7 +60,7 @@
       <tr>
         <td><code>{{ s.matricule }}</code></td>
         <td class="fw-semibold">{{ s.full_name }}</td>
-        <td class="text-end">{% if term == 'Annuel' %}<a href="{{ url_for('censeur_annual_bulletin_preview', student_id=s.id) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-calendar-range"></i> Bulletin annuel</a>{% else %}<a href="{{ url_for('censeur_bulletin_work_appreciation', student_id=s.id, term=term) }}" class="btn-ltt-outline py-1 px-2 me-1" style="font-size:12px;"><i class="bi bi-chat-left-text"></i> Apprécier</a><a href="{{ url_for('student_bulletin_staff', student_id=s.id, term=term) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-file-earmark-medical-fill"></i> Bulletin {{ term }}</a>{% endif %}</td>
+        <td class="text-end">{% if term == 'Annuel' %}<a href="{{ url_for('censeur_annual_bulletin_preview', student_id=s.id) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-calendar-range"></i> Bulletin annuel</a>{% else %}<a href="{{ url_for('student_bulletin_staff', student_id=s.id, term=term) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-file-earmark-medical-fill"></i> Bulletin {{ term }}</a>{% endif %}</td>
       </tr>
     {% else %}
       <tr><td colspan="3" class="text-muted text-center py-4">Aucun élève trouvé.</td></tr>

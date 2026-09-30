@@ -87,10 +87,10 @@
   </table>
 
   <table class="table-ltt" style="font-size:11px;">
-    <thead><tr><th style="width:25%">Matières/Enseignant</th><th style="width:8%">Notes trimestrielles</th><th style="width:6%">Éval.{{ TERM_SEQ_A }}</th><th style="width:6%">Éval.{{ TERM_SEQ_B }}</th><th style="width:5%">Coef.</th><th style="width:6%">Notes×coef.</th><th style="width:5%">Rang</th><th style="width:29%">Appréciations/Signatures</th><th style="width:10%">Signatures</th></tr></thead>
+    <thead><tr><th style="width:30%">Matières/Enseignant</th><th style="width:9%">Notes trimestrielles</th><th style="width:7%">Éval.{{ TERM_SEQ_A }}</th><th style="width:7%">Éval.{{ TERM_SEQ_B }}</th><th style="width:6%">Coef.</th><th style="width:8%">Notes×coef.</th><th style="width:7%">Rang</th><th style="width:26%">Signatures</th></tr></thead>
     <tbody>
     {% for cat in data.categories %}
-      <tr style="background:var(--cream);"><td colspan="9" style="font-weight:700; color:var(--navy-900); font-size:10.5px; text-transform:uppercase;">{{ cat.name }}</td></tr>
+      <tr style="background:var(--cream);"><td colspan="8" style="font-weight:700; color:var(--navy-900); font-size:10.5px; text-transform:uppercase;">{{ cat.name }}</td></tr>
       {% for row in cat.rows %}
       <tr>
         <td>{{ row.course.subject.name }}<br><span class="text-muted" style="font-size:9.5px; font-style:italic;">{{ row.course.teacher.user.formal_name }}</span></td>
@@ -100,7 +100,6 @@
         <td>{{ row.coef }}</td>
         <td class="fw-semibold">{{ row.points if row.points is not none else '—' }}</td>
         <td>{{ row.rank if row.rank is not none else '—' }}{{ 'e' if row.rank }}</td>
-        <td class="text-muted" style="font-size:9.5px;">{{ row.appreciation }}</td>
         <td></td>
       </tr>
       {% endfor %}
@@ -180,20 +179,12 @@
 
   <table style="width:100%; margin-top:14px; border-collapse:collapse;">
     <tr>
-      <td style="width:28%; border:1px solid #eee3c8; padding:6px; vertical-align:top; font-size:10px;">
-        <strong style="color:var(--navy-900); font-size:10px;">APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br>
-        <span style="font-style:italic;">
-        {% if data.work_appreciation %}
-          {{ data.work_appreciation }}
-        {% endif %}
-        </span>
-      </td>
-      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px; height:70px;">VISA DU PARENT</td>
-      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
+      <td style="width:33.33%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px; height:70px;">VISA DU PARENT</td>
+      <td style="width:33.33%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
         VISA DU PROF. PRINCIPAL<br>
         <span style="font-size:9.5px; font-weight:600; color:var(--navy-900);">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span>
       </td>
-      <td style="width:24%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
+      <td style="width:33.33%; border:1px solid #eee3c8; padding:6px; text-align:center; vertical-align:bottom; font-size:10px;">
         <span style="font-size:9px; color:var(--muted);">TIBATI, le ______</span><br><strong>LE PROVISEUR</strong>
       </td>
     </tr>

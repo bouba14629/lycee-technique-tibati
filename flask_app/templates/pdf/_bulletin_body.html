@@ -42,13 +42,13 @@
 
 <table class="grades">
   <tr>
-    <th style="width:28%">Matières/Enseignant</th><th style="width:8%">Notes Trim.</th>
+    <th style="width:32%">Matières/Enseignant</th><th style="width:9%">Notes Trim.</th>
     <th style="width:6%">Eval. {{ TERM_SEQ_A }}</th><th style="width:6%">Eval. {{ TERM_SEQ_B }}</th>
-    <th style="width:5%">Coef.</th><th style="width:7%">Notes x coef.</th><th style="width:6%">Rang</th>
-    <th style="width:24%">Appréciations</th><th style="width:10%">Signatures</th>
+    <th style="width:6%">Coef.</th><th style="width:8%">Notes x coef.</th><th style="width:7%">Rang</th>
+    <th style="width:22%">Signatures</th>
   </tr>
   {% for cat in data.categories %}
-  <tr class="cat-row"><td colspan="9">{{ cat.name }}</td></tr>
+  <tr class="cat-row"><td colspan="8">{{ cat.name }}</td></tr>
   {% for row in cat.rows %}
   <tr>
     <td class="subject-cell"><strong>{{ row.course.subject.name }}</strong><br><em>{{ row.course.teacher.user.formal_name }}</em></td>
@@ -58,10 +58,10 @@
     <td class="number-cell">{{ row.coef }}</td>
     <td class="number-cell"><strong>{{ row.points if row.points is not none else '—' }}</strong></td>
     <td class="number-cell">{{ row.rank if row.rank is not none else '—' }}{{ 'e' if row.rank }}</td>
-    <td>{{ row.appreciation }}</td><td></td>
+    <td></td>
   </tr>
   {% endfor %}
-  <tr class="total-row"><td colspan="4" class="total-label">Total Points : {{ cat.total_points }}</td><td>{{ cat.total_coef }}</td><td colspan="4">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count %} — {{ cat.pending_count }} en attente{% endif %}</td></tr>
+  <tr class="total-row"><td colspan="4" class="total-label">Total Points : {{ cat.total_points }}</td><td>{{ cat.total_coef }}</td><td colspan="3">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count %} — {{ cat.pending_count }} en attente{% endif %}</td></tr>
   {% endfor %}
 </table>
 
@@ -76,7 +76,6 @@
 </table>
 <!-- profile-table colspan="4" -->
 <!-- Libellés conservés pour compatibilité : Moyenne trimestrielle ; Notes trimestrielles -->
-<!-- width="8%">Notes trimestrielles ; width="36%">Appréciations/Signatures -->
 <!-- font-size:6.3pt;">Mle : 2CE1TEFD110320092 -->
 <!-- font-size:6.3pt;">Mle : 2CE1TEFD110320092 -->
 <!-- padding-left:10pt; ; meta-table td:last-child { padding-left:10pt; } -->
@@ -99,8 +98,7 @@
 </table>
 
 <table class="footer-table"><tr>
-  <td style="width:28%;height:42pt"><strong>APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br><em>{{ data.work_appreciation or '' }}</em></td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU PARENT</td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
-  <td style="width:24%;height:42pt;text-align:center">TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
+  <td style="width:33.33%;height:42pt;text-align:center">VISA DU PARENT</td>
+  <td style="width:33.33%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
+  <td style="width:33.33%;height:42pt;text-align:center">TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
 </tr></table>
