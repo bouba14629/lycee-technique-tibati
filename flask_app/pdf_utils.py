@@ -85,10 +85,15 @@ def _lightweight_photo_path(source_path):
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
     context.setdefault("logo_path", pdf_asset(("img", "logo.png"), "/manus-storage/logo_10e20177.png"))
+    context.setdefault("bulletin_logo_path", pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/bulletin_official_logo_9bdb1757.png"))
     context.setdefault("avatar_path", pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
     context.setdefault("font_bold", pdf_asset(("vendor", "fonts", "PlayfairDisplay-Bold.ttf"), "/manus-storage/PlayfairDisplay-Bold_a8c270a5.ttf"))
     context.setdefault("font_regular", pdf_asset(("vendor", "fonts", "Inter-Variable.ttf"), "/manus-storage/Inter-Variable_d79f128a.ttf"))
+    context.setdefault("bulletin_serif_regular", pdf_asset(("fonts", "LiberationSerif-Regular.ttf"), "/manus-storage/LiberationSerif-Regular_78c6f770.ttf"))
+    context.setdefault("bulletin_serif_bold", pdf_asset(("fonts", "LiberationSerif-Bold.ttf"), "/manus-storage/LiberationSerif-Bold_93dca24b.ttf"))
+    context.setdefault("bulletin_serif_italic", pdf_asset(("fonts", "LiberationSerif-Italic.ttf"), "/manus-storage/LiberationSerif-Italic_df811de7.ttf"))
+    context.setdefault("bulletin_sans_regular", pdf_asset(("fonts", "LiberationSans-Regular.ttf"), "/manus-storage/LiberationSans-Regular_e967eb0a.ttf"))
     context.setdefault("storage_base_url", storage_base_url())
     html = render_template(template_name, **context)
     buffer = BytesIO()

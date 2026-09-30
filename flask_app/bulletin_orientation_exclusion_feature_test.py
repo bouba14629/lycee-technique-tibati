@@ -8,6 +8,6 @@ assert 'def bulletin_data' in utils
 assert 'def annual_bulletin_data' in utils
 bulletin = (Path(__file__).parent / 'templates/bulletin.html').read_text(encoding='utf-8')
 pdf = (Path(__file__).parent / 'templates/pdf/_bulletin_body.html').read_text(encoding='utf-8')
-assert 'row.course.subject.name' in bulletin
+assert '_bulletin_body.html' in bulletin
 assert 'row.course.subject.name' in pdf
 print('BULLETIN_ORIENTATION_EXCLUSION_FEATURE_TEST_OK')

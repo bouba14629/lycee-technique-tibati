@@ -1,0 +1,73 @@
+<style>
+@font-face{font-family:BulletinSerif;src:url('{{ bulletin_serif_regular }}')}
+@font-face{font-family:BulletinSerif;src:url('{{ bulletin_serif_bold }}');font-weight:700}
+@font-face{font-family:BulletinSerif;src:url('{{ bulletin_serif_italic }}');font-style:italic}
+@font-face{font-family:BulletinSans;src:url('{{ bulletin_sans_regular }}')}
+@page{size:A4 portrait;margin:8pt 11pt}
+html,body{margin:0;padding:0}
+.official-bulletin{width:100%;margin:0 auto;color:#000;background:#fff;font-family:BulletinSerif,"Times New Roman",serif;font-size:7pt;line-height:1.05;box-sizing:border-box}
+.official-bulletin *{box-sizing:border-box}
+.official-bulletin table{width:100%;border-collapse:collapse;border-spacing:0}
+.official-bulletin .official-header td{border:0;vertical-align:top;padding:0}
+.official-bulletin .official-header-side{width:24%;text-align:center;font-size:6.6pt;line-height:1.18;white-space:nowrap}
+.official-bulletin .official-header-logo{width:52%;text-align:center;vertical-align:middle}
+.official-bulletin .official-header-logo img{width:69pt;height:65pt;object-fit:contain}
+.official-bulletin .official-title-photo{margin-top:-3pt}
+.official-bulletin .official-title-photo td{border:0;padding:0;vertical-align:top}
+.official-bulletin .official-title-spacer{width:19%}
+.official-bulletin .official-title-cell{width:62%;padding:0 3pt!important}
+.official-bulletin .official-title-box{border:.55pt solid #777;background:#efefef;border-radius:0;text-align:center;padding:2.5pt 1pt 1.5pt}
+.official-bulletin .official-title{font-family:BulletinSans,Tahoma,Arial,sans-serif;font-size:14.2pt;font-weight:400;line-height:1.05;white-space:nowrap}
+.official-bulletin .official-section{font-family:BulletinSerif,"Times New Roman",serif;font-size:9pt;font-weight:700;font-style:italic;text-decoration:underline;line-height:1.05;margin-top:2pt}
+.official-bulletin .official-photo-cell{width:19%;text-align:center;vertical-align:top;padding-left:4pt!important}
+.official-bulletin .official-photo{width:82pt;height:100pt;object-fit:cover;border:0;display:block;margin:0 auto}
+.official-bulletin .official-meta{margin-top:2pt;font-size:6.8pt;line-height:1.17}
+.official-bulletin .official-meta td{border:0;padding:.8pt 2pt;vertical-align:top;width:50%}
+.official-bulletin .official-meta td:last-child{padding-left:13pt}
+.official-bulletin .official-meta strong{font-weight:700}
+.official-bulletin .official-grades{table-layout:fixed;margin-top:1pt;border:.65pt solid #000}
+.official-bulletin .official-grades th,.official-bulletin .official-grades td{border:.45pt solid #000;padding:.55pt 1.4pt;vertical-align:middle;overflow:hidden}
+.official-bulletin .official-grades th{background:#d9d9d9;text-align:center;font-size:6.4pt;line-height:1.05;font-weight:700}
+.official-bulletin .official-grades td{font-size:6.1pt;line-height:.94;height:11pt}
+.official-bulletin .official-grades .subject{font-family:BulletinSans,Tahoma,Arial,sans-serif;font-weight:700;font-size:6.15pt;line-height:.9}
+.official-bulletin .official-grades .teacher{text-align:center;font-family:BulletinSerif,"Times New Roman",serif;font-style:italic;font-weight:400;font-size:5.9pt;line-height:.9}
+.official-bulletin .official-grades .center{text-align:center}
+.official-bulletin .official-grades .score{background:#d9d9d9;font-weight:700;text-align:center}
+.official-bulletin .official-grades .points,.official-bulletin .official-grades .rank{font-weight:700;text-align:center}
+.official-bulletin .official-grades .appreciation{font-style:italic;font-weight:400;font-size:5.65pt;white-space:nowrap}
+.official-bulletin .official-grades .app-sign-cell{padding:0!important}
+.official-bulletin .official-grades .app-sign-table{width:100%;height:100%;border-collapse:collapse;table-layout:fixed}
+.official-bulletin .official-grades .app-sign-table th,.official-bulletin .official-grades .app-sign-table td{border:0;padding:.55pt 1.2pt;height:auto;background:transparent}
+.official-bulletin .official-grades .app-sign-table th+th,.official-bulletin .official-grades .app-sign-table td+td{border-left:.45pt solid #000}
+.official-bulletin .official-grades .category-total td{background:#d9d9d9;font-size:6.15pt;font-weight:700;height:9pt;padding:.6pt 2pt}
+.official-bulletin .official-grades .category-name{text-transform:uppercase;text-align:left;white-space:nowrap}
+.official-bulletin .official-grades .category-summary{text-align:center;word-spacing:2pt;white-space:nowrap}
+.official-bulletin .official-summary{table-layout:fixed;border:.65pt solid #000}
+.official-bulletin .official-summary>tbody>tr>th{border:.45pt solid #000;background:#d9d9d9;text-align:center;font-size:6.4pt;font-weight:700;padding:1pt}
+.official-bulletin .official-summary>tbody>tr>td{border:.45pt solid #000;padding:0;vertical-align:top}
+.official-bulletin .official-mini{width:100%;height:100%}
+.official-bulletin .official-mini td{border:.4pt solid #000;padding:.7pt 1.5pt;font-size:5.75pt;line-height:1.02;height:10.5pt;vertical-align:middle}
+.official-bulletin .official-mini .label{font-weight:700}
+.official-bulletin .official-mini .value{text-align:center;font-weight:700}
+.official-bulletin .official-mini .check{width:8pt;text-align:center;font-size:7pt;padding:0}
+.official-bulletin .official-mini .measure{text-align:center;font-weight:700}
+.official-bulletin .official-summary-flat{width:100%;table-layout:fixed;border:.65pt solid #000}
+.official-bulletin .official-summary-flat th,.official-bulletin .official-summary-flat td{border:.4pt solid #000;padding:.7pt 0;font-size:5.55pt;line-height:1.02;height:10.5pt;vertical-align:middle}
+.official-bulletin .official-summary-flat .summary-sizing td{border:0!important;padding:0!important;height:0!important;font-size:0!important;line-height:0!important}
+.official-bulletin .official-summary-flat .summary-head th{background:#d9d9d9;text-align:center;font-size:6.4pt;font-weight:700;padding:1pt}
+.official-bulletin .official-summary-flat .label{font-weight:700}
+.official-bulletin .official-summary-flat .value,.official-bulletin .official-summary-flat .measure{text-align:center;font-weight:700}
+.official-bulletin .official-summary-flat .check{text-align:center;font-size:7pt;padding:0}
+.official-bulletin .official-footer{table-layout:fixed;border:.65pt solid #000}
+.official-bulletin .official-footer th{border:.45pt solid #000;background:#d9d9d9;text-align:center;font-size:5.7pt;line-height:1;font-weight:700;padding:1.2pt .7pt;white-space:normal}
+.official-bulletin .official-footer td{border:.45pt solid #000;height:71pt;vertical-align:top;padding:3pt;font-size:6.2pt}
+.official-bulletin .official-footer .work-appreciation{font-style:italic;font-weight:700;font-size:7pt}
+.official-bulletin .official-footer .visa{text-align:center}
+.official-bulletin .official-footer .principal-name{display:block;margin-top:52pt;font-weight:700}
+.official-bulletin .official-footer .head-date{display:block;margin-top:5pt;text-align:center;font-weight:700}
+.official-bulletin .official-footer .head-title{display:block;margin-top:7pt;text-align:center;font-weight:700}
+@media print{
+  .official-bulletin{max-width:none;width:100%;margin:0}
+  .official-bulletin .official-grades,.official-bulletin .official-summary,.official-bulletin .official-footer{page-break-inside:avoid}
+}
+</style>

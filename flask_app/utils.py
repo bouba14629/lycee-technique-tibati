@@ -351,6 +351,7 @@ def bulletin_data(student, term=None, _cache=None):
         "exclusions": exclusions, "work_marks": work_marks,
         "automatic_work_appreciation": automatic_appreciation,
         "work_appreciation": saved_appreciation.content if saved_appreciation else automatic_appreciation,
+        "official_work_appreciation": appreciation_code(overall_avg),
     }
 
 

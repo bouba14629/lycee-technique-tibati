@@ -87,18 +87,19 @@ with app.app_context():
         quarterly_template = open("templates/pdf/_bulletin_body.html", encoding="utf-8").read()
         quarterly_pdf_template = open("templates/pdf/bulletin_pdf.html", encoding="utf-8").read()
         grouped_template = open("templates/pdf/class_bulletins_pdf.html", encoding="utf-8").read()
+        quarterly_style_template = open("templates/pdf/_official_bulletin_style.html", encoding="utf-8").read()
         annual_pdf_template = open("templates/pdf/bulletin_annual_pdf.html", encoding="utf-8").read()
         preview_template = open("templates/bulletin.html", encoding="utf-8").read()
-        assert "profile-table profile-block" in quarterly_template and "term-average" in quarterly_template and "colspan=\"4\"" in quarterly_template
-        assert "Moyenne trimestrielle" in quarterly_template and "Notes trimestrielles" in quarterly_template
-        assert 'style="width:28%">Appréciations / Signatures' in quarterly_template
+        assert "official-grades" in quarterly_template and "official-summary" in quarterly_template and "official-footer" in quarterly_template
+        assert "Moy. Trim." in quarterly_template and "Notes Trim." in quarterly_template
+        assert ">Appréciations</th>" in quarterly_template and ">Signatures</th>" in quarterly_template
         assert 'width:42%">Appréciations / Signatures' in annual_pdf_template
-        assert quarterly_template.count('font-size:6.3pt;">Mle : 2CE1TEFD110320092') == 2 and 'width="64"' in quarterly_template
-        assert 'padding-left:10pt;' in quarterly_template and 'meta-table td:last-child { padding-left:10pt; }' in quarterly_pdf_template
-        assert preview_template.count('font-size:9.5px;">Mle : 2CE1TEFD110320092') == 2 and 'width="68"' in preview_template
+        assert quarterly_template.count("Mle : 2CE1TEFD110320092") == 1 and "bulletin_logo_path" in quarterly_template
+        assert "official-meta" in quarterly_template and '_official_bulletin_style.html' in quarterly_pdf_template
+        assert "bulletin_official_logo_9bdb1757.png" in preview_template
         assert 'width="52"' in annual_pdf_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
-        assert quarterly_template.index("Coefficient</td>") < quarterly_template.index("Moyenne du premier</td>")
-        assert "font-weight: bold" in quarterly_pdf_template
+        assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
+        assert "font-family:BulletinSerif" in quarterly_style_template
         assert "Excellent trimestre, continuez ainsi." not in quarterly_template
         assert "student_photo_path=row.photo_path" in grouped_template
         assert "row.course.teacher.user.formal_name" in quarterly_template

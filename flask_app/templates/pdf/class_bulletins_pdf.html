@@ -1,5 +1,18 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><style>
-@font-face{font-family:Inter;src:url('{{ font_regular }}')}@font-face{font-family:Playfair;src:url('{{ font_bold }}')}
-@page{size:A4 portrait;margin:0.35cm}body{font-family:Inter,Helvetica,sans-serif;color:#111;font-size:7pt;font-weight:bold;margin:0}.institution-header{width:100%;border-collapse:collapse}.institution-header td{vertical-align:top}.institution-side{width:38%;font-size:6pt;text-align:center;line-height:1.12}.institution-side span{font-size:5.7pt}.institution-logo{width:24%;text-align:center}.institution-logo img{width:64pt;height:64pt}.bulletin-heading{width:100%;border:1pt solid #111;border-collapse:collapse;margin:2pt 0}.heading-title{text-align:center;font-size:13pt;line-height:1.25}.heading-title small{display:block;font-size:8pt;font-style:italic;text-decoration:underline}.heading-photo{width:20%;text-align:center}.photo-box{display:block;width:62pt;height:76pt;border:1pt solid #111;background:#f5f5f5;margin:auto;text-align:center;vertical-align:middle}.photo-box img{display:block;width:62pt;height:76pt;object-fit:cover}.photo-box span{display:block;padding-top:31pt;font-size:6pt;color:#555}.student-meta{width:100%;border-collapse:collapse;margin:2pt 0;font-size:7pt;line-height:1.18}.student-meta td{width:50%;vertical-align:top;padding:1pt 3pt}table.grades{width:100%;border-collapse:collapse;table-layout:fixed}.grades th{background:#d9d9d9;border:.5pt solid #111;padding:1.2pt 1pt;font-size:5.3pt;text-align:center}.grades td{border:.5pt solid #111;padding:.7pt 1pt;font-size:5.5pt;line-height:.95;word-wrap:break-word}.grades .subject-cell{font-size:5.4pt}.grades .subject-cell em{font-size:4.8pt;font-weight:normal}.cat-row td{background:#d9d9d9;font-size:5.7pt;text-transform:uppercase;padding:1pt 2pt}.number-cell{text-align:center}.total-row td{background:#d9d9d9;font-size:5.6pt}.total-label{text-align:right}.low-score{color:#111}.profile-table{width:100%;border-collapse:collapse;margin-top:2pt;table-layout:fixed}.profile-table th,.profile-table td{border:.5pt solid #111;padding:1.2pt;font-size:5.6pt;line-height:1.05}.profile-table th{background:#d9d9d9;text-align:center;font-size:6pt}.profile-table td:nth-child(odd){background:#f0f0f0}.profile-table td:nth-child(even){text-align:center}.term-average{background:#d9d9d9!important}.lower-boxes{width:100%;border-collapse:collapse;margin-top:2pt}.lower-boxes>tbody>tr>td{border:.5pt solid #111;vertical-align:top;padding:1.5pt;font-size:5.8pt}.lower-boxes>tbody>tr>td>strong{font-size:6pt}.mini-table{width:100%;border-collapse:collapse;margin-top:1pt}.mini-table td{border:.4pt solid #555;padding:.6pt;font-size:5.3pt;line-height:1}.footer-table{width:100%;border-collapse:collapse;margin-top:2pt}.footer-table td{border:.6pt solid #111;height:42pt;vertical-align:top;padding:1.5pt;font-size:5.6pt;text-align:center}.footer-table td:first-child{text-align:left}.footer-table span{font-size:5.6pt}@media print{.grades{page-break-inside:avoid}.profile-table,.lower-boxes,.footer-table{page-break-inside:avoid}}
-</style></head><body>{% for row in students_data %}<div style="{{ 'page-break-before: always;' if not loop.first }}">{% with student=row.student,data=row.data,avatar_path=avatar_path,student_photo_path=row.photo_path,bulletin_ref=row.bulletin_ref,term_ordinal=term_ordinal,TERM_SEQ_A=TERM_SEQ_A,TERM_SEQ_B=TERM_SEQ_B,logo_path=logo_path,school_year=school_year %}{% include "pdf/_bulletin_body.html" %}{% endwith %}</div>{% endfor %}</body></html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Bulletins de la classe</title>
+  {% include "pdf/_official_bulletin_style.html" %}
+  <style>.bulletin-page{page-break-before:always}.bulletin-page:first-child{page-break-before:auto}</style>
+</head>
+<body>
+{% for row in students_data %}
+  <div class="bulletin-page">
+    {% with student=row.student, data=row.data, student_photo_path=row.photo_path, bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, school_year=school_year %}
+      {% include "pdf/_bulletin_body.html" %}
+    {% endwith %}
+  </div>
+{% endfor %}
+</body>
+</html>

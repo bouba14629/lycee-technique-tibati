@@ -127,4 +127,5 @@ def _render_bulletin(student, term=None, viewer="eleve"):
     return render_template("bulletin.html", student=student, data=data, term=term, terms=TERMS,
                             download_url=download_url, download_xlsx_url=download_xlsx_url, back_url=back_url,
                             viewer=viewer, can_export=can_export, TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b,
-                            term_ordinal=TERM_ORDINALS.get(term, ""), bulletin_ref=bulletin_ref)
+                            term_ordinal=TERM_ORDINALS.get(term, ""), bulletin_ref=bulletin_ref,
+                            school_year=get_current_school_year())
