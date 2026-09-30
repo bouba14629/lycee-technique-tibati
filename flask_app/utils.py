@@ -194,11 +194,20 @@ def automatic_work_appreciation(categories):
     return ""
 
 
-def bulletin_data(student, term=None):
+def bulletin_data(student, term=None, _cache=None):
     """Calcule toutes les données du bulletin officiel : matières groupées par catégorie,
     totaux, rang par matière et général, profil de classe, discipline et mentions."""
     from models import Subject, SUBJECT_CATEGORIES, Sanction, Attendance
     term = term or TERMS[0]
+    cache = _cache if _cache is not None else {}
+    course_average_cache = cache.setdefault("course_averages", {})
+
+    def cached_course_average(student_id, course_id):
+        key = (student_id, course_id, term)
+        if key not in course_average_cache:
+            course_average_cache[key] = course_average(student_id, course_id, term)
+        return course_average_cache[key]
+
     if not student.class_id:
         return None
     courses = [course for course in Course.query.filter_by(class_id=student.class_id).join(ScheduleEntry).distinct().all()
@@ -215,7 +224,7 @@ def bulletin_data(student, term=None):
         rows = []
         cat_points, cat_coef, pending_count = 0.0, 0, 0
         for c in cat_courses:
-            avg, nt, ea, eb = course_average(student.id, c.id, term)
+            avg, nt, ea, eb = cached_course_average(student.id, c.id)
             coef = c.subject.coefficient
             if avg is None:
                 rows.append({"course": c, "notes_trim": None, "eval_a": ea, "eval_b": eb, "coef": coef,
@@ -227,7 +236,7 @@ def bulletin_data(student, term=None):
             # rang de l'élève dans la classe pour cette matière
             peer_avgs = []
             for peer in classmates:
-                pavg, _, _, _ = course_average(peer.id, c.id, term)
+                pavg, _, _, _ = cached_course_average(peer.id, c.id)
                 if pavg is not None:
                     peer_avgs.append((peer.id, pavg))
             peer_avgs.sort(key=lambda x: -x[1])
@@ -255,7 +264,7 @@ def bulletin_data(student, term=None):
         pa_points, pa_coef = 0.0, 0
         pb_points, pb_coef = 0.0, 0
         for c in courses:
-            pavg, p_nt, p_ea, p_eb = course_average(peer.id, c.id, term)
+            pavg, p_nt, p_ea, p_eb = cached_course_average(peer.id, c.id)
             if pavg is not None:
                 p_points += pavg * c.subject.coefficient
                 p_coef += c.subject.coefficient
@@ -363,24 +372,34 @@ def schedule_group_labels(entries):
     return labels
 
 
-def annual_bulletin_data(student):
+def annual_bulletin_data(student, _cache=None):
     """Calcule le bulletin annuel sur les trois trimestres sans modifier le bulletin trimestriel."""
     from models import SUBJECT_CATEGORIES
     if not student.class_id:
         return None
+    cache = _cache if _cache is not None else {}
+    grade_values_cache = cache.setdefault("annual_grade_values", {})
+
+    def cached_grade_values(student_id, course_id, term):
+        key = (student_id, course_id, term)
+        if key not in grade_values_cache:
+            grade_values_cache[key] = [g.value / (g.max_value or 20) * 20 for g in Grade.query.filter_by(
+                student_id=student_id, course_id=course_id, term=term).all()]
+        return grade_values_cache[key]
+
     terms = TERMS[:3]
+    courses = [course for course in Course.query.filter_by(class_id=student.class_id).join(ScheduleEntry).distinct().all()
+               if "orientation scolaire" not in (course.subject.name or "").casefold()]
     categories, points_total, coef_total = [], 0.0, 0
     term_points, term_coefs = [0.0, 0.0, 0.0], [0, 0, 0]
     for category in SUBJECT_CATEGORIES:
         rows = []
-        for course in Course.query.filter_by(class_id=student.class_id).join(ScheduleEntry).distinct().all():
-            if "orientation scolaire" in (course.subject.name or "").casefold():
-                continue
+        for course in courses:
             if course.subject.category != category:
                 continue
             term_values = []
             for term in terms:
-                values = [g.value / (g.max_value or 20) * 20 for g in Grade.query.filter_by(student_id=student.id, course_id=course.id, term=term).all()]
+                values = cached_grade_values(student.id, course.id, term)
                 term_values.append(round(sum(values) / len(values), 2) if values else None)
             known = [value for value in term_values if value is not None]
             annual = round(sum(known) / len(known), 2) if known else None
@@ -396,7 +415,7 @@ def annual_bulletin_data(student):
                 for peer in student.school_class.students:
                     peer_terms = []
                     for term in terms:
-                        peer_values = [grade.value / (grade.max_value or 20) * 20 for grade in Grade.query.filter_by(student_id=peer.id, course_id=course.id, term=term).all()]
+                        peer_values = cached_grade_values(peer.id, course.id, term)
                         if peer_values:
                             peer_terms.append(sum(peer_values) / len(peer_values))
                     if peer_terms:
@@ -416,12 +435,10 @@ def annual_bulletin_data(student):
 
     def peer_annual_average(peer):
         peer_points, peer_coefs = 0.0, 0
-        for course in Course.query.filter_by(class_id=peer.class_id).join(ScheduleEntry).distinct().all():
-            if "orientation scolaire" in (course.subject.name or "").casefold():
-                continue
+        for course in courses:
             values_by_term = []
             for item_term in terms:
-                values = [grade.value / (grade.max_value or 20) * 20 for grade in Grade.query.filter_by(student_id=peer.id, course_id=course.id, term=item_term).all()]
+                values = cached_grade_values(peer.id, course.id, item_term)
                 if values:
                     values_by_term.append(sum(values) / len(values))
             if values_by_term:
