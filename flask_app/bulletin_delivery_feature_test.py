@@ -96,7 +96,7 @@ with app.app_context():
         assert 'width:42%">Appréciations / Signatures' in annual_pdf_template
         assert quarterly_template.count("Mle : 2CE1TEFD110320092") == 1 and "bulletin_logo_path" in quarterly_template
         assert "official-meta" in quarterly_template and '_official_bulletin_style.html' in quarterly_pdf_template
-        assert "bulletin_official_logo_9bdb1757.png" in preview_template
+        assert "LOGOLTT_b9c57b93.jpg" in preview_template
         assert 'width="52"' in annual_pdf_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
         assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
         assert "font-family:BulletinSerif" in quarterly_style_template
