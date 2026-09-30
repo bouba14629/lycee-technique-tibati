@@ -40,12 +40,12 @@
   </tr>
 </table>
 
-<table class="grades">
+<table class="grades" style="table-layout:fixed">
   <tr>
-    <th style="width:32%">Matières/Enseignant</th><th style="width:9%">Notes Trim.</th>
+    <th style="width:28%">Matières/Enseignant</th><th style="width:9%">Notes Trim.</th>
     <th style="width:6%">Eval. {{ TERM_SEQ_A }}</th><th style="width:6%">Eval. {{ TERM_SEQ_B }}</th>
     <th style="width:6%">Coef.</th><th style="width:8%">Notes x coef.</th><th style="width:7%">Rang</th>
-    <th style="width:22%">Signatures</th>
+    <th style="width:28%">Appréciations / Signatures</th>
   </tr>
   {% for cat in data.categories %}
   <tr class="cat-row"><td colspan="8">{{ cat.name }}</td></tr>

@@ -55,7 +55,7 @@ table { width:100%; border-collapse:collapse; }
   <td><b>Année scolaire :</b> {{ school_year }}<br><b>Classe :</b> {{ student.school_class.name }}<br><b>Effectif :</b> {{ data.class_size }}<br><b>Redoublant :</b> {{ 'Oui' if student.is_repeater else 'Non' }}</td>
 </tr></table>
 
-<table class="grid"><thead><tr><th style="width:27%">Matières / Enseignant</th><th style="width:6%">Notes<br>annuelles</th><th style="width:5%">Trim. 1</th><th style="width:5%">Trim. 2</th><th style="width:5%">Trim. 3</th><th style="width:5%">Coef.</th><th style="width:6%">N × C</th><th style="width:5%">Rang</th><th style="width:36%">Signatures</th></tr></thead><tbody>
+<table class="grid" style="table-layout:fixed"><thead><tr><th style="width:21%">Matières / Enseignant</th><th style="width:6%">Notes<br>annuelles</th><th style="width:5%">Trim. 1</th><th style="width:5%">Trim. 2</th><th style="width:5%">Trim. 3</th><th style="width:5%">Coef.</th><th style="width:6%">N × C</th><th style="width:5%">Rang</th><th style="width:42%">Appréciations / Signatures</th></tr></thead><tbody>
 {% for category in data.categories %}
   <tr class="cat"><td colspan="9">{{ category.name|upper }}</td></tr>
   {% for row in category.rows %}

@@ -91,8 +91,8 @@ with app.app_context():
         preview_template = open("templates/bulletin.html", encoding="utf-8").read()
         assert "profile-table profile-block" in quarterly_template and "term-average" in quarterly_template and "colspan=\"4\"" in quarterly_template
         assert "Moyenne trimestrielle" in quarterly_template and "Notes trimestrielles" in quarterly_template
-        assert 'Appréciations' not in quarterly_template
-        assert 'Appréciations/Signatures' not in annual_pdf_template
+        assert 'style="width:28%">Appréciations / Signatures' in quarterly_template
+        assert 'width:42%">Appréciations / Signatures' in annual_pdf_template
         assert quarterly_template.count('font-size:6.3pt;">Mle : 2CE1TEFD110320092') == 2 and 'width="64"' in quarterly_template
         assert 'padding-left:10pt;' in quarterly_template and 'meta-table td:last-child { padding-left:10pt; }' in quarterly_pdf_template
         assert preview_template.count('font-size:9.5px;">Mle : 2CE1TEFD110320092') == 2 and 'width="68"' in preview_template
