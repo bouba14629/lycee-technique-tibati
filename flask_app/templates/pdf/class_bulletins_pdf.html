@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <title>Bulletins de la classe</title>
   {% include "pdf/_official_bulletin_style.html" %}
-  <style>.bulletin-page{page-break-before:always;page-break-inside:avoid}.bulletin-page:first-child{page-break-before:auto}</style>
+  <style>
+    html,body{margin:0;padding:0}
+    .bulletin-page{width:100%;margin:0;padding:0;page-break-before:always;page-break-inside:avoid}
+    .bulletin-page:first-child{page-break-before:auto}
+    .bulletin-page .official-bulletin{width:100%;max-width:none;margin:0}
+  </style>
 </head>
 <body>
 {% for row in students_data %}
