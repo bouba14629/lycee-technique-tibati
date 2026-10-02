@@ -13,6 +13,9 @@
     {% if can_export %}
     <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu avant impression</button>
     <a class="btn-ltt-gold" href="{{ download_url }}"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</a>
+    {% if current_user.role == 'censeur' and student.school_class %}
+    <a class="btn-ltt-gold" href="{{ url_for('censeur_bulletins_class_pdf', class_id=student.school_class.id, term=term) }}" target="_blank" rel="noopener" aria-label="Exporter et imprimer tous les bulletins individuels de la classe"><i class="bi bi-printer-fill"></i> Exporter et imprimer tous</a>
+    {% endif %}
     <a class="btn-ltt-outline" href="{{ download_xlsx_url }}"><i class="bi bi-file-earmark-excel-fill"></i> Excel</a>
     {% else %}
     <span class="text-muted" style="font-size:12px;"><i class="bi bi-info-circle"></i> Consultation uniquement — l'impression du bulletin relève du Censeur.</span>

@@ -77,6 +77,8 @@ with app.app_context():
             output.write(annual_bulk_pdf.data)
         preview = client.get(f"/eleves/{student_id}/bulletin?term=Trimestre+1")
         assert preview.status_code == 200 and b"Aper\xc3\xa7u avant impression" in preview.data
+        assert b"Exporter et imprimer tous" in preview.data
+        assert f"/censeur/bulletins/classe/{class_id}/telecharger.pdf?term=Trimestre+1".encode() in preview.data
         assert preview.data.count(b"SECTION DELIVERY") == 1
         assert b"R\xc3\xa9f. :" not in preview.data
         assert b"SECTION :" not in preview.data
