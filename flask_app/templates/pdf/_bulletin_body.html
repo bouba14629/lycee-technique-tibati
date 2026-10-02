@@ -60,6 +60,7 @@
     </thead>
     <tbody>
       {% for cat in data.categories %}
+        <tr class="category-heading"><td colspan="8">{{ cat.name }}</td></tr>
         {% for row in cat.rows %}
         <tr>
           <td class="subject">{{ row.course.subject.name }}<br><span class="teacher">{{ row.course.teacher.user.formal_name }}</span></td>

@@ -109,6 +109,8 @@ with app.app_context():
         assert "height:16pt" in quarterly_style_template and "height:18pt" in quarterly_style_template
         assert "background:#cfcfcf" in quarterly_style_template
         assert "summary-gray" in quarterly_template
+        assert 'class="category-heading"' in quarterly_template
+        assert '.category-heading td' in quarterly_style_template and '.app-sign-table th{background:#cfcfcf' in quarterly_style_template
         assert "Excellent trimestre, continuez ainsi." not in quarterly_template
         assert "student_photo_path=row.photo_path" in grouped_template
         assert "row.course.teacher.user.formal_name" in quarterly_template
