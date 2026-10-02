@@ -106,6 +106,9 @@ with app.app_context():
         assert 'width="52"' in annual_shared_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
         assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
         assert "font-family:BulletinSerif" in quarterly_style_template
+        assert "height:14pt" in quarterly_style_template and "height:16pt" in quarterly_style_template
+        assert "background:#d0d0d0" in quarterly_style_template
+        assert "summary-gray" in quarterly_template
         assert "Excellent trimestre, continuez ainsi." not in quarterly_template
         assert "student_photo_path=row.photo_path" in grouped_template
         assert "row.course.teacher.user.formal_name" in quarterly_template

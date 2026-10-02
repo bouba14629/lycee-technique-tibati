@@ -95,7 +95,7 @@
     </tr>
     <tr>
       <td class="label">Moy.du dernier</td><td class="value">{{ data.lowest_avg|string|replace('.', ',') if data.lowest_avg is not none else '—' }}</td>
-      <td class="label">Moy. Trim.</td><td class="value">{{ data.overall_avg|string|replace('.', ',') if data.overall_avg is not none else '—' }}</td><td class="label">Félicitations</td><td class="check">{{ '✓' if data.work_marks.felicitations else '' }}</td><td class="label">Travail Pass.</td><td class="check">{{ '✓' if data.work_marks.travail_passable else '' }}</td>
+      <td class="label">Moy. Trim.</td><td class="value summary-gray">{{ data.overall_avg|string|replace('.', ',') if data.overall_avg is not none else '—' }}</td><td class="label">Félicitations</td><td class="check">{{ '✓' if data.work_marks.felicitations else '' }}</td><td class="label">Travail Pass.</td><td class="check">{{ '✓' if data.work_marks.travail_passable else '' }}</td>
       <td class="label">Exclusions</td><td class="label">N. heures</td><td></td><td></td>
     </tr>
     <tr>
