@@ -22,8 +22,9 @@ assert "VISA DU CHEF D'ETABLISSEMENT" in quarterly_template
 assert "VISA DU PROVISEUR" not in quarterly_template
 assert 'class="official-photo"' in quarterly_template
 assert 'height:71pt' in quarterly_style
-assert 'class="student-photo"' in Path("templates/pdf/bulletin_annual_pdf.html").read_text(encoding="utf-8")
-assert 'class="photo-frame"' in Path("templates/pdf/bulletin_annual_pdf.html").read_text(encoding="utf-8")
+annual_template = Path("templates/pdf/_annual_bulletin_body.html").read_text(encoding="utf-8")
+assert 'class="student-photo"' in annual_template
+assert 'class="photo-frame"' in annual_template
 
 
 def user(username, role):

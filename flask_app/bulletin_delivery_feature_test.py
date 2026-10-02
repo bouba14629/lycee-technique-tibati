@@ -93,22 +93,24 @@ with app.app_context():
         assert "official-grades" in quarterly_template and "official-summary" in quarterly_template and "official-footer" in quarterly_template
         assert "Moy. Trim." in quarterly_template and "Notes Trim." in quarterly_template
         assert ">Appréciations</th>" in quarterly_template and ">Signatures</th>" in quarterly_template
-        assert 'width:42%">Appréciations / Signatures' in annual_pdf_template
+        annual_shared_template = open("templates/pdf/_annual_bulletin_body.html", encoding="utf-8").read()
+        assert '{% include "pdf/_annual_bulletin_body.html" %}' in annual_pdf_template
+        assert '{% include "pdf/_annual_bulletin_body.html" %}' in open("templates/pdf/class_annual_bulletins_pdf.html", encoding="utf-8").read()
+        assert 'width:42%">Appréciations / Signatures' in annual_shared_template
         assert quarterly_template.count("Mle : 2CE1TEFD110320092") == 1 and "bulletin_logo_path" in quarterly_template
         assert "official-meta" in quarterly_template and '_official_bulletin_style.html' in quarterly_pdf_template
         assert "LOGOLTT_b9c57b93.jpg" in preview_template
         assert '{% include "pdf/_bulletin_body.html" %}' in quarterly_pdf_template
         assert '{% include "pdf/_bulletin_body.html" %}' in grouped_template
         assert 'class="bulletin-page"' in grouped_template and 'official-bulletin{width:100%;max-width:none;margin:0}' in grouped_template
-        assert 'width="52"' in annual_pdf_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
+        assert 'width="52"' in annual_shared_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
         assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
         assert "font-family:BulletinSerif" in quarterly_style_template
         assert "Excellent trimestre, continuez ainsi." not in quarterly_template
         assert "student_photo_path=row.photo_path" in grouped_template
         assert "row.course.teacher.user.formal_name" in quarterly_template
         assert "homeroom_teacher.user.formal_name" in quarterly_template
-        assert "row.teacher.user.formal_name" in annual_pdf_template
-        assert "row.teacher.user.formal_name" in open("templates/pdf/class_annual_bulletins_pdf.html", encoding="utf-8").read()
+        assert "row.teacher.user.formal_name" in annual_shared_template
         annual_generation = client.get(f"/censeur/bulletins/classe/{class_id}/annuels/generer")
         assert annual_generation.status_code == 200 and b"G\xc3\xa9n\xc3\xa9ration des bulletins annuels" in annual_generation.data
         assert b"PDF annuel" in annual_generation.data and b"Aper\xc3\xa7u" in annual_generation.data
