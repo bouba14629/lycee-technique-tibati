@@ -361,11 +361,16 @@ def censeur_teacher_schedule_list():
     if user.role == "chef_orientation":
         teachers = [teacher for teacher in teachers if teacher.user.role == "conseiller_orientation"]
     teacher_hours_faites = {}
+    teacher_extra_hours = {}
     for teacher in teachers:
         entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
         teacher_hours_faites[teacher.id] = filled_official_slots(build_official_grid(entries))
+        teacher_extra_hours[teacher.id] = schedule_extra_hours(
+            teacher_hours_faites[teacher.id], teacher.hours_due or 0
+        )
     return render_template("censeur_teacher_schedule_list.html", teachers=teachers,
-                           teacher_hours_faites=teacher_hours_faites)
+                           teacher_hours_faites=teacher_hours_faites,
+                           teacher_extra_hours=teacher_extra_hours)
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>")
