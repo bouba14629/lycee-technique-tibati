@@ -273,9 +273,10 @@ def teacher_attendance(course_id):
         flash(f"Appel {'modifié' if call_log else 'enregistré'} ({count} absence(s)/retard(s)).", "success")
         return redirect(url_for("teacher_attendance", course_id=course_id, date=session_date_value))
 
+    # La fiche d'appel est classée par prénom, A à Z.
     students = sorted(course.school_class.students, key=lambda s: (
-        (s.last_name or "").strip().casefold(),
         (s.first_name or "").strip().casefold(),
+        (s.last_name or "").strip().casefold(),
         s.id,
     ))
     return render_template("teacher_attendance.html", course=course, students=students,
