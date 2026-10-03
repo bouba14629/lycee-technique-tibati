@@ -105,7 +105,7 @@ with app.app_context():
         assert '{% include "pdf/_bulletin_body.html" %}' in quarterly_pdf_template
         assert '{% include "pdf/_bulletin_body.html" %}' in grouped_template
         assert 'class="bulletin-page"' in grouped_template and 'official-bulletin{width:100%;max-width:none;margin:0}' in grouped_template
-        assert 'width="52"' in annual_shared_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
+        assert 'width="52"' in annual_shared_template and 'bulletin_logo_path' in annual_shared_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
         assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
         assert "font-family:BulletinSerif" in quarterly_style_template
         assert '.official-header{table-layout:fixed}' in quarterly_style_template
