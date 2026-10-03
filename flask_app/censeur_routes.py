@@ -7,7 +7,7 @@ from models import (
     Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
 )
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
-                    OFFICIAL_PERIODS, build_official_grid, user_scoped_class_ids, user_scoped_department_ids, TERMS,
+                    OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
                     bulletin_data, get_current_school_year, schedule_extra_hours)
 
@@ -360,7 +360,12 @@ def censeur_teacher_schedule_list():
     teachers = teachers_q.order_by(db.func.lower(User.full_name)).all()
     if user.role == "chef_orientation":
         teachers = [teacher for teacher in teachers if teacher.user.role == "conseiller_orientation"]
-    return render_template("censeur_teacher_schedule_list.html", teachers=teachers)
+    teacher_hours_faites = {}
+    for teacher in teachers:
+        entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+        teacher_hours_faites[teacher.id] = filled_official_slots(build_official_grid(entries))
+    return render_template("censeur_teacher_schedule_list.html", teachers=teachers,
+                           teacher_hours_faites=teacher_hours_faites)
 
 
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>")
