@@ -33,6 +33,10 @@ for role in ("directeur", "censeur", "censeur_crm", "surveillant_general"):
     assert login.status_code in (302, 303), (role, login.status_code)
     response = client.get("/dashboard", follow_redirects=False)
     assert response.status_code == 200, (role, response.status_code, response.data[:500])
+    export = client.get("/dashboard/effectifs-genre/export.xlsx?attendance_class_id=1", follow_redirects=False)
+    assert export.status_code == 200, (role, export.status_code, export.data[:500])
+    assert export.content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert export.data.startswith(b"PK"), role
     filtered = client.get("/dashboard?attendance_section_id=1&attendance_department_id=1&attendance_class_id=1&attendance_class_id=2&attendance_subject_id=1&attendance_subject_id=2", follow_redirects=False)
     assert filtered.status_code == 200, (role, filtered.status_code, filtered.data[:500])
     client.get("/logout")

@@ -14,8 +14,9 @@ planned_fields = [
 ]
 for field in planned_fields:
     assert f'name="{field}"' in template
-    assert f"{{{{ 'readonly' if indicator else '' }}}}" in template
     assert f'"{field}"' in route
+assert "{{ 'readonly' if indicator else '' }}" in template
+assert 'current_user.role != "conseiller_orientation" and indicator' in template
 assert "editable_fields" in route
 assert '"hours_done", "lessons_done", "digital_lessons_done"' in route
 assert "Après le premier enregistrement, les objectifs prévus sont verrouillés." in template

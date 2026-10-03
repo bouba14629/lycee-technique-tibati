@@ -26,11 +26,12 @@
       <div class="col-md-3"><label>Fin du créneau</label><input type="time" name="end_time" class="form-control" value="{{ scheduled_end }}" readonly></div>
     </div>
     <table class="table-ltt">
-      <thead><tr><th>Élève</th><th style="width:220px;">Statut</th><th>Motif (si absent/retard)</th></tr></thead>
+      <thead><tr><th>Élève</th><th style="width:150px;">Date de naissance</th><th style="width:220px;">Statut</th><th>Motif (si absent/retard)</th></tr></thead>
       <tbody>
       {% for s in students %}
         <tr>
           <td>{{ s.full_name }}</td>
+          <td class="text-muted" style="font-size:11.5px;">{{ s.dob.strftime('%d/%m/%Y') if s.dob else '—' }}</td>
           <td>
             <select name="status_{{ s.id }}" class="form-select form-select-sm">
               <option value="Présent" {{ 'selected' if not existing_statuses.get(s.id) else '' }}>Présent</option>

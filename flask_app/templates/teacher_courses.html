@@ -15,7 +15,7 @@
       <summary class="text-muted" style="cursor:pointer; font-size:12px;">Élèves — ordre alphabétique A à Z</summary>
       <ol class="mt-2 mb-0 ps-3" style="font-size:12px;">
         {% for student in students_by_course.get(c.id, []) %}
-        <li>{{ student.last_name }} {{ student.first_name }}</li>
+        <li>{{ student.last_name }} {{ student.first_name }} <span class="text-muted">— né(e) le {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}</span></li>
         {% endfor %}
       </ol>
     </details>

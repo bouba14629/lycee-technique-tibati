@@ -4,7 +4,7 @@ import random
 import secrets
 from datetime import datetime, date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, abort, jsonify
+from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, abort, jsonify, send_file
 from sqlalchemy.exc import OperationalError
 
 from models import (
@@ -15,7 +15,7 @@ from models import (
 )
 from utils import (
     login_required, roles_required, notify, student_average, subject_averages,
-    general_average, check_schedule_conflict, parse_date, DAYS, TERMS, generate_account_password,
+    general_average, check_schedule_conflict, parse_date, DAYS, TERMS, generate_account_password, user_scoped_class_ids,
 )
 import seed as seed_module
 
