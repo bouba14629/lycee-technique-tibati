@@ -108,6 +108,9 @@ with app.app_context():
         assert 'width="52"' in annual_shared_template and '.meta td:last-child { padding-left:10pt; }' in annual_pdf_template
         assert quarterly_template.index("Coef.</th>") < quarterly_template.index("Moy.du premier")
         assert "font-family:BulletinSerif" in quarterly_style_template
+        assert '.official-header{table-layout:fixed}' in quarterly_style_template
+        assert '.official-header-logo{width:36%;text-align:center' in quarterly_style_template
+        assert 'display:block;width:69pt;height:65pt;margin:0 auto' in quarterly_style_template
         assert "height:16pt" in quarterly_style_template and "height:18pt" in quarterly_style_template
         assert "background:#cfcfcf" in quarterly_style_template
         assert "summary-gray" in quarterly_template
