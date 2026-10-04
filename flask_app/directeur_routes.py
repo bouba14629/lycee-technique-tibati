@@ -169,11 +169,14 @@ def dir_user_new():
         u.set_password(temp_pw)
         db.session.add(u)
         db.session.flush()
-        if role == "enseignant":
+        if role in ("enseignant", "conseiller_orientation"):
             dept_id = request.form.get("department_id", type=int)
-            t = Teacher(user_id=u.id, specialty=request.form.get("specialty", ""), department_id=dept_id,
+            hours_due = request.form.get("hours_due", request.form.get("hours_due_enseignant", 18), type=int)
+            t = Teacher(user_id=u.id,
+                        specialty=request.form.get("specialty", "Orientation Scolaire" if role == "conseiller_orientation" else ""),
+                        department_id=dept_id if role == "enseignant" else None,
                         grade=grade,
-                        hours_due=request.form.get("hours_due", 18, type=int),
+                        hours_due=hours_due,
                         hire_date=date.today())
             db.session.add(t)
         db.session.commit()
@@ -299,10 +302,15 @@ def dir_user_edit(user_id):
     if u.role in ("censeur", "surveillant_general", "chef_travaux"):
         u.section_id = section_id
     grade = request.form.get("grade", "")
-    if u.role == "enseignant" and u.teacher_profile:
-        u.teacher_profile.specialty = request.form.get("specialty", u.teacher_profile.specialty)
-        u.teacher_profile.grade = grade
-        u.teacher_profile.hours_due = request.form.get("hours_due", u.teacher_profile.hours_due, type=int)
+    if u.role in ("enseignant", "conseiller_orientation"):
+        teacher = u.teacher_profile
+        if teacher is None and u.role == "conseiller_orientation":
+            teacher = Teacher(user_id=u.id, specialty="Orientation Scolaire", hire_date=date.today())
+            db.session.add(teacher)
+        if teacher:
+            teacher.specialty = request.form.get("specialty", teacher.specialty)
+            teacher.grade = grade
+            teacher.hours_due = request.form.get("hours_due", teacher.hours_due, type=int)
     elif u.role == "parent" and u.parent_profile:
         u.parent_profile.phone = request.form.get("phone", u.parent_profile.phone or "").strip()
         u.parent_profile.profession = request.form.get("profession", u.parent_profile.profession or "").strip()

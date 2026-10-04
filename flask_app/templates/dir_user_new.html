@@ -10,7 +10,7 @@
       <div class="col-md-6"><label>Nom complet</label><input type="text" name="full_name" class="form-control" required></div>
       <div class="col-md-4">
         <label>Niveau d'accréditation (rôle)</label>
-        <select name="role" class="form-select" id="roleSelect" onchange="document.getElementById('teacherFields').style.display = this.value=='enseignant' ? 'flex' : 'none'; document.getElementById('sectionFields').style.display = ['censeur','chef_orientation','surveillant_general','chef_travaux'].includes(this.value) ? 'block' : 'none';">
+          <select name="role" class="form-select" id="roleSelect" onchange="document.getElementById('teacherFields').style.display = this.value=='enseignant' ? 'flex' : 'none'; document.getElementById('counselorHoursFields').style.display = this.value=='conseiller_orientation' ? 'block' : 'none'; document.getElementById('sectionFields').style.display = ['censeur','chef_orientation','surveillant_general','chef_travaux'].includes(this.value) ? 'block' : 'none';">
           <option value="enseignant">Enseignant</option>
           <option value="censeur">Censeur</option>
           <option value="censeur_crm">Censeur CRM</option>
@@ -50,7 +50,10 @@
           </select>
         </div>
         <div class="col-md-4"><label>Spécialité</label><input type="text" name="specialty" class="form-control" placeholder="ex : Mathématiques"></div>
-        <div class="col-md-2"><label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="18"></div>
+        <div class="col-md-2"><label>Heures dues</label><input type="number" name="hours_due_enseignant" class="form-control" value="18"></div>
+      </div>
+      <div class="col-md-4" id="counselorHoursFields" style="display:none;">
+        <label>Heures dues</label><input type="number" name="hours_due" class="form-control" value="18">
       </div>
     </div>
     <button class="btn-ltt-navy mt-4"><i class="bi bi-check2"></i> Créer le compte</button>

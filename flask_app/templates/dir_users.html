@@ -99,7 +99,7 @@
               {% for s in sections %}<option value="{{ s.id }}" {{ 'selected' if u.section_id==s.id }}>{{ s.name }} ({{ s.code }})</option>{% endfor %}
             </select>
             {% endif %}
-            {% if u.role == 'enseignant' and u.teacher_profile %}
+            {% if u.role in ['enseignant','conseiller_orientation'] and u.teacher_profile %}
             <label>Spécialité</label><input type="text" name="specialty" class="form-control mb-2" value="{{ u.teacher_profile.specialty or '' }}">
             <label>Heures dues</label><input type="number" name="hours_due" class="form-control mb-2" value="{{ u.teacher_profile.hours_due }}">
             {% endif %}
