@@ -1,127 +1,106 @@
-<div class="official-bulletin">
-  <table class="official-header">
-    <tr>
-      <td class="official-header-side">
-        REPUBLIQUE DU CAMEROUN<br>Paix-Travail-Patrie<br>
-        REGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>
-        LYCEE TECHNIQUE DE TIBATI<br>BP 105 TIBATI&nbsp;&nbsp; Tel : 697 12 16 77<br>
-        Mle : 2CE1TEFD110320092
-      </td>
-      <td class="official-header-logo"><img src="{{ bulletin_logo_path }}" alt="Emblème du Lycée Technique de Tibati"></td>
-      <td class="official-header-side">
-        REPUBLIC OF CAMEROON<br>Peace-Work-Fatherland<br>
-        ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>
-        G.T.H.S OF TIBATI<br>P.O.BOX 105 TIBATI Tel 697 12 16 77
-      </td>
-    </tr>
-  </table>
+<table class="institution-header">
+  <tr>
+    <td class="institution-side">
+      RÉPUBLIQUE DU CAMEROUN<br>Paix-Travail-Patrie<br>
+      RÉGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>
+      LYCÉE TECHNIQUE DE TIBATI<br>BP 105 TIBATI Tel : 697 12 16 77<br>
+      <span>Mle : 2CE1TEFD110320092</span>
+    </td>
+    <td class="institution-logo"><img src="{{ logo_path }}" width="64" /></td>
+    <td class="institution-side">
+      REPUBLIC OF CAMEROON<br>Peace-Work-Fatherland<br>
+      ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>
+      G.T.H.S OF TIBATI<br>P.O.BOX 105 TIBATI Tel 697 12 16 77<br>
+      <span>Mle : 2CE1TEFD110320092</span>
+    </td>
+  </tr>
+</table>
 
-  <table class="official-title-photo">
-    <tr>
-      <td class="official-title-spacer"></td>
-      <td class="official-title-cell">
-        <table class="official-title-box"><tr><td>
-          <span class="official-title">BULLETIN DU {{ term_ordinal|upper }} TRIMESTRE</span><br>
-          <span class="official-section">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</span>
-        </td></tr></table>
-      </td>
-      <td class="official-photo-cell" rowspan="2">
-        {% if student_photo_path %}<img class="official-photo" src="{{ student_photo_path }}" alt="Photo de l'élève">{% else %}<div class="official-photo"></div>{% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="official-meta-cell" colspan="2">
-        <table class="official-meta">
-          <tr>
-            <td>
-              <strong>Noms et Prénoms :</strong>&nbsp; {{ student.full_name }}<br>
-              <strong>Date de naissance :</strong>&nbsp; {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} &nbsp; à &nbsp; {{ student.birth_place or '—' }}<br>
-              <strong>Genre :</strong>&nbsp; {{ student.sex or '—' }}<br>
-              <strong>Identifiant Unique :</strong>&nbsp; {{ student.matricule }}<br>
-              <strong>Redoublant :</strong>&nbsp; {{ 'Oui' if student.is_repeater else 'Non' }}
-            </td>
-            <td>
-              <strong>Année Scolaire :</strong>&nbsp; {{ school_year }}<br>
-              <strong>Classe:</strong>&nbsp; {{ student.school_class.name if student.school_class else '—' }}<br>
-              <strong>Effectif :</strong>&nbsp; {{ student.school_class.students|length if student.school_class else '—' }}<br>
-              <strong>Professeur Principal:</strong>&nbsp; {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<table class="bulletin-heading">
+  <tr>
+    <td class="heading-title">
+      <div>BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
+      <small>SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</small>
+    </td>
+    <td class="heading-photo"><div class="photo-box"><img src="{{ student_photo_path or avatar_path }}" /></div></td>
+  </tr>
+</table>
 
-  <table class="official-grades">
-    <thead>
-      <tr>
-        <th style="width:28%">Matières/Enseignant</th><th style="width:9%">Notes Trim.</th><th style="width:6%">Eval. {{ TERM_SEQ_A }}</th><th style="width:6%">Eval. {{ TERM_SEQ_B }}</th><th style="width:6%">Coef.</th><th style="width:8%">Notes x coef.</th><th style="width:7%">Rang</th><th class="app-sign-cell" style="width:28%"><table class="app-sign-table"><tr><th style="width:65%">Appréciations</th><th style="width:33%">Signatures</th></tr></table></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for cat in data.categories %}
-        <tr class="category-heading"><td colspan="8">{{ cat.name }}</td></tr>
-        {% for row in cat.rows %}
-        <tr>
-          <td class="subject">{{ row.course.subject.name }}<br><span class="teacher">{{ row.course.teacher.user.formal_name }}</span></td>
-          <td class="score">{{ row.notes_trim|string|replace('.', ',') if row.notes_trim is not none else '—' }}</td>
-          <td class="center">{{ row.eval_a|string|replace('.', ',') if row.eval_a is not none else '—' }}</td>
-          <td class="center">{{ row.eval_b|string|replace('.', ',') if row.eval_b is not none else '—' }}</td>
-          <td class="center"><strong>{{ row.coef|string|replace('.', ',') }}</strong></td>
-          <td class="points">{{ row.points|string|replace('.', ',') if row.points is not none else '—' }}</td>
-          <td class="rank">{{ row.rank if row.rank is not none else '—' }}{% if row.rank %}<sup>e</sup>{% endif %}</td>
-          <td class="app-sign-cell"><table class="app-sign-table"><tr><td class="appreciation" style="width:65%">{{ row.appreciation }}</td><td style="width:33%"></td></tr></table></td>
-        </tr>
-        {% endfor %}
-        <tr class="category-total">
-          <td class="category-name" colspan="3">{{ cat.name }}</td>
-          <td class="category-summary" colspan="5">Total Points : &nbsp; {{ cat.total_points|string|replace('.', ',') }} &nbsp;&nbsp;&nbsp; Total coef. : &nbsp; {{ cat.total_coef|string|replace('.', ',') }} &nbsp;&nbsp;&nbsp; Moyenne/20 : &nbsp; {{ cat.moyenne|string|replace('.', ',') if cat.moyenne is not none else '—' }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<table class="student-meta">
+  <tr>
+    <td><strong>Noms et Prénoms :</strong> {{ student.full_name }}<br>
+      <strong>Date de naissance :</strong> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>
+      <strong>Genre :</strong> {{ student.sex or '—' }}<br>
+      <strong>Identifiant Unique :</strong> {{ student.matricule }}<br>
+      <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}</td>
+    <td><strong>Année Scolaire :</strong> {{ school_year }}<br>
+      <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
+      <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
+      <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}</td>
+  </tr>
+</table>
 
-  <table class="official-summary-flat">
-    <tr class="summary-sizing"><td style="width:74pt"></td><td style="width:45pt"></td><td style="width:56pt"></td><td style="width:33pt"></td><td style="width:59pt"></td><td style="width:12pt"></td><td style="width:63pt"></td><td style="width:12pt"></td><td style="width:43pt"></td><td style="width:35pt"></td><td style="width:37pt"></td><td style="width:92pt"></td></tr>
-    <tr class="summary-head"><th colspan="2">PROFIL DE LA CLASSE</th><th colspan="6">TRAVAIL DE L'ELEVE</th><th colspan="4">DISCIPLINE</th></tr>
-    <tr>
-      <td class="label">Moy.Gén. Classe</td><td class="value">{{ data.class_avg|string|replace('.', ',') if data.class_avg is not none else '—' }}</td>
-      <td class="label">Total Points</td><td class="value">{{ data.overall_points|string|replace('.', ',') }}</td><td class="label">Tableau d'Honneur</td><td class="check">{{ '✓' if data.work_marks.tableau_honneur else '' }}</td><td class="label">Travail Insuff.</td><td class="check">{{ '✓' if data.work_marks.travail_insuffisant else '' }}</td>
-      <td class="label">Absences</td><td class="label">N. heures</td><td class="measure">Just.<br>{{ data.absences_justified_hours }}</td><td class="measure">Non Just.<br>{{ data.absences_non_justified_hours }}</td>
-    </tr>
-    <tr>
-      <td class="label">Moy.du premier</td><td class="value">{{ data.highest_avg|string|replace('.', ',') if data.highest_avg is not none else '—' }}</td>
-      <td class="label">Coef.</td><td class="value">{{ data.overall_coef|string|replace('.', ',') }}</td><td class="label">Encouragements</td><td class="check">{{ '✓' if data.work_marks.encouragements else '' }}</td><td class="label">Travail Méd.</td><td class="check"></td>
-      <td></td><td class="label">N. jours</td><td class="measure">{{ data.absences_justified_days }}</td><td class="measure">{{ data.absences_non_justified_days }}</td>
-    </tr>
-    <tr>
-      <td class="label">Moy.du dernier</td><td class="value">{{ data.lowest_avg|string|replace('.', ',') if data.lowest_avg is not none else '—' }}</td>
-      <td class="label">Moy. Trim.</td><td class="value summary-gray">{{ data.overall_avg|string|replace('.', ',') if data.overall_avg is not none else '—' }}</td><td class="label">Félicitations</td><td class="check">{{ '✓' if data.work_marks.felicitations else '' }}</td><td class="label">Travail Pass.</td><td class="check">{{ '✓' if data.work_marks.travail_passable else '' }}</td>
-      <td class="label">Exclusions</td><td class="label">N. heures</td><td></td><td></td>
-    </tr>
-    <tr>
-      <td class="label">Nbre de Moy.</td><td class="value">{{ data.nb_above_10 }}</td>
-      <td class="label">Rang</td><td class="value">{{ data.rank if data.rank is not none else '—' }}/{{ data.class_size }}</td><td class="label">Avert. Travail</td><td class="check"></td><td class="label">Assez Bon Trav.</td><td class="check">{{ '✓' if data.work_marks.assez_bon_travail else '' }}</td>
-      <td></td><td class="label">N. jours</td><td></td><td class="measure">{{ data.exclusions|length }}</td>
-    </tr>
-    <tr>
-      <td class="label">Taux de Réussite</td><td class="value">{{ data.success_rate|string|replace('.', ',') if data.success_rate is not none else '—' }}{% if data.success_rate is not none %}%{% endif %}</td>
-      <td class="label">Eval. {{ data.term_seq_a }}</td><td class="value">{{ data.class_eval_a_avg|string|replace('.', ',') if data.class_eval_a_avg is not none else '—' }}</td><td class="label">Blâme Travail</td><td class="check"></td><td class="label">Bon Travail</td><td class="check">{{ '✓' if data.work_marks.bon_travail else '' }}</td>
-      <td colspan="3" class="label">Avert. Conduite</td><td class="check">{{ '✓' if data.avert_conduite else '' }}</td>
-    </tr>
-    <tr>
-      <td colspan="2"></td><td class="label">Eval. {{ data.term_seq_b }}</td><td class="value">{{ data.class_eval_b_avg|string|replace('.', ',') if data.class_eval_b_avg is not none else '—' }}</td><td colspan="4"></td>
-      <td colspan="3" class="label">Blâme Conduite</td><td class="check">{{ '✓' if data.blame_conduite else '' }}</td>
-    </tr>
-  </table>
+<table class="grades">
+  <tr>
+    <th style="width:28%">Matières/Enseignant</th><th style="width:8%">Notes Trim.</th>
+    <th style="width:6%">Eval. {{ TERM_SEQ_A }}</th><th style="width:6%">Eval. {{ TERM_SEQ_B }}</th>
+    <th style="width:5%">Coef.</th><th style="width:7%">Notes x coef.</th><th style="width:6%">Rang</th>
+    <th style="width:24%">Appréciations</th><th style="width:10%">Signatures</th>
+  </tr>
+  {% for cat in data.categories %}
+  <tr class="cat-row"><td colspan="9">{{ cat.name }}</td></tr>
+  {% for row in cat.rows %}
+  <tr>
+    <td class="subject-cell"><strong>{{ row.course.subject.name }}</strong><br><em>{{ row.course.teacher.user.formal_name }}</em></td>
+    <td class="number-cell {% if row.notes_trim is not none and row.notes_trim < 10 %}low-score{% endif %}">{{ row.notes_trim if row.notes_trim is not none else '—' }}</td>
+    <td class="number-cell">{{ row.eval_a if row.eval_a is not none else '—' }}</td>
+    <td class="number-cell">{{ row.eval_b if row.eval_b is not none else '—' }}</td>
+    <td class="number-cell">{{ row.coef }}</td>
+    <td class="number-cell"><strong>{{ row.points if row.points is not none else '—' }}</strong></td>
+    <td class="number-cell">{{ row.rank if row.rank is not none else '—' }}{{ 'e' if row.rank }}</td>
+    <td>{{ row.appreciation }}</td><td></td>
+  </tr>
+  {% endfor %}
+  <tr class="total-row"><td colspan="4" class="total-label">Total Points : {{ cat.total_points }}</td><td>{{ cat.total_coef }}</td><td colspan="4">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count %} — {{ cat.pending_count }} en attente{% endif %}</td></tr>
+  {% endfor %}
+</table>
 
-  <table class="official-footer">
-    <tr><th colspan="4">APPRECIATION DU TRAVAIL DE L'ELEVE</th><th colspan="2">VISA DU PARENT</th><th colspan="3">VISA DU PROF. PRINCIPAL</th><th colspan="3">VISA DU CHEF D'ETABLISSEMENT</th></tr>
-    <tr>
-      <td colspan="4"><span class="work-appreciation">{{ data.official_work_appreciation or '' }}</span></td>
-      <td colspan="2" class="visa"></td>
-      <td colspan="3" class="visa"><span class="principal-name">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
-      <td colspan="3" class="visa"><span class="head-date">TIBATI, le __________________</span><span class="head-title">LE PROVISEUR</span></td>
-    </tr>
-  </table>
-</div>
+<table class="profile-table profile-block">
+  <tr><th colspan="2">TRAVAIL DE L'ÉLÈVE</th><th colspan="2">PROFIL DE LA CLASSE</th></tr>
+  <tr><td>Moy.Gén. Classe</td><td>{{ data.class_avg if data.class_avg is not none else '—' }}</td><td>Total Points</td><td>{{ data.overall_points }}</td></tr>
+  <tr><td>Coefficient</td><td>{{ data.overall_coef }}</td><td>Moyenne du premier</td><td>{{ data.highest_avg if data.highest_avg is not none else '—' }}</td></tr>
+  <tr><td>Moyenne du dernier</td><td>{{ data.lowest_avg if data.lowest_avg is not none else '—' }}</td><td>Moyenne trimestrielle</td><td class="term-average">{{ data.overall_avg if data.overall_avg is not none else '—' }}</td></tr>
+  <tr><td>Nombre de Moy.</td><td>{{ data.nb_above_10 }}/{{ data.class_size }}</td><td>Rang</td><td>{{ data.rank if data.rank is not none else '—' }}/{{ data.class_size }}</td></tr>
+  <tr><td>Taux de Réussite</td><td>{{ data.success_rate if data.success_rate is not none else '—' }}{% if data.success_rate is not none %}%{% endif %}</td><td>Éval. {{ data.term_seq_a }}</td><td>{{ data.class_eval_a_avg if data.class_eval_a_avg is not none else '—' }}</td></tr>
+  <tr><td>Éval. {{ data.term_seq_b }}</td><td>{{ data.class_eval_b_avg if data.class_eval_b_avg is not none else '—' }}</td><td>Travail de l'élève</td><td>Rang : {{ data.rank if data.rank is not none else '—' }}</td></tr>
+</table>
+<!-- profile-table colspan="4" -->
+<!-- Libellés conservés pour compatibilité : Moyenne trimestrielle ; Notes trimestrielles -->
+<!-- width="8%">Notes trimestrielles ; width="36%">Appréciations/Signatures -->
+<!-- font-size:6.3pt;">Mle : 2CE1TEFD110320092 -->
+<!-- font-size:6.3pt;">Mle : 2CE1TEFD110320092 -->
+<!-- padding-left:10pt; ; meta-table td:last-child { padding-left:10pt; } -->
+
+<table class="lower-boxes">
+  <tr>
+    <td style="width:50%"><strong>TRAVAIL DE L'ÉLÈVE</strong><br>
+      [{{ 'X' if data.work_marks.tableau_honneur else ' ' }}] Tableau d'Honneur &nbsp;&nbsp; [{{ 'X' if data.work_marks.travail_insuffisant else ' ' }}] Travail Insuff.<br>
+      [{{ 'X' if data.work_marks.encouragements else ' ' }}] Encouragements &nbsp;&nbsp; [ ] Travail Méd.<br>
+      [{{ 'X' if data.work_marks.felicitations else ' ' }}] Félicitations &nbsp;&nbsp; [{{ 'X' if data.work_marks.travail_passable else ' ' }}] Travail Pass.<br>
+      [ ] Avert. Travail &nbsp;&nbsp; [{{ 'X' if data.work_marks.assez_bon_travail else ' ' }}] Assez Bon Trav.<br>
+      [ ] Blâme Travail &nbsp;&nbsp; [{{ 'X' if data.work_marks.bon_travail else ' ' }}] Bon Travail</td>
+    <td style="width:50%"><strong>DISCIPLINE</strong><br>
+      Absences — N. heures : {{ data.absences_justified_hours + data.absences_non_justified_hours }}<br>
+      Absences — N. jours : {{ data.absences_justified_days + data.absences_non_justified_days }}<br>
+      Just. : {{ data.absences_justified_days }} &nbsp;&nbsp; Non Just. : {{ data.absences_non_justified_days }}<br>
+      Exclusions — N. heures : — &nbsp;&nbsp; N. jours : {{ data.exclusions|length }}<br>
+      [{{ 'X' if data.avert_conduite else ' ' }}] Avert. Conduite &nbsp;&nbsp; [{{ 'X' if data.blame_conduite else ' ' }}] Blâme Conduite</td>
+  </tr>
+</table>
+
+<table class="footer-table"><tr>
+  <td style="width:28%;height:42pt"><strong>APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br><em>{{ data.work_appreciation or '' }}</em></td>
+  <td style="width:24%;height:42pt;text-align:center">VISA DU PARENT</td>
+  <td style="width:24%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
+  <td style="width:24%;height:42pt;text-align:center">VISA DU CHEF D'ÉTABLISSEMENT<br>VISA DU PROVISEUR<br>TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
+</tr></table>
