@@ -98,9 +98,8 @@
   </tr>
 </table>
 
-<table class="footer-table"><tr>
-  <td style="width:28%;height:42pt"><strong>APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br><em>{{ data.work_appreciation or '' }}</em></td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU PARENT</td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
-  <td style="width:24%;height:42pt;text-align:center">VISA DU CHEF D'ÉTABLISSEMENT<br>VISA DU PROVISEUR<br>TIBATI, le ______<br><strong>LE PROVISEUR</strong></td>
+<table class="footer-table" style="width:100%;table-layout:fixed"><tr>
+  <td style="width:34%;height:42pt"><strong>APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br><em>{{ data.work_appreciation or '' }}</em></td>
+  <td style="width:33%;height:42pt;text-align:center">VISA DU PARENT</td>
+  <td style="width:33%;height:42pt;text-align:center">VISA DU PROF. PRINCIPAL<br><span>{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span></td>
 </tr></table>

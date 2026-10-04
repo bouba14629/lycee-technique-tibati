@@ -16,6 +16,10 @@ grouped = (root / "templates/pdf/class_bulletins_pdf.html").read_text(encoding="
 assert 'class="institution-header"' in body
 assert 'class="institution-logo"' in body
 assert 'class="footer-table"' in body
+assert "VISA DU CHEF D'ÉTABLISSEMENT" not in body
+assert "VISA DU PROVISEUR" not in body
+assert 'style="width:34%;height:42pt"' in body
+assert 'style="width:33%;height:42pt;text-align:center"' in body
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
 assert 'page-break-before: always' in grouped

@@ -17,11 +17,10 @@ from utils import annual_bulletin_data, bulletin_data
 
 assert 'subtitle2">Section' not in Path("templates/pdf/_bulletin_body.html").read_text(encoding="utf-8")
 quarterly_template = Path("templates/pdf/_bulletin_body.html").read_text(encoding="utf-8")
-quarterly_style = Path("templates/pdf/_official_bulletin_style.html").read_text(encoding="utf-8")
-assert "VISA DU CHEF D'ETABLISSEMENT" in quarterly_template
+assert "VISA DU CHEF D'ETABLISSEMENT" not in quarterly_template
 assert "VISA DU PROVISEUR" not in quarterly_template
-assert 'class="official-photo"' in quarterly_template
-assert 'height:71pt' in quarterly_style
+assert 'class="photo-box"' in quarterly_template
+assert 'class="footer-table"' in quarterly_template
 annual_template = Path("templates/pdf/_annual_bulletin_body.html").read_text(encoding="utf-8")
 assert 'class="student-photo"' in annual_template
 assert 'class="photo-frame"' in annual_template
