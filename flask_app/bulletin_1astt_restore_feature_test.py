@@ -16,6 +16,12 @@ grouped = (root / "templates/pdf/class_bulletins_pdf.html").read_text(encoding="
 assert 'class="institution-header"' in body
 assert 'class="institution-logo"' in body
 assert 'class="footer-table"' in body
+assert "VISA DU PROVISEUR" not in body
+assert 'style="width:24%;height:42pt;text-align:center">VISA DU CHEF D' in body
+assert body.index("<td>Total Points</td>") < body.index("<td>Moy.Gén. Classe</td>")
+assert body.index("<td>Moyenne trimestrielle</td>") < body.index("<td>Moyenne du dernier</td>")
+assert body.index("<td>Rang</td>") < body.index("<td>Nombre de Moy.</td>")
+assert body.index("<td>Éval. {{ data.term_seq_a }}</td>") < body.index("<td>Taux de Réussite</td>")
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
 assert 'page-break-before: always' in grouped
