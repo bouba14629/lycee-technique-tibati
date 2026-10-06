@@ -117,7 +117,8 @@ with app.app_context():
         assert 'class="category-heading"' in quarterly_template
         assert '.category-heading td' in quarterly_style_template and '.app-sign-table th{background:#cfcfcf' in quarterly_style_template
         assert "Excellent trimestre, continuez ainsi." not in quarterly_template
-        assert "student_photo_path=row.photo_path" in grouped_template
+        assert "student_photo_path=(row.photo_path or avatar_path)" in grouped_template
+        assert 'class="heading-photo"' in quarterly_template and 'class="photo-box"' in quarterly_template
         assert "row.course.teacher.user.formal_name" in quarterly_template
         assert "homeroom_teacher.user.formal_name" in quarterly_template
         assert "row.teacher.user.formal_name" in annual_shared_template
