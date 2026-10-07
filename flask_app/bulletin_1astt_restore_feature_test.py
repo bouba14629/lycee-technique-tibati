@@ -13,15 +13,15 @@ root = Path(__file__).parent
 body = (root / "templates/pdf/_bulletin_body.html").read_text(encoding="utf-8")
 individual = (root / "templates/pdf/bulletin_pdf.html").read_text(encoding="utf-8")
 grouped = (root / "templates/pdf/class_bulletins_pdf.html").read_text(encoding="utf-8")
-assert 'class="institution-header"' in body
-assert 'class="institution-logo"' in body
+assert 'class="title-table"' in body
+assert 'class="meta-table"' in body
+assert 'class="photo-box"' in body
 assert 'class="footer-table"' in body
-assert "VISA DU PROVISEUR" not in body
-assert 'style="width:24%;height:42pt;text-align:center">VISA DU CHEF D' in body
-assert body.index("<td>Total Points</td>") < body.index("<td>Moy.Gén. Classe</td>")
-assert body.index("<td>Moyenne trimestrielle</td>") < body.index("<td>Moyenne du dernier</td>")
-assert body.index("<td>Rang</td>") < body.index("<td>Nombre de Moy.</td>")
-assert body.index("<td>Éval. {{ data.term_seq_a }}</td>") < body.index("<td>Taux de Réussite</td>")
+assert "VISA DU PROVISEUR" in body
+assert body.index("Total des points") < body.index("Moyenne Générale de la classe")
+assert body.index("Moyenne trimestrielle") < body.index("Moyenne du dernier")
+assert body.index("Rang") < body.index("Moyennes ≥ 10")
+assert body.index("Éval.{{ data.term_seq_a }}") < body.index("Taux réussite")
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
 assert 'page-break-before: always' in grouped
@@ -59,7 +59,7 @@ with app.app_context():
         grouped_pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=[{"student": student, "data": data, "photo_path": None, "bulletin_ref": None}], term="Trimestre 1", school_year="2025-2026")
         assert grouped_pdf.getvalue().startswith(b"%PDF")
         html = render_template("pdf/bulletin_pdf.html", student=student, data=data, term="Trimestre 1", school_year="2025-2026")
-        assert "institution-header" in html and "footer-table" in html
+        assert "title-table" in html and "footer-table" in html
     Path("/tmp/ltt-bulletin-1astt-individual.pdf").write_bytes(pdf.getvalue())
     Path("/tmp/ltt-bulletin-1astt-grouped.pdf").write_bytes(grouped_pdf.getvalue())
 print("BULLETIN_1ASTT_RESTORE_FEATURE_TEST_OK")
