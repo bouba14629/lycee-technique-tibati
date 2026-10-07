@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Bulletins{% endblock %}
 {% block page_title %}Bulletins{% endblock %}
-{% block page_subtitle %}Consultez et imprimez le bulletin d'un élève{% endblock %}
+{% block page_subtitle %}Imprimez les bulletins de la classe en un seul document{% endblock %}
 {% block extra_css %}<style>.bulk-print-action{min-height:42px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 3px 10px rgba(11,37,69,.12)}.bulk-print-action:focus-visible{outline:3px solid rgba(201,162,39,.55);outline-offset:2px}</style>{% endblock %}
 {% block content %}
 <div class="card-ltt">
@@ -60,7 +60,7 @@
       <tr>
         <td><code>{{ s.matricule }}</code></td>
         <td class="fw-semibold">{{ s.full_name }}</td>
-        <td class="text-end">{% if term == 'Annuel' %}<a href="{{ url_for('censeur_annual_bulletin_preview', student_id=s.id) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-calendar-range"></i> Bulletin annuel</a>{% else %}<a href="{{ url_for('student_bulletin_staff', student_id=s.id, term=term) }}" class="btn-ltt-gold py-1 px-3" style="font-size:12px;"><i class="bi bi-file-earmark-medical-fill"></i> Bulletin {{ term }}</a>{% endif %}</td>
+        <td class="text-end text-muted" style="font-size:12px;">Inclus dans <strong>Imprimer tous</strong></td>
       </tr>
     {% else %}
       <tr><td colspan="3" class="text-muted text-center py-4">Aucun élève trouvé.</td></tr>
@@ -68,7 +68,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="text-muted text-center py-4">Sélectionnez une classe pour consulter les bulletins de ses élèves.</p>
+  <p class="text-muted text-center py-4">Sélectionnez une classe puis utilisez <strong>Imprimer tous</strong> pour générer les bulletins groupés.</p>
   {% endif %}
 </div>
 <script id="bulletinClassData" type="application/json">{{ classes_by_department|tojson }}</script>
