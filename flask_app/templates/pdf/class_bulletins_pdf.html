@@ -53,7 +53,7 @@
 <body>
 {% for row in students_data %}
 <div style="{{ 'page-break-before: always;' if not loop.first }}">
-{% with student=row.student, data=row.data, avatar_path=avatar_path, student_photo_path=row.photo_path, bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, logo_path=logo_path %}
+ {% with student=row.student, data=row.data, avatar_path=avatar_path, student_photo_path=(row.photo_path or avatar_path), bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, logo_path=logo_path %}
 {% include "pdf/_bulletin_body.html" %}
 {% endwith %}
 </div>

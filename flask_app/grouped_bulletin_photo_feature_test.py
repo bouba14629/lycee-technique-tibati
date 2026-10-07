@@ -9,7 +9,8 @@ body_text = body.read_text(encoding="utf-8")
 
 assert "Consultez et imprimez le bulletin d'un élève" not in listing_text
 assert "Inclus dans <strong>Imprimer tous</strong>" in listing_text
-assert "student_photo_path=row.photo_path" in grouped_text
+assert "student_photo_path=(row.photo_path or avatar_path)" in grouped_text
+assert "student_photo_path=row.photo_path" not in grouped_text
 assert 'class="title-table"' in body_text
 assert 'class="photo-box"' in body_text
 assert "{{ student.full_name }}" in body_text
