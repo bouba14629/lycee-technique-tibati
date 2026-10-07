@@ -12,7 +12,8 @@ from models import (
     User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
     Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation,
 )
-from utils import roles_required, notify, user_scoped_department_ids, generate_account_password, check_schedule_conflict, schedule_extra_hours
+from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
+                   check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies)
 
 
 CLASS_LEVEL_LABELS = {
@@ -795,20 +796,12 @@ def student_edit(student_id):
 @app.route("/eleves/<int:student_id>/supprimer")
 @roles_required("directeur")
 def student_delete(student_id):
-    from models import Grade, Attendance, Sanction, Reward
     student = Student.query.get_or_404(student_id)
     return_class_id = request.args.get("return_class_id", type=int)
     if return_class_id and not SchoolClass.query.get(return_class_id):
         return_class_id = None
     name = student.full_name
-    Grade.query.filter_by(student_id=student.id).delete()
-    Attendance.query.filter_by(student_id=student.id).delete()
-    Sanction.query.filter_by(student_id=student.id).delete()
-    Reward.query.filter_by(student_id=student.id).delete()
-    user = student.user
-    db.session.delete(student)
-    if user:
-        db.session.delete(user)
+    delete_student_with_dependencies(student)
     db.session.commit()
     flash(f"Élève « {name} » et toutes ses données ont été supprimés.", "info")
     return redirect(url_for("students_list", class_id=return_class_id))

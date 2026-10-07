@@ -40,6 +40,36 @@ def schedule_extra_hours(hours_done, hours_due):
     return max(0, done - due)
 
 
+def delete_student_with_dependencies(student, delete_user=True):
+    """Supprime un élève et toutes les données directement rattachées.
+
+    Les comptes parents sont conservés ; seule leur association avec l'élève
+    est retirée. Toutes les rubriques qui interrogent les élèves (notes,
+    absences, sanctions, récompenses, appréciations et correspondance) cessent
+    ainsi immédiatement d'afficher l'élève supprimé.
+    """
+    for parent in list(student.parents):
+        student.parents.remove(parent)
+    for item in list(student.grades):
+        db.session.delete(item)
+    for item in list(student.bulletin_work_appreciations):
+        db.session.delete(item)
+    for item in list(student.attendances):
+        db.session.delete(item)
+    for item in list(student.sanctions):
+        db.session.delete(item)
+    for item in list(student.rewards):
+        db.session.delete(item)
+    for item in list(student.correspondence_entries):
+        for receipt in list(item.receipts):
+            db.session.delete(receipt)
+        db.session.delete(item)
+    user = student.user
+    db.session.delete(student)
+    if delete_user and user:
+        db.session.delete(user)
+
+
 def get_current_school_year():
     """Année scolaire actuelle, paramétrable par le Proviseur (page /directeur/parametres) —
     à utiliser partout où l'année scolaire doit s'afficher, plutôt qu'une valeur codée en dur."""

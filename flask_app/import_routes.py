@@ -16,7 +16,7 @@ from directeur_routes import gen_username, save_student_photo
 from import_utils import get_value, import_template, normalized_key, parse_date, read_tabular_rows
 from import_report_utils import import_report_workbook
 from models import Department, SchoolClass, Student, Teacher, User
-from utils import roles_required, generate_account_password
+from utils import roles_required, generate_account_password, delete_student_with_dependencies
 
 
 @app.context_processor
@@ -176,33 +176,6 @@ def _student_sex(value):
 def _student_identity(full_name, matricule):
     """Clé stable nom + matricule utilisée uniquement pour la réconciliation d’une classe."""
     return normalized_key(full_name), normalized_key(matricule)
-
-
-def _delete_import_absent_student(student):
-    """Supprime un élève retiré d’une liste importée et ses dépendances métier.
-
-    Les comptes parents sont conservés : seule l’association avec l’élève est retirée.
-    """
-    for parent in list(student.parents):
-        student.parents.remove(parent)
-    for item in list(student.grades):
-        db.session.delete(item)
-    for item in list(student.bulletin_work_appreciations):
-        db.session.delete(item)
-    for item in list(student.attendances):
-        db.session.delete(item)
-    for item in list(student.sanctions):
-        db.session.delete(item)
-    for item in list(student.rewards):
-        db.session.delete(item)
-    for item in list(student.correspondence_entries):
-        for receipt in list(item.receipts):
-            db.session.delete(receipt)
-        db.session.delete(item)
-    user = student.user
-    db.session.delete(student)
-    if user:
-        db.session.delete(user)
 
 
 def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, department_id=None):
@@ -452,7 +425,7 @@ def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen
     if chosen_class and not reconciliation_blocked:
         for identity, student in existing_by_identity.items():
             if identity not in imported_identities:
-                _delete_import_absent_student(student)
+                delete_student_with_dependencies(student)
                 removed += 1
 
     db.session.commit()

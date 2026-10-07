@@ -9,7 +9,7 @@ os.environ["LTT_ENV"] = "development"
 os.environ["LTT_INITIAL_ADMIN_PASSWORD"] = "FoundateurTest#2026"
 
 from app import app
-from models import Department, SchoolClass, Section, Student, User, db
+from models import Attendance, Department, SchoolClass, Section, Student, User, db
 
 
 def login_founder(client):
@@ -41,13 +41,19 @@ with app.app_context():
     class_id = school_class.id
     department_id = department.id
 
+    created_students = {}
     for full_name, matricule in (("Paul MBOG", "REC-001"), ("Jeanne NKOA", "REC-002")):
         user = User(username=full_name.lower().replace(" ", "."), role="eleve", full_name=full_name, active=True)
         user.set_password("AncienMotDePasse#2026")
         db.session.add(user)
         db.session.flush()
         first, last = full_name.split(" ", 1)
-        db.session.add(Student(user_id=user.id, first_name=first, last_name=last, matricule=matricule, class_id=class_id))
+        student = Student(user_id=user.id, first_name=first, last_name=last, matricule=matricule, class_id=class_id)
+        db.session.add(student)
+        db.session.flush()
+        created_students[matricule] = student
+    removed_student_id = created_students["REC-002"].id
+    db.session.add(Attendance(student_id=removed_student_id, type="Absence"))
     db.session.commit()
 
 with app.test_client() as client:
@@ -66,6 +72,7 @@ with app.test_client() as client:
 with app.app_context():
     assert Student.query.filter_by(matricule="REC-001").count() == 1
     assert Student.query.filter_by(matricule="REC-002").count() == 0
+    assert Attendance.query.filter_by(student_id=removed_student_id).count() == 0
     assert Student.query.filter_by(matricule="REC-001").one().user.check_password("AncienMotDePasse#2026")
     assert User.query.filter_by(username="jeanne.nkoa").count() == 0
 
