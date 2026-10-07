@@ -5,7 +5,7 @@
 {% block content %}
 <div class="card-ltt" style="max-width:900px;">
   {% if report %}
-  <div class="chart-title-row"><div><span class="chart-kicker">Import {{ report.kind }} · {{ report.generated_at }}</span><h2>{{ report.created }} ligne(s) importée(s)</h2></div><span class="chart-pill">{{ report.skipped }} ignorée(s)</span></div>
+  <div class="chart-title-row"><div><span class="chart-kicker">Import {{ report.kind }} · {{ report.generated_at }}</span><h2>{{ report.created }} créée(s), {{ report.updated|default(0) }} mise(s) à jour</h2><div class="text-muted small">{{ report.removed|default(0) }} élève(s) absent(s) supprimé(s) de la classe ciblée</div></div><span class="chart-pill">{{ report.skipped }} ignorée(s)</span></div>
   <div class="d-flex gap-2 flex-wrap mt-3"><a href="{{ url_for('import_report_excel') }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-excel-fill"></i> Télécharger Excel</a><a href="{{ url_for('import_report_pdf') }}" class="btn-ltt-navy"><i class="bi bi-file-earmark-pdf-fill"></i> Télécharger PDF</a></div>
   {% if report.errors %}
   <div class="alert alert-warning mt-3"><strong>{{ report.errors|length }} anomalie(s) détaillée(s)</strong>{% if report.has_more %} — d’autres erreurs existent dans le fichier{% endif %}</div>

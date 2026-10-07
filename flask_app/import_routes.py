@@ -13,7 +13,7 @@ from werkzeug.datastructures import FileStorage
 
 from app import app, db
 from directeur_routes import gen_username, save_student_photo
-from import_utils import get_value, import_template, parse_date, read_tabular_rows
+from import_utils import get_value, import_template, normalized_key, parse_date, read_tabular_rows
 from import_report_utils import import_report_workbook
 from models import Department, SchoolClass, Student, Teacher, User
 from utils import roles_required, generate_account_password
@@ -78,10 +78,12 @@ def _teacher_import_error(line, field, cause, correction):
     return {"line": line, "field": field, "cause": cause, "correction": correction}
 
 
-def _store_report(kind, created, skipped, errors):
+def _store_report(kind, created, skipped, errors, updated=0, removed=0):
     session["last_import_report"] = {
         "kind": kind,
         "created": created,
+        "updated": updated,
+        "removed": removed,
         "skipped": skipped,
         "errors": errors[:30],
         "has_more": len(errors) > 30,
@@ -171,6 +173,38 @@ def _student_sex(value):
     return "INVALID"
 
 
+def _student_identity(full_name, matricule):
+    """Clé stable nom + matricule utilisée uniquement pour la réconciliation d’une classe."""
+    return normalized_key(full_name), normalized_key(matricule)
+
+
+def _delete_import_absent_student(student):
+    """Supprime un élève retiré d’une liste importée et ses dépendances métier.
+
+    Les comptes parents sont conservés : seule l’association avec l’élève est retirée.
+    """
+    for parent in list(student.parents):
+        student.parents.remove(parent)
+    for item in list(student.grades):
+        db.session.delete(item)
+    for item in list(student.bulletin_work_appreciations):
+        db.session.delete(item)
+    for item in list(student.attendances):
+        db.session.delete(item)
+    for item in list(student.sanctions):
+        db.session.delete(item)
+    for item in list(student.rewards):
+        db.session.delete(item)
+    for item in list(student.correspondence_entries):
+        for receipt in list(item.receipts):
+            db.session.delete(receipt)
+        db.session.delete(item)
+    user = student.user
+    db.session.delete(student)
+    if user:
+        db.session.delete(user)
+
+
 def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, department_id=None):
     """Construit une prévisualisation légère, sans créer aucun compte ni élève."""
     classes_by_identifier = classes_by_identifier or _class_lookup()
@@ -201,8 +235,10 @@ def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, depart
             errors.append(f"Ligne {line_number} : {exc}.")
             continue
         requested_matricule = get_value(row, "matricule", "matricule scolaire")
+        existing = Student.query.filter_by(matricule=requested_matricule).first() if requested_matricule else None
+        same_existing = existing and existing.class_id == school_class.id and _student_identity(full_name, requested_matricule) == _student_identity(existing.full_name, existing.matricule)
         if requested_matricule and (requested_matricule in seen_matricules or
-                                    Student.query.filter_by(matricule=requested_matricule).first()):
+                                    (existing and not same_existing)):
             errors.append(f"Ligne {line_number} : matricule déjà utilisé ({requested_matricule}).")
             continue
         if requested_matricule:
@@ -299,13 +335,20 @@ def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen
         return redirect(url_for("student_enroll"))
 
     classes_by_identifier = _class_lookup()
-    created, skipped, errors = 0, 0, []
+    created, updated, removed, skipped, errors = 0, 0, 0, 0, []
     seen_matricules = set()
+    imported_identities = set()
+    reconciliation_blocked = not bool(chosen_class)
+    existing_by_identity = {
+        _student_identity(student.full_name, student.matricule): student
+        for student in (chosen_class.students if chosen_class else [])
+    }
 
     for line_number, row in rows:
         full_name = _student_full_name(row)
         if not full_name:
             skipped += 1
+            reconciliation_blocked = True
             errors.append(f"Ligne {line_number} : renseignez « Nom complet » ou « Nom » et « Prénom ».")
             continue
 
@@ -315,52 +358,88 @@ def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen
             school_class, class_error = _resolve_student_class(class_ref, classes_by_identifier, chosen_department_id)
             if class_error:
                 skipped += 1
+                reconciliation_blocked = True
                 errors.append(f"Ligne {line_number} : {class_error}.")
                 continue
         elif chosen_department_id and school_class.department_id != chosen_department_id:
             skipped += 1
+            reconciliation_blocked = True
             errors.append(f"Ligne {line_number} : classe hors de la filière sélectionnée.")
             continue
 
         sex = _student_sex(get_value(row, "sexe", "genre"))
         if sex == "INVALID":
             skipped += 1
+            reconciliation_blocked = True
             errors.append(f"Ligne {line_number} : sexe invalide — utilisez M ou F.")
             continue
         try:
             dob = parse_date(get_value(row, "date de naissance", "naissance", "date naissance"))
         except ValueError as exc:
             skipped += 1
+            reconciliation_blocked = True
             errors.append(f"Ligne {line_number} : {exc}.")
             continue
 
         requested_matricule = get_value(row, "matricule", "matricule scolaire")
-        if requested_matricule and (requested_matricule in seen_matricules or
-                                    Student.query.filter_by(matricule=requested_matricule).first()):
+        if not requested_matricule and chosen_class:
+            reconciliation_blocked = True
+        existing = Student.query.filter_by(matricule=requested_matricule).first() if requested_matricule else None
+        identity = _student_identity(full_name, requested_matricule) if requested_matricule else None
+        if requested_matricule and requested_matricule in seen_matricules:
             skipped += 1
             errors.append(f"Ligne {line_number} : matricule déjà utilisé ({requested_matricule}).")
             continue
+        if existing and _student_identity(existing.full_name, existing.matricule) != identity:
+            skipped += 1
+            reconciliation_blocked = True
+            errors.append(f"Ligne {line_number} : le matricule {requested_matricule} appartient déjà à un autre élève.")
+            continue
+        if existing and existing.class_id != school_class.id:
+            skipped += 1
+            reconciliation_blocked = True
+            errors.append(f"Ligne {line_number} : l’élève {full_name} est déjà inscrit dans une autre classe.")
+            continue
+        first_name, last_name = (full_name.split(" ", 1) + [""])[:2]
+        repeater_value = get_value(row, "redoublant", "statut redoublant", "repeater").strip().lower()
+        is_repeater = repeater_value in {"oui", "o", "1", "true", "vrai", "redoublant", "redoublante"}
+        status = get_value(row, "statut", "situation") or "Inscrit"
+        if existing:
+            existing.first_name = first_name
+            existing.last_name = last_name
+            existing.sex = sex
+            existing.dob = dob
+            existing.birth_place = get_value(row, "lieu de naissance", "adresse", "lieu naissance")
+            existing.status = status
+            existing.is_repeater = is_repeater
+            imported_identities.add(identity)
+            seen_matricules.add(requested_matricule)
+            updated += 1
+            if photo_files:
+                match = photo_files.get(_photo_key(matricule)) or photo_files.get(_photo_key(full_name))
+                if match:
+                    filename, image_bytes = match
+                    photo = save_student_photo(FileStorage(stream=BytesIO(image_bytes), filename=filename), matricule)
+                    if photo:
+                        existing.photo = photo
+            continue
+
         matricule = requested_matricule or f"LTT{date.today().year}{random.randint(1000, 9999)}"
         while matricule in seen_matricules or Student.query.filter_by(matricule=matricule).first():
             matricule = f"LTT{date.today().year}{random.randint(1000, 9999)}"
         seen_matricules.add(matricule)
-
-        first_name, last_name = (full_name.split(" ", 1) + [""])[:2]
         username = gen_username(full_name)
         password = generate_account_password(full_name, "eleve")
         user = User(username=username, role="eleve", full_name=full_name, must_change_password=True)
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
-
-        repeater_value = get_value(row, "redoublant", "statut redoublant", "repeater").strip().lower()
-        is_repeater = repeater_value in {"oui", "o", "1", "true", "vrai", "redoublant", "redoublante"}
-        status = get_value(row, "statut", "situation") or "Inscrit"
         student = Student(user_id=user.id, matricule=matricule, first_name=first_name,
                           last_name=last_name, sex=sex, dob=dob,
                           birth_place=get_value(row, "lieu de naissance", "adresse", "lieu naissance"),
                           class_id=school_class.id, status=status, is_repeater=is_repeater)
         db.session.add(student)
+        imported_identities.add(_student_identity(full_name, matricule))
         if photo_files:
             match = photo_files.get(_photo_key(matricule)) or photo_files.get(_photo_key(full_name))
             if match:
@@ -370,9 +449,18 @@ def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen
                     student.photo = photo
         created += 1
 
+    if chosen_class and not reconciliation_blocked:
+        for identity, student in existing_by_identity.items():
+            if identity not in imported_identities:
+                _delete_import_absent_student(student)
+                removed += 1
+
     db.session.commit()
-    _store_report("élèves", created, skipped, errors)
-    flash(f"{created} élève(s) importé(s). {skipped} ligne(s) ignorée(s).", "success" if created else "warning")
+    _store_report("élèves", created, skipped, errors, updated=updated, removed=removed)
+    summary = f"{created} créé(s), {updated} mis à jour, {removed} supprimé(s). {skipped} ligne(s) ignorée(s)."
+    flash(summary, "success" if created or updated or removed else "warning")
+    if chosen_class and reconciliation_blocked and not errors:
+        flash("La suppression de réconciliation est désactivée : chaque ligne doit contenir un matricule.", "warning")
     if errors:
         flash("Consultez le rapport d’import pour corriger les lignes ignorées.", "warning")
     return redirect(url_for("students_list"))
