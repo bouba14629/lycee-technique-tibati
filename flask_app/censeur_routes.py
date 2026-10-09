@@ -1227,7 +1227,8 @@ def censeur_bulletins_class_pdf(class_id):
         if not pdf:
             abort(500)
         filename = f"Bulletins_annuels_{cls.name}.pdf".replace(" ", "_")
-        return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+        inline_preview = request.args.get("preview") == "1"
+        return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     students_data = []
     for st in students:
@@ -1243,7 +1244,8 @@ def censeur_bulletins_class_pdf(class_id):
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
-    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    inline_preview = request.args.get("preview") == "1"
+    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
 
 
 def _sanctioned_students_query(user, search, date_from, date_to):

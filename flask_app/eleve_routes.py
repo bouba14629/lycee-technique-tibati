@@ -87,7 +87,8 @@ def _bulletin_pdf_response(student, term=None):
     if not pdf:
         abort(500)
     filename = f"Bulletin_{student.last_name}_{student.first_name}_{term}.pdf".replace(" ", "_")
-    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    inline_preview = request.args.get("preview") == "1"
+    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
 
 
 def _bulletin_xlsx_response(student, term=None):

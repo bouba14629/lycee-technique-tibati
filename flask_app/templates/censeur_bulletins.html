@@ -34,7 +34,8 @@
     </form>
     {% if class_id and current_user.role == 'censeur' %}
     <div class="d-flex gap-2 flex-wrap align-items-center ms-auto">
-      <a href="{{ url_for('censeur_bulletins_class_pdf', class_id=class_id, term=term) }}" class="btn-ltt-gold bulk-print-action" aria-label="Imprimer tous les bulletins de la classe"><i class="bi bi-printer-fill"></i> {{ 'Imprimer tous les annuels' if term == 'Annuel' else 'Imprimer tous — ' ~ term }}</a>
+      <a href="{{ url_for('censeur_bulletins_class_pdf', class_id=class_id, term=term, preview=1) }}" class="btn-ltt-outline bulk-print-action" target="_blank" rel="noopener" aria-label="Aperçu PDF de tous les bulletins de la classe"><i class="bi bi-eye-fill"></i> Aperçu PDF</a>
+      <a href="{{ url_for('censeur_bulletins_class_pdf', class_id=class_id, term=term) }}" class="btn-ltt-gold bulk-print-action" aria-label="Télécharger tous les bulletins de la classe"><i class="bi bi-download"></i> {{ 'Télécharger tous les annuels' if term == 'Annuel' else 'Télécharger tous — ' ~ term }}</a>
       <a href="{{ url_for('dir_structure') }}" class="btn-ltt-outline"><i class="bi bi-person-badge-fill"></i> Prof. principal</a>
     </div>
     {% endif %}

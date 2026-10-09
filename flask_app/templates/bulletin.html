@@ -12,7 +12,8 @@
   <div class="d-flex gap-2 flex-wrap">
     {% if can_export %}
     <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-eye-fill"></i> Aperçu avant impression</button>
-    <a class="btn-ltt-gold" href="{{ download_url }}"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</a>
+    <a class="btn-ltt-outline" href="{{ download_url }}&preview=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf-fill"></i> Aperçu PDF</a>
+    <a class="btn-ltt-gold" href="{{ download_url }}"><i class="bi bi-download"></i> Télécharger PDF</a>
     {% if current_user.role == 'censeur' and student.school_class %}
     <a class="btn-ltt-gold" href="{{ url_for('censeur_bulletins_class_pdf', class_id=student.school_class.id, term=term) }}" target="_blank" rel="noopener" aria-label="Exporter et imprimer tous les bulletins individuels de la classe"><i class="bi bi-printer-fill"></i> Exporter et imprimer tous</a>
     {% endif %}
@@ -38,10 +39,12 @@
   {% set student_photo_path = student_photo_url(student.photo) %}
   {% include "pdf/_official_bulletin_style.html" %}
   <style>
+    .title-table{border-top:0!important}
     .bulletin-preview-shell{background:#fff;padding:10px;border-radius:4px;box-shadow:0 4px 18px rgba(15,23,42,.12);overflow-x:auto}
     .bulletin-preview-shell .official-bulletin{max-width:573pt}
     @media print{.bulletin-preview-shell{padding:0;box-shadow:none;border-radius:0;overflow:visible}}
   </style>
+  {% set logo_path = bulletin_logo_path %}
   <div class="bulletin-preview-shell">
     {% include "pdf/_bulletin_body.html" %}
   </div>
