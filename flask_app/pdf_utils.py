@@ -1,5 +1,5 @@
 import os
-import os
+import base64
 from io import BytesIO
 from urllib.request import urlopen
 from flask import render_template
@@ -34,6 +34,18 @@ def pdf_asset(local_parts, storage_path):
                 return asset_path(*local_parts)
         return cache_path
     return asset_path(*local_parts)
+
+
+def pdf_image_data_uri(path, mime_type="image/png"):
+    """Retourne une image locale sous forme de données embarquées pour xhtml2pdf."""
+    if not path or not os.path.isfile(path):
+        return path
+    try:
+        with open(path, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode("ascii")
+        return f"data:{mime_type};base64,{encoded}"
+    except OSError:
+        return path
 
 
 def student_photo_pdf_path(photo, lightweight=False):
@@ -84,8 +96,10 @@ def _lightweight_photo_path(source_path):
 
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
-    context.setdefault("logo_path", pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg"))
-    context.setdefault("bulletin_logo_path", pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg"))
+    logo_path = pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg")
+    embedded_logo = pdf_image_data_uri(logo_path)
+    context.setdefault("logo_path", embedded_logo)
+    context.setdefault("bulletin_logo_path", embedded_logo)
     context.setdefault("avatar_path", pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
     context.setdefault("font_bold", pdf_asset(("vendor", "fonts", "PlayfairDisplay-Bold.ttf"), "/manus-storage/PlayfairDisplay-Bold_a8c270a5.ttf"))
