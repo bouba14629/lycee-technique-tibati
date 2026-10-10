@@ -4,7 +4,12 @@
 {% block page_subtitle %}Consultez les emplois du temps des enseignants relevant de votre périmètre pédagogique.{% endblock %}
 {% block content %}
 <div class="card-ltt">
-  <div class="section-title"><h2><i class="bi bi-calendar2-week-fill me-1" style="color:var(--gold-500);"></i> Emplois du temps individuels</h2></div>
+  <div class="section-title d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <h2><i class="bi bi-calendar2-week-fill me-1" style="color:var(--gold-500);"></i> Emplois du temps individuels</h2>
+    <a href="{{ url_for('censeur_teacher_schedule_bulk_pdf') }}" class="btn-ltt-gold py-1 px-2" style="font-size:11.5px;" aria-label="Imprimer tous les emplois du temps individuels">
+      <i class="bi bi-printer-fill"></i> Imprimer Tous
+    </a>
+  </div>
   <div class="table-responsive">
     <table class="table-ltt">
       <thead><tr><th>Enseignant</th><th>Filière</th><th>Heures dues</th><th>Heures faites</th><th>Heures supplémentaires</th><th></th></tr></thead>

@@ -410,6 +410,33 @@ def censeur_teacher_schedule_official_pdf(teacher_id):
     return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
+@app.route("/censeur/emplois-du-temps/enseignants/imprimer-tous.pdf")
+@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
+def censeur_teacher_schedule_bulk_pdf():
+    from flask import send_file
+    from pdf_utils import render_pdf
+
+    user = User.query.get(session["user_id"])
+    teachers_q = Teacher.query.join(User)
+    scoped_dept_ids = user_scoped_department_ids(user)
+    if scoped_dept_ids is not None:
+        teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
+    teachers = teachers_q.order_by(db.func.lower(User.full_name)).all()
+    if user.role == "chef_orientation":
+        teachers = [teacher for teacher in teachers if teacher.user.role == "conseiller_orientation"]
+
+    schedules = []
+    for teacher in teachers:
+        context = _teacher_schedule_context(teacher)
+        context.pop("entries", None)
+        schedules.append(context)
+    pdf = render_pdf("pdf/schedule_official_bulk_pdf.html", schedules=schedules)
+    if not pdf:
+        abort(500)
+    return send_file(pdf, mimetype="application/pdf", as_attachment=True,
+                     download_name="Emplois_du_temps_individuels.pdf")
+
+
 @app.route("/censeur/emplois-du-temps/enseignants/<int:teacher_id>/officiel.xlsx")
 @roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation")
 def censeur_teacher_schedule_official_xlsx(teacher_id):
