@@ -24,7 +24,9 @@ assert body.index("Rang") < body.index("Moyennes ≥ 10")
 assert body.index("Éval.{{ data.term_seq_a }}") < body.index("Taux réussite")
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
-assert 'page-break-before: always' in grouped
+assert 'page-break-after: always' in grouped
+assert 'page-break-inside: avoid' in grouped
+assert 'width:48%; text-align:center' in body
 assert 'official-bulletin' not in body
 
 def user(username, role):

@@ -49,11 +49,12 @@
   .footer-table { width: 100%; margin-top: 1pt; border-collapse: collapse; }
   .footer-table td { border: 0.75pt solid #000; background-color: #D3D3D3; padding: 2.5pt 1pt 1pt; font-size: 5.5pt; height: 44pt; vertical-align: top; }
   .digital-stamp { display: inline-block; margin-top: 3pt; padding: 2pt 4pt; border: 1pt solid #16704A; color: #16704A; font-size: 5.5pt; font-weight: bold; text-align: center; }
+  .bulletin-page { page-break-inside: avoid; }
 </style>
 </head>
 <body>
 {% for row in students_data %}
-<div style="{{ 'page-break-before: always;' if not loop.first }}">
+<div class="bulletin-page" style="{{ 'page-break-after: always;' if not loop.last }}">
  {% with student=row.student, data=row.data, avatar_path=avatar_path, student_photo_path=(row.photo_path or avatar_path), bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, logo_path=logo_path %}
 {% include "pdf/_bulletin_body.html" %}
 {% endwith %}
