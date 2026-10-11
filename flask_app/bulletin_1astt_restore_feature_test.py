@@ -21,7 +21,9 @@ assert "VISA DU PROVISEUR" in body
 assert body.index("Total des points") < body.index("Moyenne Générale de la classe")
 assert body.index("Moyenne trimestrielle") < body.index("Moyenne du dernier")
 assert body.index("Rang") < body.index("Moyennes ≥ 10")
-assert body.index("Éval.{{ data.term_seq_a }}") < body.index("Taux réussite")
+assert body.index("Évaluation {{ data.term_seq_a }}") < body.index("Taux réussite")
+assert body.index("Évaluation {{ data.term_seq_b }}") > body.index("Évaluation {{ data.term_seq_a }}")
+assert "data.overall_eval_a_avg" in body and "data.overall_eval_b_avg" in body
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
 assert 'page-break-after: always' in grouped

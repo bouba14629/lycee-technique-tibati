@@ -247,6 +247,8 @@ def bulletin_data(student, term=None, _cache=None):
     # moyenne + rang par matière, groupés par catégorie
     categories = []
     overall_points, overall_coef = 0.0, 0
+    eval_a_points, eval_a_coef = 0.0, 0
+    eval_b_points, eval_b_coef = 0.0, 0
     for cat in SUBJECT_CATEGORIES:
         cat_courses = [c for c in courses if c.subject.category == cat]
         if not cat_courses:
@@ -256,6 +258,12 @@ def bulletin_data(student, term=None, _cache=None):
         for c in cat_courses:
             avg, nt, ea, eb = cached_course_average(student.id, c.id)
             coef = c.subject.coefficient
+            if ea is not None:
+                eval_a_points += ea * coef
+                eval_a_coef += coef
+            if eb is not None:
+                eval_b_points += eb * coef
+                eval_b_coef += coef
             if avg is None:
                 rows.append({"course": c, "notes_trim": None, "eval_a": ea, "eval_b": eb, "coef": coef,
                              "points": None, "average": None, "rank": None, "class_size": 0,
@@ -285,6 +293,8 @@ def bulletin_data(student, term=None, _cache=None):
             overall_coef += cat_coef
 
     overall_avg = round(overall_points / overall_coef, 2) if overall_coef else None
+    overall_eval_a_avg = round(eval_a_points / eval_a_coef, 2) if eval_a_coef else None
+    overall_eval_b_avg = round(eval_b_points / eval_b_coef, 2) if eval_b_coef else None
 
     # profil de la classe : moyennes de tous les élèves de la classe
     class_avgs = []
@@ -374,6 +384,7 @@ def bulletin_data(student, term=None, _cache=None):
         "overall_coef": overall_coef, "overall_avg": overall_avg, "rank": rank, "class_size": class_size,
         "class_avg": class_avg, "highest_avg": highest_avg, "lowest_avg": lowest_avg,
         "nb_above_10": nb_above_10, "success_rate": success_rate,
+        "overall_eval_a_avg": overall_eval_a_avg, "overall_eval_b_avg": overall_eval_b_avg,
         "class_eval_a_avg": class_eval_a_avg, "class_eval_b_avg": class_eval_b_avg,
         "absences_justified_hours": just_hours, "absences_justified_days": just_days,
         "absences_non_justified_hours": non_just_hours, "absences_non_justified_days": non_just_days,
