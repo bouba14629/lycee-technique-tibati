@@ -5,6 +5,7 @@ from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
     Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
+    TeacherIndicator, CustomIndicatorValue,
 )
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
@@ -28,6 +29,50 @@ def _subject_compatible_with_class(subject, school_class):
     if subject.class_id is not None:
         return False
     return subject.department_id is None or subject.department_id == school_class.department_id
+
+
+def _move_course_indicators(old_course_id, new_course_id, teacher_id):
+    """Conserve les indicateurs quand un créneau change d'enseignant.
+
+    Les indicateurs sont rattachés au cours (classe + matière), et non au
+    créneau. Lorsqu'un cours équivalent existe déjà pour le nouvel enseignant,
+    on déplace les valeurs saisies vers ce cours au lieu de les perdre.
+    """
+    if not old_course_id or old_course_id == new_course_id:
+        return
+    source_indicators = TeacherIndicator.query.filter_by(course_id=old_course_id).all()
+    for source in source_indicators:
+        target = TeacherIndicator.query.filter_by(
+            course_id=new_course_id, term=source.term
+        ).first()
+        if target is None:
+            source.course_id = new_course_id
+            source.teacher_id = teacher_id
+            continue
+        # Le cours cible peut déjà avoir une ligne vide créée auparavant.
+        # Les valeurs du cours d'origine restent prioritaires puisqu'elles ont
+        # été saisies avant le changement d'emploi du temps.
+        for field in (
+            "hours_due", "hours_done", "lessons_planned", "lessons_done",
+            "digital_lessons_planned", "digital_lessons_done", "tp_planned",
+            "tp_done", "digital_tp_planned", "digital_tp_done", "observations",
+        ):
+            setattr(target, field, getattr(source, field))
+        db.session.delete(source)
+
+    source_values = CustomIndicatorValue.query.filter_by(course_id=old_course_id).all()
+    for source in source_values:
+        target = CustomIndicatorValue.query.filter_by(
+            course_id=new_course_id,
+            indicator_type_id=source.indicator_type_id,
+            term=source.term,
+        ).first()
+        if target is None:
+            source.course_id = new_course_id
+            continue
+        target.planned = source.planned
+        target.done = source.done
+        db.session.delete(source)
 
 
 @app.route("/censeur/service-des-professeurs")
@@ -289,12 +334,14 @@ def censeur_schedule_edit(entry_id):
 
     group_key = entry.group_key or (str(uuid.uuid4()) if target_classes else None)
     for item in group_entries:
+        old_course_id = item.course_id
         course = Course.query.filter_by(subject_id=item.course.subject_id, teacher_id=teacher_id,
                                         class_id=item.course.class_id).first()
         if not course:
             course = Course(subject_id=item.course.subject_id, teacher_id=teacher_id, class_id=item.course.class_id)
             db.session.add(course)
             db.session.flush()
+        _move_course_indicators(old_course_id, course.id, teacher_id)
         item.course_id = course.id
         item.room_id = room.id if room else None
         item.day = day
