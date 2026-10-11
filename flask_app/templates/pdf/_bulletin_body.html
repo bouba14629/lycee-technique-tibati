@@ -19,15 +19,17 @@
 
 <table class="title-table">
   <tr>
-    <td style="width:78%; text-align:center; position:relative;">
+    <td style="width:23%; text-align:center; vertical-align:middle;"></td>
+    <td style="width:54%; text-align:center; vertical-align:middle;">
       <div class="title">BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
-    <td style="width:22%; text-align:center;">
+    <td style="width:23%; text-align:center; vertical-align:middle;">
       <div class="photo-box"><img src="{{ student_photo_path or avatar_path }}"/></div>
     </td>
   </tr>
   <tr>
+    <td></td>
     <td></td>
     <td style="text-align:center; padding-top:1pt;">
       <div style="font-size:5.6pt; color:#0B2545; font-weight:bold;">{{ student.full_name }}</span>
