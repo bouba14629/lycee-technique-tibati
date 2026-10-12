@@ -18,6 +18,9 @@ assert "border-top: 0" in grouped_text and "border-top: 0" in bulletin_pdf
 assert "student_photo_path=row.photo_path" not in grouped_text
 assert 'class="title-table"' in body_text
 assert 'class="photo-box"' in body_text
+assert '{{ logo_path or bulletin_logo_path }}' in body_text
+assert 'logo_path=(logo_path or bulletin_logo_path)' in grouped_text
+assert 'bulletin_logo_path=bulletin_logo_path' in grouped_text
 assert "{{ student.full_name }}" in body_text
 photo_position = body_text.index('class="photo-box"')
 name_position = body_text.index("{{ student.full_name }}", photo_position)
