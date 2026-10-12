@@ -1,5 +1,6 @@
 import os
 import base64
+import mimetypes
 from io import BytesIO
 from urllib.request import urlopen
 from flask import render_template
@@ -36,11 +37,12 @@ def pdf_asset(local_parts, storage_path):
     return asset_path(*local_parts)
 
 
-def pdf_image_data_uri(path, mime_type="image/png"):
+def pdf_image_data_uri(path, mime_type=None):
     """Retourne une image locale sous forme de données embarquées pour xhtml2pdf."""
     if not path or not os.path.isfile(path):
         return path
     try:
+        mime_type = mime_type or mimetypes.guess_type(path)[0] or "image/png"
         with open(path, "rb") as image_file:
             encoded = base64.b64encode(image_file.read()).decode("ascii")
         return f"data:{mime_type};base64,{encoded}"
@@ -100,7 +102,8 @@ def render_pdf(template_name, **context):
     embedded_logo = pdf_image_data_uri(logo_path)
     context.setdefault("logo_path", embedded_logo)
     context.setdefault("bulletin_logo_path", embedded_logo)
-    context.setdefault("avatar_path", pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
+    avatar_path = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
+    context.setdefault("avatar_path", pdf_image_data_uri(avatar_path))
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
     context.setdefault("font_bold", pdf_asset(("vendor", "fonts", "PlayfairDisplay-Bold.ttf"), "/manus-storage/PlayfairDisplay-Bold_a8c270a5.ttf"))
     context.setdefault("font_regular", pdf_asset(("vendor", "fonts", "Inter-Variable.ttf"), "/manus-storage/Inter-Variable_d79f128a.ttf"))

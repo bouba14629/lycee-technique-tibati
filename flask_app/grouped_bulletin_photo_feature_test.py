@@ -2,9 +2,11 @@ from pathlib import Path
 
 listing = Path(__file__).parent / "templates/censeur_bulletins.html"
 grouped = Path(__file__).parent / "templates/pdf/class_bulletins_pdf.html"
+annual_grouped = Path(__file__).parent / "templates/pdf/class_annual_bulletins_pdf.html"
 body = Path(__file__).parent / "templates/pdf/_bulletin_body.html"
 listing_text = listing.read_text(encoding="utf-8")
 grouped_text = grouped.read_text(encoding="utf-8")
+annual_grouped_text = annual_grouped.read_text(encoding="utf-8")
 body_text = body.read_text(encoding="utf-8")
 bulletin_pdf = (Path(__file__).parent / "templates/pdf/bulletin_pdf.html").read_text(encoding="utf-8")
 
@@ -21,6 +23,10 @@ assert 'class="photo-box"' in body_text
 assert '{{ logo_path or bulletin_logo_path }}' in body_text
 assert 'logo_path=(logo_path or bulletin_logo_path)' in grouped_text
 assert 'bulletin_logo_path=bulletin_logo_path' in grouped_text
+assert 'bulletin_logo_path=(bulletin_logo_path or logo_path)' in annual_grouped_text
+assert 'student_photo_path=(item.photo_path or avatar_path)' in annual_grouped_text
+assert 'pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))' in (Path(__file__).parent / "censeur_routes.py").read_text(encoding="utf-8")
+assert 'mimetypes.guess_type(path)' in (Path(__file__).parent / "pdf_utils.py").read_text(encoding="utf-8")
 assert "{{ student.full_name }}" in body_text
 photo_position = body_text.index('class="photo-box"')
 name_position = body_text.index("{{ student.full_name }}", photo_position)
