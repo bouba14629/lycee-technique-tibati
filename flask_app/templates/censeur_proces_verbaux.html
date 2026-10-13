@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Procès-verbaux{% endblock %}
+{% block page_title %}Procès-verbaux{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h2 class="mb-1">Procès-verbaux</h2><p class="text-muted mb-0">Génération conforme au modèle officiel du conseil de classe.</p></div>
+  <a class="btn-ltt-outline" href="{{ url_for('censeur_bulletins') }}"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+<div class="card border-0 shadow-sm mb-4"><div class="card-body">
+  <form method="post" class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label fw-semibold">Classe</label><select name="class_id" class="form-select" required><option value="">Sélectionner une classe</option>{% for cls in classes %}<option value="{{ cls.id }}">{{ cls.code or cls.name }} — {{ cls.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-4"><label class="form-label fw-semibold">Période</label><select name="term" class="form-select">{% for term in terms %}<option value="{{ term }}" {% if term == default_term %}selected{% endif %}>{{ term }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><button class="btn-ltt-gold w-100" type="submit"><i class="bi bi-file-earmark-plus"></i> Préparer le PV</button></div>
+  </form>
+</div></div>
+<div class="card border-0 shadow-sm"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Classe</th><th>Période</th><th>Année scolaire</th><th>Créé le</th><th class="text-end">Actions</th></tr></thead><tbody>
+{% for pv in minutes %}<tr><td class="fw-semibold">{{ pv.school_class.code or pv.school_class.name }}</td><td>{{ pv.term }}</td><td>{{ pv.school_year }}</td><td>{{ pv.created_at.strftime('%d/%m/%Y %H:%M') }}</td><td class="text-end"><a class="btn btn-sm btn-outline-secondary" target="_blank" href="{{ url_for('censeur_proces_verbal_pdf', minutes_id=pv.id, inline=1) }}"><i class="bi bi-eye"></i> Aperçu</a> <a class="btn btn-sm btn-outline-dark" href="{{ url_for('censeur_proces_verbal_pdf', minutes_id=pv.id) }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a> <a class="btn btn-sm btn-outline-success" href="{{ url_for('censeur_proces_verbal_export', minutes_id=pv.id) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted py-5">Aucun procès-verbal préparé. Sélectionnez une classe et une période pour commencer.</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% endblock %}

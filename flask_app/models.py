@@ -525,3 +525,16 @@ class Notification(db.Model):
     read = db.Column(db.Boolean, default=False)
     link = db.Column(db.String(255))
     user = db.relationship("User")
+
+
+class ClassCouncilMinutes(db.Model):
+    """Procès-verbal généré pour une classe et une période, sans modifier les notes sources."""
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
+    term = db.Column(db.String(20), nullable=False, default="Trimestre 2")
+    school_year = db.Column(db.String(12), nullable=False)
+    principal_teacher = db.Column(db.String(160), default="")
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    school_class = db.relationship("SchoolClass", backref=db.backref("council_minutes", cascade="all, delete-orphan"))
+    created_by = db.relationship("User")

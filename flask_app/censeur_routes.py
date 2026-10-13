@@ -5,7 +5,7 @@ from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
     Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
-    TeacherIndicator, CustomIndicatorValue,
+    TeacherIndicator, CustomIndicatorValue, ClassCouncilMinutes,
 )
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
@@ -1938,3 +1938,101 @@ def censeur_indicator_type_delete(type_id):
     db.session.commit()
     flash(f"Indicateur « {label} » supprimé.", "info")
     return redirect(url_for("censeur_indicators"))
+
+# ---------------------------------------------------------------------------
+# Procès-verbaux du conseil de classe — modèle officiel importé
+# ---------------------------------------------------------------------------
+def _pv_classes(user):
+    classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level, SchoolClass.name)
+    if user.role in ("censeur", "censeur_crm") and user.section_id:
+        scoped = user_scoped_class_ids(user)
+        classes_q = classes_q.filter(SchoolClass.id.in_(scoped or [-1]))
+    return classes_q.all()
+
+def _pv_scope(user, minutes):
+    if user.role in ("censeur", "censeur_crm") and user.section_id and minutes.class_id not in (user_scoped_class_ids(user) or []): abort(403)
+
+def _pv_dataset(school_class, term):
+    category_order = ["Enseignements Divers", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Généraux"]
+    courses = Course.query.filter_by(class_id=school_class.id).join(Subject).order_by(Subject.category, Subject.name).all()
+    subjects, seen = [], set()
+    for course in courses:
+        subject = course.subject
+        if subject and subject.id not in seen and subject.name.lower() != "orientation scolaire": seen.add(subject.id); subjects.append(subject)
+    subjects.sort(key=lambda s: (category_order.index(s.category) if s.category in category_order else 99, s.name.lower()))
+    groups = [(category, [s for s in subjects if s.category == category]) for category in category_order if any(s.category == category for s in subjects)]
+    flat_subjects = [s for _, group in groups for s in group]
+    students = sorted(list(school_class.students), key=lambda s: ((s.last_name or "").upper(), (s.first_name or "").upper()))
+    rows = []
+    for student in students:
+        values = []
+        for subject in flat_subjects:
+            grades = [g for g in student.grades if g.term == term and g.course.subject_id == subject.id]
+            values.append(sum(g.value for g in grades) / len(grades) if grades else None)
+        valid = [v for v in values if v is not None]
+        rows.append({"student": student, "subject_values": [{"value": v, "is_average": True} for v in values], "average": sum(valid) / len(valid) if valid else None})
+    ranked = sorted([r for r in rows if r["average"] is not None], key=lambda r: (-r["average"], r["student"].last_name, r["student"].first_name))
+    for index, row in enumerate(ranked, 1): row["rank"] = index
+    stats = {}
+    for label, fn in (("Moyenne", lambda vals: sum(vals) / len(vals) if vals else None), ("Maximum", lambda vals: max(vals) if vals else None), ("Minimum", lambda vals: min(vals) if vals else None)):
+        subject_stats = []
+        for index in range(len(flat_subjects)):
+            vals = [r["subject_values"][index]["value"] for r in rows if r["subject_values"][index]["value"] is not None]
+            subject_stats.append(fn(vals))
+        avgs = [r["average"] for r in rows if r["average"] is not None]
+        stats[label] = {"general": fn(avgs), "subjects": subject_stats}
+    return groups, rows, stats
+
+@app.route("/censeur/proces-verbaux", methods=["GET", "POST"])
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_proces_verbaux():
+    user = User.query.get(session["user_id"])
+    if request.method == "POST":
+        school_class = SchoolClass.query.get_or_404(request.form.get("class_id", type=int))
+        if school_class not in _pv_classes(user): abort(403)
+        term = request.form.get("term", "Trimestre 2")
+        pv = ClassCouncilMinutes.query.filter_by(class_id=school_class.id, term=term).first()
+        if pv is None:
+            pv = ClassCouncilMinutes(class_id=school_class.id, term=term, school_year=get_current_school_year(), principal_teacher=school_class.homeroom_teacher.user.formal_name if school_class.homeroom_teacher else "", created_by_id=user.id)
+            db.session.add(pv); db.session.commit()
+        flash("Procès-verbal préparé à partir des notes enregistrées.", "success")
+        return redirect(url_for("censeur_proces_verbaux"))
+    allowed = {c.id for c in _pv_classes(user)}
+    minutes = [pv for pv in ClassCouncilMinutes.query.order_by(ClassCouncilMinutes.created_at.desc()).all() if pv.class_id in allowed]
+    return render_template("censeur_proces_verbaux.html", classes=_pv_classes(user), minutes=minutes, terms=TERMS, default_term="Trimestre 2")
+
+@app.route("/censeur/proces-verbaux/<int:minutes_id>.pdf")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_proces_verbal_pdf(minutes_id):
+    from flask import send_file
+    pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
+    groups, rows, stats = _pv_dataset(pv.school_class, pv.term)
+    from pdf_utils import render_pdf
+    pdf = render_pdf("pdf/class_council_minutes.html", school_class=pv.school_class, term=pv.term, school_year=pv.school_year, principal_teacher=pv.principal_teacher, groups=groups, rows=rows, stats=stats)
+    if pdf is None: abort(500)
+    inline = request.args.get("inline") == "1"; filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.pdf".replace(" ", "_")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline, download_name=filename)
+
+@app.route("/censeur/proces-verbaux/<int:minutes_id>.xlsx")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_proces_verbal_export(minutes_id):
+    from flask import send_file
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
+    groups, rows, stats = _pv_dataset(pv.school_class, pv.term); subjects = [s for _, group in groups for s in group]
+    wb = Workbook(); ws = wb.active; ws.title = "Procès-verbal"
+    ws.append(["PROCES-VERBAL DU CONSEIL DE CLASSE", pv.school_class.code or pv.school_class.name, pv.term, pv.school_year])
+    ws.append(["NOMS", "PRENOMS", "RANG", "MOYENNE GENERALE"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
+    for row in rows: ws.append([row["student"].last_name.upper(), row["student"].first_name.upper(), row.get("rank", ""), row["average"]] + [x["value"] for x in row["subject_values"]] + [""])
+    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", "", stats[label]["general"]] + stats[label]["subjects"] + [""])
+    ws.freeze_panes = "A3"; ws.auto_filter.ref = ws.dimensions; grey = PatternFill("solid", fgColor="D9D9D9"); thin = Side(style="thin", color="000000")
+    for cell in ws[1]: cell.font = Font(bold=True, size=12)
+    for cell in ws[2]: cell.font = Font(bold=True); cell.fill = grey; cell.alignment = Alignment(text_rotation=90, vertical="bottom", wrap_text=True)
+    for row in ws.iter_rows():
+        for cell in row: cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    ws.column_dimensions["A"].width = 24; ws.column_dimensions["B"].width = 20
+    for col in range(3, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
+    output = BytesIO(); wb.save(output); output.seek(0); filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
+    return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)

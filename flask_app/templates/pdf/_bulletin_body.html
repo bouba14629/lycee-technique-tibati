@@ -95,11 +95,11 @@
     <td style="width:50%;">
       <span class="box-title">TRAVAIL DE L'ÉLÈVE</span>
       <table class="mini-table grid-table">
-        <tr><td>[{{ 'X' if data.work_marks.tableau_honneur else ' ' }}] Tableau d'Honneur</td><td>[{{ 'X' if data.work_marks.travail_insuffisant else ' ' }}] Travail Insuff.</td></tr>
-        <tr><td>[{{ 'X' if data.work_marks.encouragements else ' ' }}] Encouragements</td><td>[ ] Travail Méd.</td></tr>
-        <tr><td>[{{ 'X' if data.work_marks.felicitations else ' ' }}] Félicitations</td><td>[{{ 'X' if data.work_marks.travail_passable else ' ' }}] Travail Pass.</td></tr>
-        <tr><td>[ ] Avert. Travail</td><td>[{{ 'X' if data.work_marks.assez_bon_travail else ' ' }}] Assez Bon Trav.</td></tr>
-        <tr><td>[ ] Blâme Travail</td><td>[{{ 'X' if data.work_marks.bon_travail else ' ' }}] Bon Travail</td></tr>
+        <tr><td>[{{ 'X' if data.work_marks.tableau_honneur else ' ' }}] Tableau d'Honneur</td><td>[{{ 'X' if data.work_marks.travail_insuffisant else ' ' }}] Compétences non acquises</td></tr>
+        <tr><td>[{{ 'X' if data.work_marks.encouragements else ' ' }}] Encouragements</td><td></td></tr>
+        <tr><td>[{{ 'X' if data.work_marks.felicitations else ' ' }}] Félicitations</td><td>[{{ 'X' if data.work_marks.travail_passable else ' ' }}] Compétences moyennement acquises</td></tr>
+        <tr><td>[ ] Avert. Travail</td><td>[{{ 'X' if data.work_marks.assez_bon_travail else ' ' }}] Compétences bien acquises</td></tr>
+        <tr><td>[ ] Blâme Travail</td><td>[{{ 'X' if data.work_marks.bon_travail else ' ' }}] Compétences très bien acquises</td></tr>
       </table>
     </td>
     <td style="width:50%;">
