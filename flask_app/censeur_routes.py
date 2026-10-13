@@ -10,7 +10,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year, schedule_extra_hours)
+                    bulletin_data, get_current_school_year, schedule_extra_hours, floor_hours)
 
 
 def _is_stt_class(school_class):
@@ -389,7 +389,8 @@ def _teacher_schedule_context(teacher):
         "periods": OFFICIAL_PERIODS,
         "days": DAYS[:5],
         "day_en": DAY_EN,
-        "hours_faites": filled_official_slots(grid),
+        "hours_faites": floor_hours(filled_official_slots(grid)),
+        "hours_due": floor_hours(teacher.hours_due),
         "extra_hours": schedule_extra_hours(filled_official_slots(grid), teacher.hours_due),
         "classes_tenues": ", ".join(sorted({entry.course.school_class.code or entry.course.school_class.name for entry in entries})),
         "entries": entries,
@@ -411,11 +412,12 @@ def censeur_teacher_schedule_list():
     teacher_extra_hours = {}
     for teacher in teachers:
         entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
-        teacher_hours_faites[teacher.id] = filled_official_slots(build_official_grid(entries))
+        teacher_hours_faites[teacher.id] = floor_hours(filled_official_slots(build_official_grid(entries)))
         teacher_extra_hours[teacher.id] = schedule_extra_hours(
             teacher_hours_faites[teacher.id], teacher.hours_due or 0
         )
     return render_template("censeur_teacher_schedule_list.html", teachers=teachers,
+                           teacher_hours_dues={teacher.id: floor_hours(teacher.hours_due) for teacher in teachers},
                            teacher_hours_faites=teacher_hours_faites,
                            teacher_extra_hours=teacher_extra_hours)
 
@@ -1281,7 +1283,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri
+    from pdf_utils import render_pdf, student_photo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1298,7 +1300,7 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1314,7 +1316,7 @@ def censeur_bulletins_class_pdf(class_id):
             "student": st,
             "data": bulletin_data(st, term=term, _cache=bulletin_cache),
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
-            "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),

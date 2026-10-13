@@ -38,7 +38,12 @@ def pdf_asset(local_parts, storage_path):
 
 
 def pdf_image_data_uri(path, mime_type=None):
-    """Retourne une image locale sous forme de données embarquées pour xhtml2pdf."""
+    """Retourne une image locale sous forme de données embarquées.
+
+    Conservée pour les anciens appels, mais les templates xhtml2pdf utilisent
+    désormais des chemins locaux : certaines versions de xhtml2pdf ignorent
+    silencieusement les URI data dans les PDF groupés.
+    """
     if not path or not os.path.isfile(path):
         return path
     try:
@@ -99,11 +104,13 @@ def _lightweight_photo_path(source_path):
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
     logo_path = pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg")
-    embedded_logo = pdf_image_data_uri(logo_path)
-    context.setdefault("logo_path", embedded_logo)
-    context.setdefault("bulletin_logo_path", embedded_logo)
+    # xhtml2pdf résout de façon fiable les chemins absolus, contrairement aux
+    # URI data dans certains rendus groupés. Le fichier est déjà localisé ou
+    # téléchargé dans /tmp par pdf_asset en production.
+    context.setdefault("logo_path", logo_path)
+    context.setdefault("bulletin_logo_path", logo_path)
     avatar_path = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
-    context.setdefault("avatar_path", pdf_image_data_uri(avatar_path))
+    context.setdefault("avatar_path", avatar_path)
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
     context.setdefault("font_bold", pdf_asset(("vendor", "fonts", "PlayfairDisplay-Bold.ttf"), "/manus-storage/PlayfairDisplay-Bold_a8c270a5.ttf"))
     context.setdefault("font_regular", pdf_asset(("vendor", "fonts", "Inter-Variable.ttf"), "/manus-storage/Inter-Variable_d79f128a.ttf"))

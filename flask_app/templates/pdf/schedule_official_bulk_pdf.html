@@ -38,7 +38,7 @@
 <body>
 {% for item in schedules %}
 <div class="schedule-page" style="page-break-after: {{ 'always' if not loop.last else 'auto' }}; page-break-inside: avoid;">
-{% with mode=item.mode, teacher=item.teacher, school_class=item.school_class, grid=item.grid, periods=item.periods, days=item.days, day_en=item.day_en, hours_faites=item.hours_faites, extra_hours=item.extra_hours, classes_tenues=item.classes_tenues %}
+    {% with mode=item.mode, teacher=item.teacher, school_class=item.school_class, grid=item.grid, periods=item.periods, days=item.days, day_en=item.day_en, hours_due=item.hours_due, hours_faites=item.hours_faites, extra_hours=item.extra_hours, classes_tenues=item.classes_tenues %}
 {% set section_label = school_class.department.section.name|upper|replace('SECTION ', '') if mode == 'classe' else (teacher.department.section.name|upper|replace('SECTION ', '') if teacher.department and teacher.department.section else '') %}
 {% set censeur_label = 'DES ENSEIGNEMENTS GÉNÉRAUX' if mode != 'classe' and (not teacher.department or not teacher.department.section) else ('INDUSTRIEL' if section_label == 'INDUSTRIELLE' else section_label) %}
 
@@ -80,7 +80,7 @@
     <td colspan="3"><strong>DÉPARTEMENT :</strong> <span class="red">{{ teacher.specialty or (teacher.department.code if teacher.department else 'Enseignements généraux') }}</span></td>
   </tr>
   <tr>
-    <td><strong>HEURES DUES :</strong> <span class="red">{{ teacher.hours_due }}</span></td>
+    <td><strong>HEURES DUES :</strong> <span class="red">{{ hours_due if hours_due is defined else teacher.hours_due|int }}</span></td>
     <td><strong>HEURES FAITES :</strong> <span class="red">{{ hours_faites }}</span></td>
     <td colspan="3"><strong>ANNÉE SCOLAIRE :</strong> <span class="red">{{ school_year }}</span></td>
   </tr>

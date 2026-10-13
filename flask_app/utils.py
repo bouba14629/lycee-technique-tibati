@@ -1,4 +1,5 @@
 from functools import wraps
+import math
 from datetime import datetime, date, timedelta
 import secrets
 from flask import session, redirect, url_for, flash, abort
@@ -30,11 +31,19 @@ OFFICIAL_PERIODS = [
 ]
 
 
-def schedule_extra_hours(hours_done, hours_due):
-    """Retourne les heures supplémentaires affichables sans jamais produire une valeur négative."""
+def floor_hours(value):
+    """Retourne une durée sous forme d'entier, toujours arrondie vers le bas."""
     try:
-        done = float(hours_done or 0)
-        due = float(hours_due or 0)
+        return max(0, math.floor(float(value or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def schedule_extra_hours(hours_done, hours_due):
+    """Retourne les heures supplémentaires entières sans valeur négative."""
+    try:
+        done = floor_hours(hours_done)
+        due = floor_hours(hours_due)
     except (TypeError, ValueError):
         return 0
     return max(0, done - due)

@@ -59,7 +59,7 @@
       <td colspan="2" style="text-align:right;"><strong>DÉPARTEMENT :</strong> <span style="color:#000; font-weight:700;">{{ teacher.specialty or (teacher.department.code if teacher.department else 'Enseignements généraux') }}</span></td>
     </tr>
     <tr>
-      <td><strong>HEURES DUES :</strong> <span style="color:#000; font-weight:700;">{{ teacher.hours_due }}</span></td>
+      <td><strong>HEURES DUES :</strong> <span style="color:#000; font-weight:700;">{{ hours_due if hours_due is defined else teacher.hours_due|int }}</span></td>
       <td><strong>HEURES FAITES :</strong> <span style="color:#000; font-weight:700;">{{ hours_faites }}</span></td>
       <td style="text-align:right; white-space:nowrap;"><strong>ANNÉE SCOLAIRE :</strong> <span style="color:#000; font-weight:700;">{{ school_year }}</span></td>
     </tr>
