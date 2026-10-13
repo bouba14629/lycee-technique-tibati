@@ -60,8 +60,22 @@ def student_photo_pdf_path(photo, lightweight=False):
     if not photo:
         return None
     if photo.startswith("/manus-storage/"):
-        path = pdf_asset(("img", "avatar_placeholder.png"), photo)
-        return _lightweight_photo_path(path) if lightweight and path else path
+        # Une photo stockée doit être téléchargée/cachée sous son propre nom.
+        # L’ancien code la remplaçait toujours par l’avatar de secours en local.
+        cache_dir = "/tmp/ltt-pdf-assets"
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, os.path.basename(photo.split("?", 1)[0]))
+        if not os.path.exists(cache_path):
+            try:
+                with urlopen(f"{storage_base_url()}{photo}", timeout=10) as response:
+                    with open(cache_path, "wb") as output:
+                        output.write(response.read())
+            except Exception:
+                cache_path = None
+        if cache_path and os.path.isfile(cache_path):
+            return _lightweight_photo_path(cache_path) if lightweight else cache_path
+        fallback = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
+        return _lightweight_photo_path(fallback) if lightweight and fallback else fallback
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)

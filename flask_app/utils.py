@@ -355,7 +355,7 @@ def bulletin_data(student, term=None, _cache=None):
                 total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
             except Exception:
                 pass
-        return round(total, 1)
+        return floor_hours(total)
 
     just_hours = _hours([a for a in absences if a.justified])
     non_just_hours = _hours([a for a in absences if not a.justified])

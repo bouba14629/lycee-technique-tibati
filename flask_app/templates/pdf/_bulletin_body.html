@@ -25,7 +25,7 @@
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
     <td style="width:23%; text-align:center; vertical-align:middle;">
-      <div class="photo-box"><img src="{{ student_photo_path or avatar_path }}"/></div>
+      <div class="photo-box">{% if student_photo_path %}<img src="{{ student_photo_path }}"/>{% else %}<div class="photo-placeholder">PHOTO<br>DE L’ÉLÈVE</div>{% endif %}</div>
     </td>
   </tr>
   <tr>
