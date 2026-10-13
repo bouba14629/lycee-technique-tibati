@@ -50,12 +50,21 @@
   .footer-table { width: 100%; margin-top: 0.2pt; border-collapse: collapse; }
   .footer-table td { border: 0.75pt solid #000; background-color: #D3D3D3; padding: 0.7pt .5pt .3pt; font-size: 4.5pt; height: 28pt; vertical-align: top; }
   .digital-stamp { display: inline-block; margin-top: 3pt; padding: 2pt 4pt; border: 1pt solid #16704A; color: #16704A; font-size: 4.8pt; font-weight: bold; text-align: center; }
-  .bulletin-page { page-break-inside: avoid; }
+  .bulletin-page { page-break-inside: avoid; zoom: {{ bulletin_zoom|default(1) }}; }
+  .bulletin-page.roomy table.grades td { padding-top: 2.2pt; padding-bottom: 2.2pt; }
+  .bulletin-page.roomy table.grades th { padding-top: 1.8pt; padding-bottom: 1.8pt; }
+  .bulletin-page.roomy .cat-row td { padding-top: 2.2pt; padding-bottom: 2.2pt; }
+  .bulletin-page.roomy .total-row td { padding-top: 2pt; padding-bottom: 2pt; }
+  .bulletin-page.roomy .profile-table td { padding-top: 1.4pt; padding-bottom: 1.4pt; }
+  .bulletin-page.roomy .mini-table td { padding-top: 1.1pt; padding-bottom: 1.1pt; }
+  .bulletin-page.roomy .footer-table td { height: 42pt; padding-top: 1.5pt; }
+  .bulletin-page.compact table.grades td { padding-top: 0.25pt; padding-bottom: 0.25pt; }
+  .bulletin-page.compact .footer-table td { height: 24pt; }
 </style>
 </head>
 <body>
 {% for row in students_data %}
-<div class="bulletin-page" style="{{ 'page-break-after: always;' if not loop.last }}">
+<div class="bulletin-page {{ bulletin_size_class|default('normal') }}" style="{{ 'page-break-after: always;' if not loop.last }}">
  {% with student=row.student, data=row.data, avatar_path=avatar_path, student_photo_path=row.photo_path, bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, logo_path=(logo_path or bulletin_logo_path), bulletin_logo_path=bulletin_logo_path %}
 {% include "pdf/_bulletin_body.html" %}
 {% endwith %}

@@ -1318,9 +1318,14 @@ def censeur_bulletins_class_pdf(class_id):
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
             "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
         })
+    # Ajuste la taille globale selon la classe : peu de lignes = bulletin agrandi,
+    # beaucoup de lignes = bulletin réduit, avec une limite pour rester lisible et sur une page.
+    max_rows = max((sum(len(category.get("rows", [])) for category in item["data"].get("categories", [])) for item in students_data), default=0)
+    bulletin_zoom = max(0.82, min(1.25, 17 / max(12, max_rows)))
+    bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                      approval=approval, school_year=get_current_school_year())
+                      approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom, bulletin_size_class=bulletin_size_class)
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")

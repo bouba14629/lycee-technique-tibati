@@ -274,9 +274,11 @@ def teachers_import():
 @roles_required("directeur")
 def dir_user_toggle(user_id):
     u = User.query.get_or_404(user_id)
-    u.active = not u.active
+    # La gestion des comptes ne doit plus désactiver un compte par bascule accidentelle.
+    # L’action reste idempotente et ne fait qu’activer un compte déjà désactivé.
+    u.active = True
     db.session.commit()
-    flash(f"Compte {u.username} {'activé' if u.active else 'désactivé'}.", "info")
+    flash(f"Compte {u.username} activé. La désactivation des comptes est désactivée.", "info")
     return redirect(url_for("dir_users"))
 
 

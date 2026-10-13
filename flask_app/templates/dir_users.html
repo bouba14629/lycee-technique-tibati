@@ -66,7 +66,7 @@
         <td class="text-end">
           <a href="#" data-bs-toggle="modal" data-bs-target="#userEdit{{ u.id }}Modal" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-pencil-square"></i></a>
           <form method="POST" action="{{ url_for('dir_user_reset', user_id=u.id) }}" class="d-inline"><button type="submit" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;" title="Régénérer le mot de passe" onclick="return confirm('Générer un nouveau mot de passe temporaire pour {{ u.username }} ?')"><i class="bi bi-key-fill"></i> Régénérer</button></form>
-          <a href="{{ url_for('dir_user_toggle', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;"><i class="bi bi-power"></i></a>
+          <a href="{{ url_for('dir_user_toggle', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:11.5px;" title="Activer le compte (la désactivation est désactivée)"><i class="bi bi-power"></i> Activer</a>
           {% if u.role not in ['eleve','parent'] %}<a href="{{ url_for('dir_user_delete', user_id=u.id) }}" class="btn-ltt-outline py-1 px-2 text-danger" style="font-size:11.5px; border-color:var(--danger);" onclick="return confirm('Supprimer définitivement le compte {{ u.username }} ?')"><i class="bi bi-trash"></i></a>{% endif %}
         </td>
         {% endif %}
