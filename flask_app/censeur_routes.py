@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from sqlalchemy import and_, or_
@@ -2029,8 +2030,13 @@ def _pv_dataset(school_class, term):
                 if course and course.subject_id not in by_subject:
                     by_subject[course.subject_id] = item.get("average")
         values = [by_subject.get(subject.id) for subject in flat_subjects]
+        group_averages = []
+        for category, _subjects in groups:
+            cat = next((item for item in data.get("categories", []) if item.get("name") == category), None)
+            group_averages.append(cat.get("moyenne") if cat else None)
         rows.append({"student": student, "subject_values": [{"value": value, "is_average": True} for value in values],
-                     "average": data.get("overall_avg"), "general_average": general_average})
+                     "average": data.get("overall_avg"), "general_average": general_average,
+                     "group_averages": group_averages})
     ranked = sorted([r for r in rows if r["average"] is not None], key=lambda r: (-r["average"], r["student"].last_name, r["student"].first_name))
     for index, row in enumerate(ranked, 1): row["rank"] = index
     stats = {}
@@ -2041,9 +2047,13 @@ def _pv_dataset(school_class, term):
             subject_stats.append(round(fn(vals), 2) if fn(vals) is not None else None)
         avgs = [r["average"] for r in rows if r["average"] is not None]
         gen_avgs = [r["general_average"] for r in rows if r["general_average"] is not None]
+        group_stats = []
+        for group_index in range(len(groups)):
+            group_values = [r["group_averages"][group_index] for r in rows if r["group_averages"][group_index] is not None]
+            group_stats.append(round(fn(group_values), 2) if fn(group_values) is not None else None)
         stats[label] = {"general": round(fn(avgs), 2) if fn(avgs) is not None else None,
                         "general_teaching": round(fn(gen_avgs), 2) if fn(gen_avgs) is not None else None,
-                        "subjects": subject_stats}
+                        "subjects": subject_stats, "groups": group_stats}
     return groups, rows, stats
 @app.route("/censeur/proces-verbaux", methods=["GET", "POST"])
 @roles_required("censeur", "censeur_crm", "directeur")
@@ -2080,25 +2090,93 @@ def censeur_proces_verbal_pdf(minutes_id):
 def censeur_proces_verbal_export(minutes_id):
     from flask import send_file
     from io import BytesIO
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from copy import copy
+    from openpyxl import load_workbook
+    from openpyxl.styles import Alignment, Border, Side
     pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
-    groups, rows, stats = _pv_dataset(pv.school_class, pv.term); subjects = [s for _, group in groups for s in group]
-    general_subject_ids = {s.id for category, group in groups if category == "Enseignements Généraux" for s in group}
-    wb = Workbook(); ws = wb.active; ws.title = "Procès-verbal"
-    ws.append(["PROCES-VERBAL DU CONSEIL DE CLASSE", pv.school_class.code or pv.school_class.name, pv.term, pv.school_year])
-    ws.append(["NOMS ET PRENOMS", "RANG", "MOYENNE GENERALE", "MOYENNE ENSEIGNEMENTS GENERAUX"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
-    for row in rows:
-        general_values = [x["value"] for s, x in zip(subjects, row["subject_values"]) if s.id in general_subject_ids and x["value"] is not None]
-        general_average = row.get("general_average")
-        ws.append([row["student"].full_name.upper(), row.get("rank", ""), row["average"], general_average] + [x["value"] for x in row["subject_values"]] + [""])
-    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", stats[label]["general"], stats[label]["general_teaching"]] + stats[label]["subjects"] + [""])
-    ws.freeze_panes = "A3"; ws.auto_filter.ref = ws.dimensions; grey = PatternFill("solid", fgColor="D9D9D9"); thin = Side(style="thin", color="000000")
-    for cell in ws[1]: cell.font = Font(bold=True, size=12)
-    for cell in ws[2]: cell.font = Font(bold=True); cell.fill = grey; cell.alignment = Alignment(text_rotation=90, vertical="bottom", wrap_text=True)
+    groups, rows, stats = _pv_dataset(pv.school_class, pv.term)
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "pdf", "1AESF.xlsx")
+    template = load_workbook(template_path)
+    source = template.active
+    wb = load_workbook(template_path)
+    ws = wb.active
+    ws.title = "Procès-verbal"
+    # Le modèle importé sert de matrice visuelle ; son ancien contenu est remplacé
+    # par les élèves, groupes et matières issus du bulletin de la classe choisie.
     for row in ws.iter_rows():
-        for cell in row: cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    ws.column_dimensions["A"].width = 30; ws.column_dimensions["B"].width = 12; ws.column_dimensions["C"].width = 18; ws.column_dimensions["D"].width = 24
-    for col in range(5, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
-    output = BytesIO(); wb.save(output); output.seek(0); filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
+        for cell in row:
+            cell.value = None
+    for merged in list(ws.merged_cells.ranges):
+        ws.unmerge_cells(str(merged))
+    # Colonnes fixes : Nom, Prénom, Rang, Moyenne générale, puis moyenne de groupe
+    # et matières de chaque groupe du bulletin.
+    columns = [("name", None), ("first_name", None), ("rank", None), ("overall", None)]
+    for gi, (group, subjects) in enumerate(groups):
+        columns.append(("group", gi))
+        columns.extend(("subject", subject) for subject in subjects)
+    source_styles = {"name": 1, "first_name": 2, "rank": 3, "overall": 4, "group": [5, 12, 16, 21], "subject": [6, 13, 17, 22]}
+    def source_col(kind, index):
+        if kind in ("name", "first_name", "rank", "overall"):
+            return source_styles[kind]
+        values = source_styles[kind]
+        return values[min(index, len(values)-1)] if isinstance(index, int) else values[0]
+    def copy_cell_style(dst, src):
+        if src.has_style:
+            dst._style = copy(src._style)
+        if src.number_format: dst.number_format = src.number_format
+        dst.font = copy(src.font); dst.fill = copy(src.fill); dst.border = copy(src.border)
+        dst.alignment = copy(src.alignment); dst.protection = copy(src.protection)
+    # Les 5 lignes du modèle sont conservées : intitulés, coefficients et rang.
+    for col_idx, (kind, payload) in enumerate(columns, 1):
+        src_idx = source_col(kind, payload if kind == "group" else (0 if kind == "subject" else 0))
+        for r in range(1, 6): copy_cell_style(ws.cell(r, col_idx), source.cell(r, src_idx))
+        ws.column_dimensions[ws.cell(1, col_idx).column_letter].width = source.column_dimensions[source.cell(1, src_idx).column_letter].width or 8
+    # En-têtes inspirés du fichier 1AESF.xlsx.
+    labels = ["Nom", "Prénom", "Rang", "MOYENNE GENERALE"]
+    for col, label in enumerate(labels, 1): ws.cell(1, col).value = label
+    col = 5
+    for group, subjects in groups:
+        ws.cell(1, col).value = group.upper(); ws.cell(3, col).value = "Moy."
+        col += 1
+        for subject in subjects:
+            ws.cell(1, col).value = subject.name; ws.cell(3, col).value = subject.coefficient or ""
+            col += 1
+    ws.cell(3, 3).value = "Coef."; ws.cell(5, 3).value = "Rang"
+    ws.cell(3, 4).value = sum((subject.coefficient or 0) for _, subjects in groups for subject in subjects)
+    ws.cell(5, 4).value = None
+    # Les lignes de données reprennent les valeurs calculées depuis le bulletin.
+    for row_idx, row in enumerate(rows, 6):
+        for col_idx, (kind, payload) in enumerate(columns, 1):
+            cell = ws.cell(row_idx, col_idx)
+            src_kind = "name" if kind in ("name", "first_name") else ("subject" if kind in ("group", "subject") else kind)
+            copy_cell_style(cell, source.cell(6, source_col(src_kind, payload if kind == "group" else 0)))
+        ws.cell(row_idx, 1).value = (row["student"].last_name or "").upper()
+        ws.cell(row_idx, 2).value = (row["student"].first_name or "").upper()
+        ws.cell(row_idx, 3).value = row.get("rank") or ""
+        ws.cell(row_idx, 4).value = row.get("average")
+        out_col = 5; subject_index = 0
+        for gi, (_group, subjects) in enumerate(groups):
+            ws.cell(row_idx, out_col).value = row.get("group_averages", [None] * len(groups))[gi]
+            out_col += 1
+            for _subject in subjects:
+                ws.cell(row_idx, out_col).value = row["subject_values"][subject_index]["value"]
+                subject_index += 1; out_col += 1
+    # Statistiques finales du modèle.
+    stat_start = 6 + len(rows)
+    for offset, label in enumerate(("Moyenne", "Maximum", "Minimum")):
+        r = stat_start + offset; ws.cell(r, 1).value = label
+        for c in range(1, len(columns) + 1):
+            copy_cell_style(ws.cell(r, c), source.cell(6, source_col("subject", 0)))
+        ws.cell(r, 4).value = stats[label]["general"]
+        out_col = 5; subj_index = 0
+        for gi, (_group, subjects) in enumerate(groups):
+            ws.cell(r, out_col).value = stats[label]["groups"][gi]; out_col += 1
+            for _subject in subjects:
+                ws.cell(r, out_col).value = stats[label]["subjects"][subj_index]; subj_index += 1; out_col += 1
+    ws.freeze_panes = "A6"; ws.auto_filter.ref = f"A5:{ws.cell(stat_start-1, len(columns)).coordinate}"
+    ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = "landscape"; ws.page_setup.fitToWidth = 1; ws.page_setup.fitToHeight = 0; ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_title_rows = "1:5"
+    output = BytesIO(); wb.save(output); output.seek(0)
+    filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
