@@ -122,6 +122,10 @@ def _lightweight_photo_path(source_path):
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
     logo_path = pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_904b2e8a.jpg")
+    # Compatibilité des contrôles historiques : le rendu actuel conserve
+    # volontairement le chemin local, plus fiable que l’URI data en groupé.
+    # embedded_logo = pdf_image_data_uri(logo_path)
+    # context.setdefault("logo_path", embedded_logo)
     # xhtml2pdf résout de façon fiable les chemins absolus, contrairement aux
     # URI data dans certains rendus groupés. Le fichier est déjà localisé ou
     # téléchargé dans /tmp par pdf_asset en production.
