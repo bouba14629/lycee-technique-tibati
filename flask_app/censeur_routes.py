@@ -31,6 +31,39 @@ def _subject_compatible_with_class(subject, school_class):
     return subject.department_id is None or subject.department_id == school_class.department_id
 
 
+def _course_has_recorded_data(course_id):
+    """Indique si un cours possède des données à ne jamais détacher d'un changement d'enseignant."""
+    return any((model.query.filter_by(course_id=course_id).first() is not None)
+               for model in (Grade, Attendance, PlannedAssessment, TeacherIndicator, CustomIndicatorValue))
+
+
+def _course_for_teacher_change(old_course, teacher_id):
+    """Change uniquement l'enseignant lorsque le cours contient déjà des données.
+
+    Les notes, appels, évaluations planifiées, fiches pédagogiques et valeurs
+    personnalisées restent ainsi liés au même identifiant de cours. Si aucun
+    enregistrement n'existe encore, le cours cible peut être réutilisé ou créé
+    comme auparavant.
+    """
+    if old_course.teacher_id == teacher_id:
+        return old_course
+    if _course_has_recorded_data(old_course.id):
+        old_course.teacher_id = teacher_id
+        # Les valeurs restent inchangées ; seul leur propriétaire enseignant
+        # suit le nouveau rattachement du cours.
+        TeacherIndicator.query.filter_by(course_id=old_course.id).update(
+            {TeacherIndicator.teacher_id: teacher_id}, synchronize_session=False
+        )
+        return old_course
+    target = Course.query.filter_by(subject_id=old_course.subject_id,
+                                    teacher_id=teacher_id,
+                                    class_id=old_course.class_id).first()
+    if target and target.id != old_course.id:
+        return target
+    old_course.teacher_id = teacher_id
+    return old_course
+
+
 def _move_course_indicators(old_course_id, new_course_id, teacher_id):
     """Conserve les indicateurs quand un créneau change d'enseignant.
 
@@ -334,14 +367,18 @@ def censeur_schedule_edit(entry_id):
 
     group_key = entry.group_key or (str(uuid.uuid4()) if target_classes else None)
     for item in group_entries:
-        old_course_id = item.course_id
-        course = Course.query.filter_by(subject_id=item.course.subject_id, teacher_id=teacher_id,
-                                        class_id=item.course.class_id).first()
-        if not course:
-            course = Course(subject_id=item.course.subject_id, teacher_id=teacher_id, class_id=item.course.class_id)
-            db.session.add(course)
+        old_course = item.course
+        old_course_id = old_course.id
+        course = _course_for_teacher_change(old_course, teacher_id)
+        if course.id == old_course_id and course.teacher_id == teacher_id:
+            # Le même Course conserve toutes ses notes, appels et fiches.
+            pass
+        elif course.id != old_course_id:
+            # Cas sans données enregistrées : on peut réutiliser un cours cible vide.
+            _move_course_indicators(old_course_id, course.id, teacher_id)
+        else:
+            # Le cours porteur de données a seulement changé de teacher_id.
             db.session.flush()
-        _move_course_indicators(old_course_id, course.id, teacher_id)
         item.course_id = course.id
         item.room_id = room.id if room else None
         item.day = day
