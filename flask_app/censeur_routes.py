@@ -1321,7 +1321,7 @@ def censeur_bulletins_class_pdf(class_id):
     # Ajuste la taille globale selon la classe : peu de lignes = bulletin agrandi,
     # beaucoup de lignes = bulletin réduit, avec une limite pour rester lisible et sur une page.
     max_rows = max((sum(len(category.get("rows", [])) for category in item["data"].get("categories", [])) for item in students_data), default=0)
-    bulletin_zoom = max(0.82, min(1.25, 17 / max(12, max_rows)))
+    bulletin_zoom = max(0.78, min(1.05, 15 / max(15, max_rows)))
     bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
@@ -1958,24 +1958,42 @@ def _pv_scope(user, minutes):
     if user.role in ("censeur", "censeur_crm") and user.section_id and minutes.class_id not in (user_scoped_class_ids(user) or []): abort(403)
 
 def _pv_dataset(school_class, term):
-    category_order = ["Enseignements Divers", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Généraux"]
-    courses = Course.query.filter_by(class_id=school_class.id).join(Subject).order_by(Subject.category, Subject.name).all()
-    subjects, seen = [], set()
-    for course in courses:
-        subject = course.subject
-        if subject and subject.id not in seen and subject.name.lower() != "orientation scolaire": seen.add(subject.id); subjects.append(subject)
-    subjects.sort(key=lambda s: (category_order.index(s.category) if s.category in category_order else 99, s.name.lower()))
-    groups = [(category, [s for s in subjects if s.category == category]) for category in category_order if any(s.category == category for s in subjects)]
-    flat_subjects = [s for _, group in groups for s in group]
+    """Construit le PV à partir exactement des mêmes données que le bulletin."""
+    from utils import bulletin_data
     students = sorted(list(school_class.students), key=lambda s: ((s.last_name or "").upper(), (s.first_name or "").upper()))
+    cache = {}
+    subject_map = {}
+    category_order = ["Enseignements Généraux", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Divers"]
+    bulletin_cache = {}
+    for student in students:
+        data = bulletin_data(student, term=term, _cache=bulletin_cache) or {}
+        cache[student.id] = data
+        for category in data.get("categories", []):
+            for item in category.get("rows", []):
+                subject = item.get("course").subject if item.get("course") else None
+                if subject and subject.id not in subject_map:
+                    subject_map[subject.id] = (category.get("name", subject.category), subject)
+    groups = []
+    for category in category_order:
+        subjects = sorted([subject for cat, subject in subject_map.values() if cat == category], key=lambda x: (x.name or "").casefold())
+        if subjects:
+            groups.append((category, subjects))
+    flat_subjects = [subject for _, group in groups for subject in group]
     rows = []
     for student in students:
-        values = []
-        for subject in flat_subjects:
-            grades = [g for g in student.grades if g.term == term and g.course.subject_id == subject.id]
-            values.append(sum(g.value for g in grades) / len(grades) if grades else None)
-        valid = [v for v in values if v is not None]
-        rows.append({"student": student, "subject_values": [{"value": v, "is_average": True} for v in values], "average": sum(valid) / len(valid) if valid else None})
+        data = cache[student.id]
+        by_subject = {}
+        general_average = None
+        for category in data.get("categories", []):
+            if category.get("name") == "Enseignements Généraux":
+                general_average = category.get("moyenne")
+            for item in category.get("rows", []):
+                course = item.get("course")
+                if course and course.subject_id not in by_subject:
+                    by_subject[course.subject_id] = item.get("average")
+        values = [by_subject.get(subject.id) for subject in flat_subjects]
+        rows.append({"student": student, "subject_values": [{"value": value, "is_average": True} for value in values],
+                     "average": data.get("overall_avg"), "general_average": general_average})
     ranked = sorted([r for r in rows if r["average"] is not None], key=lambda r: (-r["average"], r["student"].last_name, r["student"].first_name))
     for index, row in enumerate(ranked, 1): row["rank"] = index
     stats = {}
@@ -1983,11 +2001,13 @@ def _pv_dataset(school_class, term):
         subject_stats = []
         for index in range(len(flat_subjects)):
             vals = [r["subject_values"][index]["value"] for r in rows if r["subject_values"][index]["value"] is not None]
-            subject_stats.append(fn(vals))
+            subject_stats.append(round(fn(vals), 2) if fn(vals) is not None else None)
         avgs = [r["average"] for r in rows if r["average"] is not None]
-        stats[label] = {"general": fn(avgs), "subjects": subject_stats}
+        gen_avgs = [r["general_average"] for r in rows if r["general_average"] is not None]
+        stats[label] = {"general": round(fn(avgs), 2) if fn(avgs) is not None else None,
+                        "general_teaching": round(fn(gen_avgs), 2) if fn(gen_avgs) is not None else None,
+                        "subjects": subject_stats}
     return groups, rows, stats
-
 @app.route("/censeur/proces-verbaux", methods=["GET", "POST"])
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_proces_verbaux():
@@ -2001,7 +2021,7 @@ def censeur_proces_verbaux():
             pv = ClassCouncilMinutes(class_id=school_class.id, term=term, school_year=get_current_school_year(), principal_teacher=school_class.homeroom_teacher.user.formal_name if school_class.homeroom_teacher else "", created_by_id=user.id)
             db.session.add(pv); db.session.commit()
         flash("Procès-verbal préparé à partir des notes enregistrées.", "success")
-        return redirect(url_for("censeur_proces_verbaux"))
+        return redirect(url_for("censeur_proces_verbal_pdf", minutes_id=pv.id, inline=1))
     allowed = {c.id for c in _pv_classes(user)}
     minutes = [pv for pv in ClassCouncilMinutes.query.order_by(ClassCouncilMinutes.created_at.desc()).all() if pv.class_id in allowed]
     return render_template("censeur_proces_verbaux.html", classes=_pv_classes(user), minutes=minutes, terms=TERMS, default_term="Trimestre 2")
@@ -2027,17 +2047,21 @@ def censeur_proces_verbal_export(minutes_id):
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
     groups, rows, stats = _pv_dataset(pv.school_class, pv.term); subjects = [s for _, group in groups for s in group]
+    general_subject_ids = {s.id for category, group in groups if category == "Enseignements Généraux" for s in group}
     wb = Workbook(); ws = wb.active; ws.title = "Procès-verbal"
     ws.append(["PROCES-VERBAL DU CONSEIL DE CLASSE", pv.school_class.code or pv.school_class.name, pv.term, pv.school_year])
-    ws.append(["NOMS", "PRENOMS", "RANG", "MOYENNE GENERALE"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
-    for row in rows: ws.append([row["student"].last_name.upper(), row["student"].first_name.upper(), row.get("rank", ""), row["average"]] + [x["value"] for x in row["subject_values"]] + [""])
-    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", "", stats[label]["general"]] + stats[label]["subjects"] + [""])
+    ws.append(["NOMS ET PRENOMS", "RANG", "MOYENNE GENERALE", "MOYENNE ENSEIGNEMENTS GENERAUX"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
+    for row in rows:
+        general_values = [x["value"] for s, x in zip(subjects, row["subject_values"]) if s.id in general_subject_ids and x["value"] is not None]
+        general_average = row.get("general_average")
+        ws.append([row["student"].full_name.upper(), row.get("rank", ""), row["average"], general_average] + [x["value"] for x in row["subject_values"]] + [""])
+    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", stats[label]["general"], stats[label]["general_teaching"]] + stats[label]["subjects"] + [""])
     ws.freeze_panes = "A3"; ws.auto_filter.ref = ws.dimensions; grey = PatternFill("solid", fgColor="D9D9D9"); thin = Side(style="thin", color="000000")
     for cell in ws[1]: cell.font = Font(bold=True, size=12)
     for cell in ws[2]: cell.font = Font(bold=True); cell.fill = grey; cell.alignment = Alignment(text_rotation=90, vertical="bottom", wrap_text=True)
     for row in ws.iter_rows():
         for cell in row: cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    ws.column_dimensions["A"].width = 24; ws.column_dimensions["B"].width = 20
-    for col in range(3, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
+    ws.column_dimensions["A"].width = 30; ws.column_dimensions["B"].width = 12; ws.column_dimensions["C"].width = 18; ws.column_dimensions["D"].width = 24
+    for col in range(5, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
     output = BytesIO(); wb.save(output); output.seek(0); filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
