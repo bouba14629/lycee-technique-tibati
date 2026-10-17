@@ -1363,10 +1363,12 @@ def censeur_bulletins_class_pdf(class_id):
     bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
     # Le groupé trimestriel utilise le PDF officiel comme fond immuable :
     # logo, cadres, polices et proportions ne sont plus reconstruits en HTML.
-    from bulletin_screenshot import matches_template_layout, render_grouped_screenshot
-    if matches_template_layout(students_data):
+    from bulletin_screenshot import matches_template_layout, model_for_class, render_grouped_screenshot
+    exact_model = model_for_class(cls.name)
+    if exact_model and matches_template_layout(students_data):
         pdf = render_grouped_screenshot(students_data, school_year=get_current_school_year(),
-                                        term_ordinal=TERM_ORDINALS.get(term, ""), approval=approval)
+                                        term_ordinal=TERM_ORDINALS.get(term, ""), approval=approval,
+                                        template_path=exact_model)
     else:
         # Les classes avec une autre distribution de matières conservent le
         # modèle dynamique afin de ne jamais déplacer une catégorie sur une

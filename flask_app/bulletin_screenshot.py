@@ -4,7 +4,6 @@ exclusivement du modèle PDF importé. Seules les zones de données sont recouve
 à l'intérieur des cellules puis alimentées par bulletin_data().
 """
 import os
-from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
 from reportlab.pdfgen import canvas
@@ -13,7 +12,8 @@ from reportlab.lib.utils import ImageReader
 from pypdf import PdfReader, PdfWriter
 
 ROOT = Path(__file__).resolve().parent
-TEMPLATE = ROOT / "templates" / "pdf" / "bulletin_model" / "Bulletin_PREMIERE_ACA_v7.pdf"
+MODEL_DIR = ROOT / "templates" / "pdf" / "bulletin_model"
+TEMPLATE = MODEL_DIR / "Bulletin_PREMIERE_ACA_v7.pdf"
 PAGE_W, PAGE_H = A4
 
 # Coordonnées mesurées sur Bulletin_PREMIERE_ACA_v7.pdf (origine en haut).
@@ -107,12 +107,24 @@ def _overlay_student(student, data, school_year, term_ordinal, approval=None):
     c.showPage(); c.save(); out.seek(0); return out
 
 
-def render_grouped_screenshot(students_data, school_year, term_ordinal, approval=None):
+def model_for_class(class_name):
+    name = (class_name or '').upper()
+    if 'ACA' in name and ('PREMIERE' in name or '1A' in name):
+        return MODEL_DIR / 'Bulletin_PREMIERE_ACA_v7.pdf'
+    if 'STT' in name and ('PREMIERE' in name or '1A' in name):
+        return MODEL_DIR / 'Bulletin_PREMIERE_STT.pdf'
+    if 'COME' in name and ('PREMIERE' in name or '1A' in name):
+        return MODEL_DIR / 'Bulletin_PREMIERE_COME.pdf'
+    return None
+
+
+def render_grouped_screenshot(students_data, school_year, term_ordinal, approval=None, template_path=None):
     writer = PdfWriter()
+    template_path = Path(template_path or TEMPLATE)
     for item in students_data:
         # Recharger le fond pour chaque page : pypdf peut partager des objets
         # indirects après merge_page, ce qui ferait réapparaître le premier élève.
-        base = PdfReader(str(TEMPLATE)).pages[0]
+        base = PdfReader(str(template_path)).pages[0]
         overlay = PdfReader(_overlay_student(item['student'], item['data'], school_year, term_ordinal, approval)).pages[0]
         base.merge_page(overlay)
         writer.add_page(base)
