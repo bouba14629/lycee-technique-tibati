@@ -1361,9 +1361,20 @@ def censeur_bulletins_class_pdf(class_id):
     max_rows = max((sum(len(category.get("rows", [])) for category in item["data"].get("categories", [])) for item in students_data), default=0)
     bulletin_zoom = max(0.78, min(1.05, 15 / max(15, max_rows)))
     bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
-    pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
-                      TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                      approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom, bulletin_size_class=bulletin_size_class)
+    # Le groupé trimestriel utilise le PDF officiel comme fond immuable :
+    # logo, cadres, polices et proportions ne sont plus reconstruits en HTML.
+    from bulletin_screenshot import matches_template_layout, render_grouped_screenshot
+    if matches_template_layout(students_data):
+        pdf = render_grouped_screenshot(students_data, school_year=get_current_school_year(),
+                                        term_ordinal=TERM_ORDINALS.get(term, ""), approval=approval)
+    else:
+        # Les classes avec une autre distribution de matières conservent le
+        # modèle dynamique afin de ne jamais déplacer une catégorie sur une
+        # ligne qui ne lui appartient pas.
+        pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
+                          TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
+                          approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom,
+                          bulletin_size_class=bulletin_size_class)
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
