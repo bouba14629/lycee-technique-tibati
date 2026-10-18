@@ -11,7 +11,7 @@ assert "schedule_extra_hours(" in route
 assert "<th>Heures dues</th>" in template
 assert "<th>Heures faites</th>" in template
 assert "<th>Heures supplémentaires</th>" in template
-assert "teacher_hours_dues.get(teacher.id, 0)" in template
+assert "teacher.hours_due or 0" in template
 assert "teacher_hours_faites.get(teacher.id, 0)" in template
 assert "teacher_extra_hours.get(teacher.id, 0)" in template
 assert "Créneaux planifiés" not in template

@@ -38,12 +38,7 @@ def pdf_asset(local_parts, storage_path):
 
 
 def pdf_image_data_uri(path, mime_type=None):
-    """Retourne une image locale sous forme de données embarquées.
-
-    Conservée pour les anciens appels, mais les templates xhtml2pdf utilisent
-    désormais des chemins locaux : certaines versions de xhtml2pdf ignorent
-    silencieusement les URI data dans les PDF groupés.
-    """
+    """Retourne une image locale sous forme de données embarquées pour xhtml2pdf."""
     if not path or not os.path.isfile(path):
         return path
     try:
@@ -60,22 +55,8 @@ def student_photo_pdf_path(photo, lightweight=False):
     if not photo:
         return None
     if photo.startswith("/manus-storage/"):
-        # Une photo stockée doit être téléchargée/cachée sous son propre nom.
-        # L’ancien code la remplaçait toujours par l’avatar de secours en local.
-        cache_dir = "/tmp/ltt-pdf-assets"
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, os.path.basename(photo.split("?", 1)[0]))
-        if not os.path.exists(cache_path):
-            try:
-                with urlopen(f"{storage_base_url()}{photo}", timeout=10) as response:
-                    with open(cache_path, "wb") as output:
-                        output.write(response.read())
-            except Exception:
-                cache_path = None
-        if cache_path and os.path.isfile(cache_path):
-            return _lightweight_photo_path(cache_path) if lightweight else cache_path
-        fallback = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
-        return _lightweight_photo_path(fallback) if lightweight and fallback else fallback
+        path = pdf_asset(("img", "avatar_placeholder.png"), photo)
+        return _lightweight_photo_path(path) if lightweight and path else path
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
@@ -118,13 +99,11 @@ def _lightweight_photo_path(source_path):
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
     logo_path = pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg")
-    # xhtml2pdf résout de façon fiable les chemins absolus, contrairement aux
-    # URI data dans certains rendus groupés. Le fichier est déjà localisé ou
-    # téléchargé dans /tmp par pdf_asset en production.
-    context.setdefault("logo_path", logo_path)
-    context.setdefault("bulletin_logo_path", logo_path)
+    embedded_logo = pdf_image_data_uri(logo_path)
+    context.setdefault("logo_path", embedded_logo)
+    context.setdefault("bulletin_logo_path", embedded_logo)
     avatar_path = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
-    context.setdefault("avatar_path", avatar_path)
+    context.setdefault("avatar_path", pdf_image_data_uri(avatar_path))
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
     context.setdefault("font_bold", pdf_asset(("vendor", "fonts", "PlayfairDisplay-Bold.ttf"), "/manus-storage/PlayfairDisplay-Bold_a8c270a5.ttf"))
     context.setdefault("font_regular", pdf_asset(("vendor", "fonts", "Inter-Variable.ttf"), "/manus-storage/Inter-Variable_d79f128a.ttf"))

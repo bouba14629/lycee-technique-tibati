@@ -429,28 +429,26 @@ def dashboard():
     dashboard_filters = _dashboard_filter_context(user)
 
     def student_demographics(class_ids=None):
-        # Ne charger que les quatre colonnes nécessaires : le tableau de bord ne
-        # doit pas instancier chaque élève ni déclencher une relation par ligne.
-        query = (db.session.query(Student.sex, Student.is_repeater, Student.class_id, SchoolClass.name)
-                 .outerjoin(SchoolClass, Student.class_id == SchoolClass.id))
+        query = Student.query
         if class_ids is not None:
             query = query.filter(Student.class_id.in_(class_ids)) if class_ids else query.filter(db.false())
-        rows = query.all()
-        keys = ("Filles", "Garçons", "Non renseigné")
+        students = query.all()
         def gender(value):
             value = (value or "").strip().upper()
             return "Filles" if value in {"F", "FILLE", "FILLES"} else "Garçons" if value in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"} else "Non renseigné"
-        def counts(items, predicate=lambda _row: True):
-            return {key: sum(1 for row in items if predicate(row) and gender(row[0]) == key) for key in keys}
+        keys = ("Filles", "Garçons", "Non renseigné")
+        def counts(items, predicate=lambda _student: True):
+            return {key: sum(1 for student in items if predicate(student) and gender(student.sex) == key) for key in keys}
         class_rows = {}
-        for row in rows:
-            class_rows.setdefault(row[3] or "Classe non renseignée", []).append(row)
-        return {"effectifs": counts(rows),
-                "redoublants": counts(rows, lambda row: bool(row[1])),
-                "non_redoublants": counts(rows, lambda row: not bool(row[1])),
+        for student in students:
+            class_name = student.school_class.name if student.school_class else "Classe non renseignée"
+            class_rows.setdefault(class_name, []).append(student)
+        return {"effectifs": counts(students),
+                "redoublants": counts(students, lambda student: bool(student.is_repeater)),
+                "non_redoublants": counts(students, lambda student: not bool(student.is_repeater)),
                 "classes": [{"name": name, "effectifs": counts(items),
-                             "redoublants": counts(items, lambda row: bool(row[1])),
-                             "non_redoublants": counts(items, lambda row: not bool(row[1]))}
+                             "redoublants": counts(items, lambda student: bool(student.is_repeater)),
+                             "non_redoublants": counts(items, lambda student: not bool(student.is_repeater))}
                             for name, items in sorted(class_rows.items(), key=lambda item: item[0].casefold())]}
 
     if role == "directeur":

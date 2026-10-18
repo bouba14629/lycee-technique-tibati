@@ -5,12 +5,12 @@ from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
     Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
-    TeacherIndicator, CustomIndicatorValue, ClassCouncilMinutes,
+    TeacherIndicator, CustomIndicatorValue,
 )
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year, schedule_extra_hours, floor_hours)
+                    bulletin_data, get_current_school_year, schedule_extra_hours)
 
 
 def _is_stt_class(school_class):
@@ -389,8 +389,7 @@ def _teacher_schedule_context(teacher):
         "periods": OFFICIAL_PERIODS,
         "days": DAYS[:5],
         "day_en": DAY_EN,
-        "hours_faites": floor_hours(filled_official_slots(grid)),
-        "hours_due": floor_hours(teacher.hours_due),
+        "hours_faites": filled_official_slots(grid),
         "extra_hours": schedule_extra_hours(filled_official_slots(grid), teacher.hours_due),
         "classes_tenues": ", ".join(sorted({entry.course.school_class.code or entry.course.school_class.name for entry in entries})),
         "entries": entries,
@@ -412,12 +411,11 @@ def censeur_teacher_schedule_list():
     teacher_extra_hours = {}
     for teacher in teachers:
         entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
-        teacher_hours_faites[teacher.id] = floor_hours(filled_official_slots(build_official_grid(entries)))
+        teacher_hours_faites[teacher.id] = filled_official_slots(build_official_grid(entries))
         teacher_extra_hours[teacher.id] = schedule_extra_hours(
             teacher_hours_faites[teacher.id], teacher.hours_due or 0
         )
     return render_template("censeur_teacher_schedule_list.html", teachers=teachers,
-                           teacher_hours_dues={teacher.id: floor_hours(teacher.hours_due) for teacher in teachers},
                            teacher_hours_faites=teacher_hours_faites,
                            teacher_extra_hours=teacher_extra_hours)
 
@@ -560,7 +558,7 @@ def censeur_absences():
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
         })
     absence_rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = floor_hours(sum(row["hours"] for row in absence_rows))
+    total_hours = round(sum(row["hours"] for row in absence_rows), 2)
     return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id, total_hours=total_hours)
 
 
@@ -568,7 +566,7 @@ def _attendance_duration(record):
     try:
         h1, m1 = map(int, (record.start_time or "00:00").split(":"))
         h2, m2 = map(int, (record.end_time or record.start_time or "00:00").split(":"))
-        return floor_hours(max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60))
+        return max(0, round((h2 * 60 + m2 - h1 * 60 - m1) / 60, 2))
     except Exception:
         return 0
 
@@ -612,7 +610,7 @@ def surveillant_daily_absences():
     classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
     rows = _daily_absence_rows(user, selected_date, class_id)
     rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = floor_hours(sum(row["hours"] for row in rows))
+    total_hours = round(sum(row["hours"] for row in rows), 2)
     return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date, total_hours=total_hours)
 
 
@@ -1283,7 +1281,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1300,7 +1298,7 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
+            "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1316,16 +1314,11 @@ def censeur_bulletins_class_pdf(class_id):
             "student": st,
             "data": bulletin_data(st, term=term, _cache=bulletin_cache),
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
-            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
+            "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
         })
-    # Ajuste la taille globale selon la classe : peu de lignes = bulletin agrandi,
-    # beaucoup de lignes = bulletin réduit, avec une limite pour rester lisible et sur une page.
-    max_rows = max((sum(len(category.get("rows", [])) for category in item["data"].get("categories", [])) for item in students_data), default=0)
-    bulletin_zoom = max(0.82, min(1.25, 17 / max(12, max_rows)))
-    bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                      approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom, bulletin_size_class=bulletin_size_class)
+                      approval=approval, school_year=get_current_school_year())
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
@@ -1358,7 +1351,7 @@ def _absence_hours(student_id):
             total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
         except Exception:
             pass
-    return floor_hours(total)
+    return round(total, 1)
 
 
 @app.route("/surveillant/sanctions")
@@ -1943,101 +1936,3 @@ def censeur_indicator_type_delete(type_id):
     db.session.commit()
     flash(f"Indicateur « {label} » supprimé.", "info")
     return redirect(url_for("censeur_indicators"))
-
-# ---------------------------------------------------------------------------
-# Procès-verbaux du conseil de classe — modèle officiel importé
-# ---------------------------------------------------------------------------
-def _pv_classes(user):
-    classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level, SchoolClass.name)
-    if user.role in ("censeur", "censeur_crm") and user.section_id:
-        scoped = user_scoped_class_ids(user)
-        classes_q = classes_q.filter(SchoolClass.id.in_(scoped or [-1]))
-    return classes_q.all()
-
-def _pv_scope(user, minutes):
-    if user.role in ("censeur", "censeur_crm") and user.section_id and minutes.class_id not in (user_scoped_class_ids(user) or []): abort(403)
-
-def _pv_dataset(school_class, term):
-    category_order = ["Enseignements Divers", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Généraux"]
-    courses = Course.query.filter_by(class_id=school_class.id).join(Subject).order_by(Subject.category, Subject.name).all()
-    subjects, seen = [], set()
-    for course in courses:
-        subject = course.subject
-        if subject and subject.id not in seen and subject.name.lower() != "orientation scolaire": seen.add(subject.id); subjects.append(subject)
-    subjects.sort(key=lambda s: (category_order.index(s.category) if s.category in category_order else 99, s.name.lower()))
-    groups = [(category, [s for s in subjects if s.category == category]) for category in category_order if any(s.category == category for s in subjects)]
-    flat_subjects = [s for _, group in groups for s in group]
-    students = sorted(list(school_class.students), key=lambda s: ((s.last_name or "").upper(), (s.first_name or "").upper()))
-    rows = []
-    for student in students:
-        values = []
-        for subject in flat_subjects:
-            grades = [g for g in student.grades if g.term == term and g.course.subject_id == subject.id]
-            values.append(sum(g.value for g in grades) / len(grades) if grades else None)
-        valid = [v for v in values if v is not None]
-        rows.append({"student": student, "subject_values": [{"value": v, "is_average": True} for v in values], "average": sum(valid) / len(valid) if valid else None})
-    ranked = sorted([r for r in rows if r["average"] is not None], key=lambda r: (-r["average"], r["student"].last_name, r["student"].first_name))
-    for index, row in enumerate(ranked, 1): row["rank"] = index
-    stats = {}
-    for label, fn in (("Moyenne", lambda vals: sum(vals) / len(vals) if vals else None), ("Maximum", lambda vals: max(vals) if vals else None), ("Minimum", lambda vals: min(vals) if vals else None)):
-        subject_stats = []
-        for index in range(len(flat_subjects)):
-            vals = [r["subject_values"][index]["value"] for r in rows if r["subject_values"][index]["value"] is not None]
-            subject_stats.append(fn(vals))
-        avgs = [r["average"] for r in rows if r["average"] is not None]
-        stats[label] = {"general": fn(avgs), "subjects": subject_stats}
-    return groups, rows, stats
-
-@app.route("/censeur/proces-verbaux", methods=["GET", "POST"])
-@roles_required("censeur", "censeur_crm", "directeur")
-def censeur_proces_verbaux():
-    user = User.query.get(session["user_id"])
-    if request.method == "POST":
-        school_class = SchoolClass.query.get_or_404(request.form.get("class_id", type=int))
-        if school_class not in _pv_classes(user): abort(403)
-        term = request.form.get("term", "Trimestre 2")
-        pv = ClassCouncilMinutes.query.filter_by(class_id=school_class.id, term=term).first()
-        if pv is None:
-            pv = ClassCouncilMinutes(class_id=school_class.id, term=term, school_year=get_current_school_year(), principal_teacher=school_class.homeroom_teacher.user.formal_name if school_class.homeroom_teacher else "", created_by_id=user.id)
-            db.session.add(pv); db.session.commit()
-        flash("Procès-verbal préparé à partir des notes enregistrées.", "success")
-        return redirect(url_for("censeur_proces_verbaux"))
-    allowed = {c.id for c in _pv_classes(user)}
-    minutes = [pv for pv in ClassCouncilMinutes.query.order_by(ClassCouncilMinutes.created_at.desc()).all() if pv.class_id in allowed]
-    return render_template("censeur_proces_verbaux.html", classes=_pv_classes(user), minutes=minutes, terms=TERMS, default_term="Trimestre 2")
-
-@app.route("/censeur/proces-verbaux/<int:minutes_id>.pdf")
-@roles_required("censeur", "censeur_crm", "directeur")
-def censeur_proces_verbal_pdf(minutes_id):
-    from flask import send_file
-    pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
-    groups, rows, stats = _pv_dataset(pv.school_class, pv.term)
-    from pdf_utils import render_pdf
-    pdf = render_pdf("pdf/class_council_minutes.html", school_class=pv.school_class, term=pv.term, school_year=pv.school_year, principal_teacher=pv.principal_teacher, groups=groups, rows=rows, stats=stats)
-    if pdf is None: abort(500)
-    inline = request.args.get("inline") == "1"; filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.pdf".replace(" ", "_")
-    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline, download_name=filename)
-
-@app.route("/censeur/proces-verbaux/<int:minutes_id>.xlsx")
-@roles_required("censeur", "censeur_crm", "directeur")
-def censeur_proces_verbal_export(minutes_id):
-    from flask import send_file
-    from io import BytesIO
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
-    groups, rows, stats = _pv_dataset(pv.school_class, pv.term); subjects = [s for _, group in groups for s in group]
-    wb = Workbook(); ws = wb.active; ws.title = "Procès-verbal"
-    ws.append(["PROCES-VERBAL DU CONSEIL DE CLASSE", pv.school_class.code or pv.school_class.name, pv.term, pv.school_year])
-    ws.append(["NOMS", "PRENOMS", "RANG", "MOYENNE GENERALE"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
-    for row in rows: ws.append([row["student"].last_name.upper(), row["student"].first_name.upper(), row.get("rank", ""), row["average"]] + [x["value"] for x in row["subject_values"]] + [""])
-    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", "", stats[label]["general"]] + stats[label]["subjects"] + [""])
-    ws.freeze_panes = "A3"; ws.auto_filter.ref = ws.dimensions; grey = PatternFill("solid", fgColor="D9D9D9"); thin = Side(style="thin", color="000000")
-    for cell in ws[1]: cell.font = Font(bold=True, size=12)
-    for cell in ws[2]: cell.font = Font(bold=True); cell.fill = grey; cell.alignment = Alignment(text_rotation=90, vertical="bottom", wrap_text=True)
-    for row in ws.iter_rows():
-        for cell in row: cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    ws.column_dimensions["A"].width = 24; ws.column_dimensions["B"].width = 20
-    for col in range(3, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
-    output = BytesIO(); wb.save(output); output.seek(0); filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
-    return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
