@@ -1,4 +1,3 @@
-import os
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from sqlalchemy import and_, or_
@@ -30,39 +29,6 @@ def _subject_compatible_with_class(subject, school_class):
     if subject.class_id is not None:
         return False
     return subject.department_id is None or subject.department_id == school_class.department_id
-
-
-def _course_has_recorded_data(course_id):
-    """Indique si un cours possède des données à ne jamais détacher d'un changement d'enseignant."""
-    return any((model.query.filter_by(course_id=course_id).first() is not None)
-               for model in (Grade, Attendance, PlannedAssessment, TeacherIndicator, CustomIndicatorValue))
-
-
-def _course_for_teacher_change(old_course, teacher_id):
-    """Change uniquement l'enseignant lorsque le cours contient déjà des données.
-
-    Les notes, appels, évaluations planifiées, fiches pédagogiques et valeurs
-    personnalisées restent ainsi liés au même identifiant de cours. Si aucun
-    enregistrement n'existe encore, le cours cible peut être réutilisé ou créé
-    comme auparavant.
-    """
-    if old_course.teacher_id == teacher_id:
-        return old_course
-    if _course_has_recorded_data(old_course.id):
-        old_course.teacher_id = teacher_id
-        # Les valeurs restent inchangées ; seul leur propriétaire enseignant
-        # suit le nouveau rattachement du cours.
-        TeacherIndicator.query.filter_by(course_id=old_course.id).update(
-            {TeacherIndicator.teacher_id: teacher_id}, synchronize_session=False
-        )
-        return old_course
-    target = Course.query.filter_by(subject_id=old_course.subject_id,
-                                    teacher_id=teacher_id,
-                                    class_id=old_course.class_id).first()
-    if target and target.id != old_course.id:
-        return target
-    old_course.teacher_id = teacher_id
-    return old_course
 
 
 def _move_course_indicators(old_course_id, new_course_id, teacher_id):
@@ -368,18 +334,14 @@ def censeur_schedule_edit(entry_id):
 
     group_key = entry.group_key or (str(uuid.uuid4()) if target_classes else None)
     for item in group_entries:
-        old_course = item.course
-        old_course_id = old_course.id
-        course = _course_for_teacher_change(old_course, teacher_id)
-        if course.id == old_course_id and course.teacher_id == teacher_id:
-            # Le même Course conserve toutes ses notes, appels et fiches.
-            pass
-        elif course.id != old_course_id:
-            # Cas sans données enregistrées : on peut réutiliser un cours cible vide.
-            _move_course_indicators(old_course_id, course.id, teacher_id)
-        else:
-            # Le cours porteur de données a seulement changé de teacher_id.
+        old_course_id = item.course_id
+        course = Course.query.filter_by(subject_id=item.course.subject_id, teacher_id=teacher_id,
+                                        class_id=item.course.class_id).first()
+        if not course:
+            course = Course(subject_id=item.course.subject_id, teacher_id=teacher_id, class_id=item.course.class_id)
+            db.session.add(course)
             db.session.flush()
+        _move_course_indicators(old_course_id, course.id, teacher_id)
         item.course_id = course.id
         item.room_id = room.id if room else None
         item.day = day
@@ -1359,24 +1321,11 @@ def censeur_bulletins_class_pdf(class_id):
     # Ajuste la taille globale selon la classe : peu de lignes = bulletin agrandi,
     # beaucoup de lignes = bulletin réduit, avec une limite pour rester lisible et sur une page.
     max_rows = max((sum(len(category.get("rows", [])) for category in item["data"].get("categories", [])) for item in students_data), default=0)
-    bulletin_zoom = max(0.78, min(1.05, 15 / max(15, max_rows)))
+    bulletin_zoom = max(0.82, min(1.25, 17 / max(12, max_rows)))
     bulletin_size_class = "roomy" if max_rows <= 15 else ("normal" if max_rows <= 22 else "compact")
-    # Le groupé trimestriel utilise le PDF officiel comme fond immuable :
-    # logo, cadres, polices et proportions ne sont plus reconstruits en HTML.
-    from bulletin_screenshot import matches_template_layout, model_for_class, render_grouped_screenshot
-    exact_model = model_for_class(cls.name)
-    if exact_model and matches_template_layout(students_data):
-        pdf = render_grouped_screenshot(students_data, school_year=get_current_school_year(),
-                                        term_ordinal=TERM_ORDINALS.get(term, ""), approval=approval,
-                                        template_path=exact_model)
-    else:
-        # Les classes avec une autre distribution de matières conservent le
-        # modèle dynamique afin de ne jamais déplacer une catégorie sur une
-        # ligne qui ne lui appartient pas.
-        pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
-                          TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                          approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom,
-                          bulletin_size_class=bulletin_size_class)
+    pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
+                      TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
+                      approval=approval, school_year=get_current_school_year(), bulletin_zoom=bulletin_zoom, bulletin_size_class=bulletin_size_class)
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
@@ -2009,47 +1958,24 @@ def _pv_scope(user, minutes):
     if user.role in ("censeur", "censeur_crm") and user.section_id and minutes.class_id not in (user_scoped_class_ids(user) or []): abort(403)
 
 def _pv_dataset(school_class, term):
-    """Construit le PV à partir exactement des mêmes données que le bulletin."""
-    from utils import bulletin_data
+    category_order = ["Enseignements Divers", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Généraux"]
+    courses = Course.query.filter_by(class_id=school_class.id).join(Subject).order_by(Subject.category, Subject.name).all()
+    subjects, seen = [], set()
+    for course in courses:
+        subject = course.subject
+        if subject and subject.id not in seen and subject.name.lower() != "orientation scolaire": seen.add(subject.id); subjects.append(subject)
+    subjects.sort(key=lambda s: (category_order.index(s.category) if s.category in category_order else 99, s.name.lower()))
+    groups = [(category, [s for s in subjects if s.category == category]) for category in category_order if any(s.category == category for s in subjects)]
+    flat_subjects = [s for _, group in groups for s in group]
     students = sorted(list(school_class.students), key=lambda s: ((s.last_name or "").upper(), (s.first_name or "").upper()))
-    cache = {}
-    subject_map = {}
-    category_order = ["Enseignements Généraux", "Enseignements Professionnels Théoriques", "Enseignements Professionnels Pratiques", "Enseignements Divers"]
-    bulletin_cache = {}
-    for student in students:
-        data = bulletin_data(student, term=term, _cache=bulletin_cache) or {}
-        cache[student.id] = data
-        for category in data.get("categories", []):
-            for item in category.get("rows", []):
-                subject = item.get("course").subject if item.get("course") else None
-                if subject and subject.id not in subject_map:
-                    subject_map[subject.id] = (category.get("name", subject.category), subject)
-    groups = []
-    for category in category_order:
-        subjects = sorted([subject for cat, subject in subject_map.values() if cat == category], key=lambda x: (x.name or "").casefold())
-        if subjects:
-            groups.append((category, subjects))
-    flat_subjects = [subject for _, group in groups for subject in group]
     rows = []
     for student in students:
-        data = cache[student.id]
-        by_subject = {}
-        general_average = None
-        for category in data.get("categories", []):
-            if category.get("name") == "Enseignements Généraux":
-                general_average = category.get("moyenne")
-            for item in category.get("rows", []):
-                course = item.get("course")
-                if course and course.subject_id not in by_subject:
-                    by_subject[course.subject_id] = item.get("average")
-        values = [by_subject.get(subject.id) for subject in flat_subjects]
-        group_averages = []
-        for category, _subjects in groups:
-            cat = next((item for item in data.get("categories", []) if item.get("name") == category), None)
-            group_averages.append(cat.get("moyenne") if cat else None)
-        rows.append({"student": student, "subject_values": [{"value": value, "is_average": True} for value in values],
-                     "average": data.get("overall_avg"), "general_average": general_average,
-                     "group_averages": group_averages})
+        values = []
+        for subject in flat_subjects:
+            grades = [g for g in student.grades if g.term == term and g.course.subject_id == subject.id]
+            values.append(sum(g.value for g in grades) / len(grades) if grades else None)
+        valid = [v for v in values if v is not None]
+        rows.append({"student": student, "subject_values": [{"value": v, "is_average": True} for v in values], "average": sum(valid) / len(valid) if valid else None})
     ranked = sorted([r for r in rows if r["average"] is not None], key=lambda r: (-r["average"], r["student"].last_name, r["student"].first_name))
     for index, row in enumerate(ranked, 1): row["rank"] = index
     stats = {}
@@ -2057,17 +1983,11 @@ def _pv_dataset(school_class, term):
         subject_stats = []
         for index in range(len(flat_subjects)):
             vals = [r["subject_values"][index]["value"] for r in rows if r["subject_values"][index]["value"] is not None]
-            subject_stats.append(round(fn(vals), 2) if fn(vals) is not None else None)
+            subject_stats.append(fn(vals))
         avgs = [r["average"] for r in rows if r["average"] is not None]
-        gen_avgs = [r["general_average"] for r in rows if r["general_average"] is not None]
-        group_stats = []
-        for group_index in range(len(groups)):
-            group_values = [r["group_averages"][group_index] for r in rows if r["group_averages"][group_index] is not None]
-            group_stats.append(round(fn(group_values), 2) if fn(group_values) is not None else None)
-        stats[label] = {"general": round(fn(avgs), 2) if fn(avgs) is not None else None,
-                        "general_teaching": round(fn(gen_avgs), 2) if fn(gen_avgs) is not None else None,
-                        "subjects": subject_stats, "groups": group_stats}
+        stats[label] = {"general": fn(avgs), "subjects": subject_stats}
     return groups, rows, stats
+
 @app.route("/censeur/proces-verbaux", methods=["GET", "POST"])
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_proces_verbaux():
@@ -2081,7 +2001,7 @@ def censeur_proces_verbaux():
             pv = ClassCouncilMinutes(class_id=school_class.id, term=term, school_year=get_current_school_year(), principal_teacher=school_class.homeroom_teacher.user.formal_name if school_class.homeroom_teacher else "", created_by_id=user.id)
             db.session.add(pv); db.session.commit()
         flash("Procès-verbal préparé à partir des notes enregistrées.", "success")
-        return redirect(url_for("censeur_proces_verbal_pdf", minutes_id=pv.id, inline=1))
+        return redirect(url_for("censeur_proces_verbaux"))
     allowed = {c.id for c in _pv_classes(user)}
     minutes = [pv for pv in ClassCouncilMinutes.query.order_by(ClassCouncilMinutes.created_at.desc()).all() if pv.class_id in allowed]
     return render_template("censeur_proces_verbaux.html", classes=_pv_classes(user), minutes=minutes, terms=TERMS, default_term="Trimestre 2")
@@ -2103,93 +2023,21 @@ def censeur_proces_verbal_pdf(minutes_id):
 def censeur_proces_verbal_export(minutes_id):
     from flask import send_file
     from io import BytesIO
-    from copy import copy
-    from openpyxl import load_workbook
-    from openpyxl.styles import Alignment, Border, Side
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     pv = ClassCouncilMinutes.query.get_or_404(minutes_id); user = User.query.get(session["user_id"]); _pv_scope(user, pv)
-    groups, rows, stats = _pv_dataset(pv.school_class, pv.term)
-    template_path = os.path.join(os.path.dirname(__file__), "templates", "pdf", "1AESF.xlsx")
-    template = load_workbook(template_path)
-    source = template.active
-    wb = load_workbook(template_path)
-    ws = wb.active
-    ws.title = "Procès-verbal"
-    # Le modèle importé sert de matrice visuelle ; son ancien contenu est remplacé
-    # par les élèves, groupes et matières issus du bulletin de la classe choisie.
+    groups, rows, stats = _pv_dataset(pv.school_class, pv.term); subjects = [s for _, group in groups for s in group]
+    wb = Workbook(); ws = wb.active; ws.title = "Procès-verbal"
+    ws.append(["PROCES-VERBAL DU CONSEIL DE CLASSE", pv.school_class.code or pv.school_class.name, pv.term, pv.school_year])
+    ws.append(["NOMS", "PRENOMS", "RANG", "MOYENNE GENERALE"] + [s.name for s in subjects] + ["DECISION DU CONSEIL"])
+    for row in rows: ws.append([row["student"].last_name.upper(), row["student"].first_name.upper(), row.get("rank", ""), row["average"]] + [x["value"] for x in row["subject_values"]] + [""])
+    for label in ("Moyenne", "Maximum", "Minimum"): ws.append([label, "", "", stats[label]["general"]] + stats[label]["subjects"] + [""])
+    ws.freeze_panes = "A3"; ws.auto_filter.ref = ws.dimensions; grey = PatternFill("solid", fgColor="D9D9D9"); thin = Side(style="thin", color="000000")
+    for cell in ws[1]: cell.font = Font(bold=True, size=12)
+    for cell in ws[2]: cell.font = Font(bold=True); cell.fill = grey; cell.alignment = Alignment(text_rotation=90, vertical="bottom", wrap_text=True)
     for row in ws.iter_rows():
-        for cell in row:
-            cell.value = None
-    for merged in list(ws.merged_cells.ranges):
-        ws.unmerge_cells(str(merged))
-    # Colonnes fixes : Nom, Prénom, Rang, Moyenne générale, puis moyenne de groupe
-    # et matières de chaque groupe du bulletin.
-    columns = [("name", None), ("first_name", None), ("rank", None), ("overall", None)]
-    for gi, (group, subjects) in enumerate(groups):
-        columns.append(("group", gi))
-        columns.extend(("subject", subject) for subject in subjects)
-    source_styles = {"name": 1, "first_name": 2, "rank": 3, "overall": 4, "group": [5, 12, 16, 21], "subject": [6, 13, 17, 22]}
-    def source_col(kind, index):
-        if kind in ("name", "first_name", "rank", "overall"):
-            return source_styles[kind]
-        values = source_styles[kind]
-        return values[min(index, len(values)-1)] if isinstance(index, int) else values[0]
-    def copy_cell_style(dst, src):
-        if src.has_style:
-            dst._style = copy(src._style)
-        if src.number_format: dst.number_format = src.number_format
-        dst.font = copy(src.font); dst.fill = copy(src.fill); dst.border = copy(src.border)
-        dst.alignment = copy(src.alignment); dst.protection = copy(src.protection)
-    # Les 5 lignes du modèle sont conservées : intitulés, coefficients et rang.
-    for col_idx, (kind, payload) in enumerate(columns, 1):
-        src_idx = source_col(kind, payload if kind == "group" else (0 if kind == "subject" else 0))
-        for r in range(1, 6): copy_cell_style(ws.cell(r, col_idx), source.cell(r, src_idx))
-        ws.column_dimensions[ws.cell(1, col_idx).column_letter].width = source.column_dimensions[source.cell(1, src_idx).column_letter].width or 8
-    # En-têtes inspirés du fichier 1AESF.xlsx.
-    labels = ["Nom", "Prénom", "Rang", "MOYENNE GENERALE"]
-    for col, label in enumerate(labels, 1): ws.cell(1, col).value = label
-    col = 5
-    for group, subjects in groups:
-        ws.cell(1, col).value = group.upper(); ws.cell(3, col).value = "Moy."
-        col += 1
-        for subject in subjects:
-            ws.cell(1, col).value = subject.name; ws.cell(3, col).value = subject.coefficient or ""
-            col += 1
-    ws.cell(3, 3).value = "Coef."; ws.cell(5, 3).value = "Rang"
-    ws.cell(3, 4).value = sum((subject.coefficient or 0) for _, subjects in groups for subject in subjects)
-    ws.cell(5, 4).value = None
-    # Les lignes de données reprennent les valeurs calculées depuis le bulletin.
-    for row_idx, row in enumerate(rows, 6):
-        for col_idx, (kind, payload) in enumerate(columns, 1):
-            cell = ws.cell(row_idx, col_idx)
-            src_kind = "name" if kind in ("name", "first_name") else ("subject" if kind in ("group", "subject") else kind)
-            copy_cell_style(cell, source.cell(6, source_col(src_kind, payload if kind == "group" else 0)))
-        ws.cell(row_idx, 1).value = (row["student"].last_name or "").upper()
-        ws.cell(row_idx, 2).value = (row["student"].first_name or "").upper()
-        ws.cell(row_idx, 3).value = row.get("rank") or ""
-        ws.cell(row_idx, 4).value = row.get("average")
-        out_col = 5; subject_index = 0
-        for gi, (_group, subjects) in enumerate(groups):
-            ws.cell(row_idx, out_col).value = row.get("group_averages", [None] * len(groups))[gi]
-            out_col += 1
-            for _subject in subjects:
-                ws.cell(row_idx, out_col).value = row["subject_values"][subject_index]["value"]
-                subject_index += 1; out_col += 1
-    # Statistiques finales du modèle.
-    stat_start = 6 + len(rows)
-    for offset, label in enumerate(("Moyenne", "Maximum", "Minimum")):
-        r = stat_start + offset; ws.cell(r, 1).value = label
-        for c in range(1, len(columns) + 1):
-            copy_cell_style(ws.cell(r, c), source.cell(6, source_col("subject", 0)))
-        ws.cell(r, 4).value = stats[label]["general"]
-        out_col = 5; subj_index = 0
-        for gi, (_group, subjects) in enumerate(groups):
-            ws.cell(r, out_col).value = stats[label]["groups"][gi]; out_col += 1
-            for _subject in subjects:
-                ws.cell(r, out_col).value = stats[label]["subjects"][subj_index]; subj_index += 1; out_col += 1
-    ws.freeze_panes = "A6"; ws.auto_filter.ref = f"A5:{ws.cell(stat_start-1, len(columns)).coordinate}"
-    ws.sheet_view.showGridLines = False
-    ws.page_setup.orientation = "landscape"; ws.page_setup.fitToWidth = 1; ws.page_setup.fitToHeight = 0; ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.print_title_rows = "1:5"
-    output = BytesIO(); wb.save(output); output.seek(0)
-    filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
+        for cell in row: cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    ws.column_dimensions["A"].width = 24; ws.column_dimensions["B"].width = 20
+    for col in range(3, ws.max_column + 1): ws.column_dimensions[ws.cell(2, col).column_letter].width = 13
+    output = BytesIO(); wb.save(output); output.seek(0); filename = f"Proces_verbal_{pv.school_class.code or pv.school_class.name}_{pv.term}.xlsx".replace(" ", "_")
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
