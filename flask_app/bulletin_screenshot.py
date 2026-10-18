@@ -14,6 +14,7 @@ from pypdf import PdfReader, PdfWriter
 ROOT = Path(__file__).resolve().parent
 MODEL_DIR = ROOT / "templates" / "pdf" / "bulletin_model"
 TEMPLATE = MODEL_DIR / "Bulletin_PREMIERE_ACA_v7.pdf"
+LOGO = Path("/home/ubuntu/webdev-static-assets/ltt/img/bulletin_official_logo.png")
 PAGE_W, PAGE_H = A4
 
 # Coordonnées mesurées sur Bulletin_PREMIERE_ACA_v7.pdf (origine en haut).
@@ -69,6 +70,14 @@ def _overlay_student(student, data, school_year, term_ordinal, approval=None):
     principal = student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—'
     _text(c, principal, 384, 159.92, 6.0)
     _text(c, student.full_name, 484, 122.72, 5.6, bold=True)
+    # Le logo fourni par l'établissement est replacé au centre de l'en-tête
+    # afin d'être identique dans les modèles importés et le rendu individuel.
+    if LOGO.exists():
+        c.setFillColorRGB(1, 1, 1)
+        c.rect(264, PAGE_H - 67, 67, 67, fill=1, stroke=0)
+        c.drawImage(ImageReader(str(LOGO)), 272, PAGE_H - 59, width=51, height=51,
+                    preserveAspectRatio=True, mask='auto')
+        c.setFillColorRGB(0, 0, 0)
     # Titre et section (le logo et sa position restent ceux du PDF source).
     _white_cell(c, 195, 400, 78.5, 16)
     _text(c, f"BULLETIN DU {term_ordinal.upper()} TRIMESTRE", 297.5, 79.0, 13.2, bold=True, align="center")
@@ -83,7 +92,7 @@ def _overlay_student(student, data, school_year, term_ordinal, approval=None):
         for ri, row in enumerate(cat.get('rows', [])[:GROUP_CAPACITY[gi]]):
             top = start + ri * 11.73
             _white_cell(c, 9, 169, top, 10.7)
-            _text(c, f"{row['course'].subject.name} ({row['course'].teacher.user.formal_name})", 11, top + .5, 5.2)
+            _text(c, f"{row['course'].subject.name} ({row['course'].teacher.user.formal_name})", 11, top + .5, 6.2)
             vals = [row.get('notes_trim'), row.get('eval_a'), row.get('eval_b'), row.get('coef'), row.get('points'), f"{row.get('rank')}e" if row.get('rank') else '—', row.get('appreciation') or '']
             for j, value in enumerate(vals):
                 x1, x2 = VALUE_X[j], VALUE_X[j+1]
