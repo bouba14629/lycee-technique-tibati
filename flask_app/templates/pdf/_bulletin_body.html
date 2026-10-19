@@ -104,7 +104,7 @@
     <td style="width:50%;">
       <span class="box-title">DISCIPLINE</span>
       <table class="mini-table grid-table">
-        <tr><td>Absences N.heures</td><td>{{ data.absences_justified_hours + data.absences_non_justified_hours }}</td></tr>
+        <tr><td>Absences N.heures</td><td>{{ (data.absences_justified_hours + data.absences_non_justified_hours)|int }}</td></tr>
         <tr><td>Absences N.jours</td><td>{{ data.absences_justified_days + data.absences_non_justified_days }} (Just. {{ data.absences_justified_days }} / Non just. {{ data.absences_non_justified_days }})</td></tr>
         <tr><td>Exclusions</td><td>{{ data.exclusions|length }}</td></tr>
         <tr><td>[{{ 'X' if data.avert_conduite else ' ' }}] Avert. Conduite</td><td>[{{ 'X' if data.blame_conduite else ' ' }}] Blâme Conduite</td></tr>
@@ -125,8 +125,8 @@
     </td>
     <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PARENT<div style="height:28pt;"></div></td>
     <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">
-      VISA DU PROF. PRINCIPAL<br>
-      <span style="font-size:6.5pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span><div style="height:20pt;"></div>
+      VISA DU PROFESSEUR PRINCIPAL<br>
+      <div style="height:8pt;"></div><span style="font-size:6.5pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span><div style="height:20pt;"></div>
     </td>
     <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PROVISEUR<br><span style="font-size:6pt; color:#6b7688;">TIBATI, le ______</span>{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
   </tr>

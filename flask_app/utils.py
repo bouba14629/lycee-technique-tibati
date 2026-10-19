@@ -1,4 +1,5 @@
 from functools import wraps
+import math
 from datetime import datetime, date, timedelta
 import secrets
 from flask import session, redirect, url_for, flash, abort
@@ -8,6 +9,14 @@ DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
 TERMS = ["Trimestre 1", "Trimestre 2", "Trimestre 3"]
 TERM_ORDINALS = {"Trimestre 1": "PREMIER", "Trimestre 2": "DEUXIÈME", "Trimestre 3": "TROISIÈME"}
 TERM_SEQUENCES = {"Trimestre 1": (1, 2), "Trimestre 2": (3, 4), "Trimestre 3": (5, 6)}
+
+
+def floor_hours(value):
+    """Convertit une durée positive en entier naturel par arrondi inférieur."""
+    try:
+        return max(0, math.floor(float(value or 0)))
+    except (TypeError, ValueError):
+        return 0
 
 ROLE_PASSWORD_CODES = {
     "directeur": "DIR", "censeur": "CEN", "censeur_crm": "CRM",
@@ -224,6 +233,29 @@ def automatic_work_appreciation(categories):
     return ""
 
 
+def competency_marks(average):
+    """Retourne les cases de compétences correspondant à une moyenne sur 20."""
+    marks = {key: False for key in (
+        "tableau_honneur", "felicitations", "encouragements", "assez_bon_travail",
+        "bon_travail", "travail_passable", "travail_insuffisant")}
+    if average is None:
+        return marks
+    if average >= 16:
+        marks["tableau_honneur"] = True
+        marks["felicitations"] = True
+    elif average >= 14:
+        marks["encouragements"] = True
+    elif average >= 12:
+        marks["assez_bon_travail"] = True
+    elif average >= 10:
+        marks["bon_travail"] = True
+    elif average >= 8:
+        marks["travail_passable"] = True
+    else:
+        marks["travail_insuffisant"] = True
+    return marks
+
+
 def bulletin_data(student, term=None, _cache=None):
     """Calcule toutes les données du bulletin officiel : matières groupées par catégorie,
     totaux, rang par matière et général, profil de classe, discipline et mentions."""
@@ -346,7 +378,7 @@ def bulletin_data(student, term=None, _cache=None):
                 total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
             except Exception:
                 pass
-        return round(total, 1)
+        return math.floor(total)
 
     just_hours = _hours([a for a in absences if a.justified])
     non_just_hours = _hours([a for a in absences if not a.justified])
@@ -356,24 +388,8 @@ def bulletin_data(student, term=None, _cache=None):
     blame_conduite = any("blâme" in s.type.lower() or "blame" in s.type.lower() for s in sanctions)
     exclusions = [s for s in sanctions if "exclusion" in s.type.lower()]
 
-    # mentions "travail de l'élève" (dérivées de la moyenne générale)
-    work_marks = {k: False for k in [
-        "tableau_honneur", "felicitations", "encouragements", "assez_bon_travail",
-        "bon_travail", "travail_passable", "travail_insuffisant"]}
-    if overall_avg is not None:
-        if overall_avg >= 16:
-            work_marks["tableau_honneur"] = True
-            work_marks["felicitations"] = True
-        elif overall_avg >= 14:
-            work_marks["encouragements"] = True
-        elif overall_avg >= 12:
-            work_marks["assez_bon_travail"] = True
-        elif overall_avg >= 10:
-            work_marks["bon_travail"] = True
-        elif overall_avg >= 8:
-            work_marks["travail_passable"] = True
-        else:
-            work_marks["travail_insuffisant"] = True
+    # Compétences cochées selon la moyenne du trimestre.
+    work_marks = competency_marks(overall_avg)
 
     saved_appreciation = BulletinWorkAppreciation.query.filter_by(student_id=student.id, term=term).first()
     automatic_appreciation = automatic_work_appreciation(categories)
@@ -499,7 +515,8 @@ def annual_bulletin_data(student, _cache=None):
             "class_avg": round(sum(class_averages) / len(class_averages), 2) if class_averages else None,
             "class_high": max(class_averages) if class_averages else None,
             "class_low": min(class_averages) if class_averages else None,
-            "rank": class_rank if overall_avg is not None else None}
+            "rank": class_rank if overall_avg is not None else None,
+            "work_marks": competency_marks(overall_avg)}
 
 
 def build_official_grid(entries, days=None):

@@ -10,7 +10,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year, schedule_extra_hours)
+                    bulletin_data, get_current_school_year, schedule_extra_hours, floor_hours)
 
 
 def _is_stt_class(school_class):
@@ -558,7 +558,7 @@ def censeur_absences():
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
         })
     absence_rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = round(sum(row["hours"] for row in absence_rows), 2)
+    total_hours = floor_hours(sum(row["hours"] for row in absence_rows))
     return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id, total_hours=total_hours)
 
 
@@ -566,7 +566,7 @@ def _attendance_duration(record):
     try:
         h1, m1 = map(int, (record.start_time or "00:00").split(":"))
         h2, m2 = map(int, (record.end_time or record.start_time or "00:00").split(":"))
-        return max(0, round((h2 * 60 + m2 - h1 * 60 - m1) / 60, 2))
+        return floor_hours((h2 * 60 + m2 - h1 * 60 - m1) / 60)
     except Exception:
         return 0
 
@@ -610,7 +610,7 @@ def surveillant_daily_absences():
     classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
     rows = _daily_absence_rows(user, selected_date, class_id)
     rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = round(sum(row["hours"] for row in rows), 2)
+    total_hours = floor_hours(sum(row["hours"] for row in rows))
     return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date, total_hours=total_hours)
 
 
@@ -1352,7 +1352,7 @@ def _absence_hours(student_id):
             total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
         except Exception:
             pass
-    return round(total, 1)
+    return floor_hours(total)
 
 
 @app.route("/surveillant/sanctions")
