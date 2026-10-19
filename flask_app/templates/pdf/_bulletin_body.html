@@ -104,8 +104,8 @@
     <td style="width:50%;">
       <span class="box-title">DISCIPLINE</span>
       <table class="mini-table grid-table">
-        <tr><td>Absences N.heures</td><td>{{ (data.absences_justified_hours + data.absences_non_justified_hours)|int }}</td></tr>
-        <tr><td>Absences N.jours</td><td>{{ data.absences_justified_days + data.absences_non_justified_days }} (Just. {{ data.absences_justified_days }} / Non just. {{ data.absences_non_justified_days }})</td></tr>
+        <tr><td>Absences Nombre d'heures</td><td>{{ (data.absences_justified_hours + data.absences_non_justified_hours)|int }}</td></tr>
+        <tr><td>Absences Nombre de jours</td><td>{{ data.absences_justified_days + data.absences_non_justified_days }} (Just. {{ data.absences_justified_days }} / Non just. {{ data.absences_non_justified_days }})</td></tr>
         <tr><td>Exclusions</td><td>{{ data.exclusions|length }}</td></tr>
         <tr><td>[{{ 'X' if data.avert_conduite else ' ' }}] Avert. Conduite</td><td>[{{ 'X' if data.blame_conduite else ' ' }}] Blâme Conduite</td></tr>
       </table>
