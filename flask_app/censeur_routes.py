@@ -1144,7 +1144,11 @@ def censeur_annual_bulletins_generation_preview(class_id):
         abort(403)
     school_class = SchoolClass.query.get_or_404(class_id)
     rows = []
-    for student in sorted(school_class.students, key=lambda item: (item.last_name, item.first_name)):
+    for student in sorted(school_class.students, key=lambda item: (
+        (item.first_name or "").strip().casefold(),
+        (item.last_name or "").strip().casefold(),
+        item.id,
+    )):
         annual_data = annual_bulletin_data(student)
         rows.append({"student": student, "data": annual_data})
     approval = BulletinApproval.query.filter_by(class_id=class_id, term="Annuel", status="Validé").first()

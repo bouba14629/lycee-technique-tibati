@@ -38,6 +38,11 @@
     <input type="hidden" name="term" value="{{ term }}">
     {% if current_user.role == "conseiller_orientation" %}
     <input type="hidden" name="class_id" value="{{ selected_class.id }}">
+    {% elif group_courses %}
+    <div class="alert alert-info"><i class="bi bi-people-fill"></i> Remplissage groupé pour {{ group_courses|length }} classes du niveau <strong>{{ group_level }}</strong> — {{ course.subject.name }}.</div>
+    <input type="hidden" name="group_level" value="{{ group_level }}">
+    <input type="hidden" name="group_subject_id" value="{{ group_subject_id }}">
+    {% for group_course in group_courses %}<input type="hidden" name="group_course_ids" value="{{ group_course.id }}">{% endfor %}
     {% else %}
     <input type="hidden" name="course_id" value="{{ course.id }}">
     {% endif %}

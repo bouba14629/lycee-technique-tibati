@@ -32,14 +32,27 @@ def teacher_courses():
                if course.school_class is not None and course.subject is not None]
     students_by_course = {
         course.id: sorted(course.school_class.students, key=lambda student: (
-            (student.last_name or "").strip().casefold(),
             (student.first_name or "").strip().casefold(),
+            (student.last_name or "").strip().casefold(),
             student.id,
         ))
         for course in courses
     }
+    group_map = {}
+    for course in courses:
+        category = (course.subject.category or "").strip()
+        if category not in {"Enseignements Généraux", "Enseignements Divers"}:
+            continue
+        key = (course.school_class.level, course.subject_id)
+        group_map.setdefault(key, []).append(course)
+    indicator_groups = [
+        {"level": level, "subject": items[0].subject, "courses": sorted(items, key=lambda c: (c.school_class.code or c.school_class.name).casefold())}
+        for (level, _subject_id), items in sorted(group_map.items(), key=lambda item: (item[0][0], item[0][1]))
+        if len(items) > 1
+    ]
     return render_template("teacher_courses.html", teacher=teacher, courses=courses,
-                           students_by_course=students_by_course, schedule_synced=True)
+                           students_by_course=students_by_course, indicator_groups=indicator_groups,
+                           schedule_synced=True)
 
 
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")
@@ -491,6 +504,9 @@ def teacher_indicators():
     course_id = request.args.get("course_id", type=int) if request.method == "GET" else request.form.get("course_id", type=int)
     selected_class_id = (request.args.get("class_id", type=int) if request.method == "GET"
                          else request.form.get("class_id", type=int))
+    group_level = request.args.get("group_level") if request.method == "GET" else request.form.get("group_level")
+    group_subject_id = (request.args.get("group_subject_id", type=int) if request.method == "GET"
+                        else request.form.get("group_subject_id", type=int))
     indicator_classes = []
     selected_class = None
     courses = []
@@ -520,10 +536,18 @@ def teacher_indicators():
     else:
         courses = sorted(Course.query.filter(Course.teacher_id == teacher.id, Course.schedule_entries.any()).all(),
                          key=lambda c: (c.school_class.code or c.school_class.name, c.subject.name))
+        group_courses = [c for c in courses
+                         if group_level and group_subject_id and c.school_class.level == group_level
+                         and c.subject_id == group_subject_id
+                         and (c.subject.category or "").strip() in {"Enseignements Généraux", "Enseignements Divers"}]
         if course_id:
             course = Course.query.get(course_id)
             if not course or course.teacher_id != teacher.id:
                 abort(403)
+        elif group_courses:
+            course = group_courses[0]
+        else:
+            group_courses = []
 
     custom_types = []
     indicator_class = selected_class if is_counselor else (course.school_class if course else None)
@@ -535,6 +559,42 @@ def teacher_indicators():
         custom_types = custom_types_q.order_by(CustomIndicatorType.label).all()
 
     if request.method == "POST":
+        posted_group_ids = request.form.getlist("group_course_ids", type=int)
+        if posted_group_ids and not is_counselor:
+            target_courses = [item for item in courses if item.id in set(posted_group_ids)]
+            if not target_courses or any(item.school_class.level != group_level or item.subject_id != group_subject_id
+                                         or (item.subject.category or "").strip() not in {"Enseignements Généraux", "Enseignements Divers"}
+                                         for item in target_courses):
+                abort(403)
+            submitted_hours_due = request.form.get("hours_due", type=int)
+            if submitted_hours_due not in allowed_hours_due:
+                flash("Les heures dues doivent être choisies dans la liste autorisée.", "danger")
+                return redirect(url_for("teacher_indicators", group_level=group_level, group_subject_id=group_subject_id))
+            planned_fields = ("hours_due", "lessons_planned", "digital_lessons_planned", "tp_planned", "digital_tp_planned")
+            done_fields = ("hours_done", "lessons_done", "digital_lessons_done", "tp_done", "digital_tp_done")
+            for target in target_courses:
+                target_ind = TeacherIndicator.query.filter_by(course_id=target.id, term=term).first()
+                if not target_ind:
+                    target_ind = TeacherIndicator(teacher_id=teacher.id, course_id=target.id, term=term)
+                    db.session.add(target_ind)
+                values = {field: request.form.get(field, 0, type=int) for field in done_fields}
+                planned = {field: (getattr(target_ind, field) if target_ind.id else request.form.get(field, 0, type=int))
+                           for field in planned_fields}
+                planned["hours_due"] = submitted_hours_due
+                pairs = list(zip(planned_fields, done_fields))
+                if any(values[done] > planned[plan] for plan, done in pairs):
+                    flash("Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue.", "danger")
+                    return redirect(url_for("teacher_indicators", group_level=group_level, group_subject_id=group_subject_id))
+                if target_ind.id and any(values[done] < getattr(target_ind, done, 0) for _plan, done in pairs):
+                    flash("Une valeur déjà enregistrée ne peut pas être diminuée.", "danger")
+                    return redirect(url_for("teacher_indicators", group_level=group_level, group_subject_id=group_subject_id))
+                for field, value in planned.items():
+                    setattr(target_ind, field, value)
+                for field, value in values.items():
+                    setattr(target_ind, field, value)
+            db.session.commit()
+            flash(f"Indicateurs enregistrés pour {len(target_courses)} classes du niveau {group_level}.", "success")
+            return redirect(url_for("teacher_indicators", group_level=group_level, group_subject_id=group_subject_id))
         if is_counselor and not selected_class:
             flash("Veuillez choisir une classe.", "warning")
             return redirect(url_for("teacher_indicators"))
@@ -618,4 +678,5 @@ def teacher_indicators():
                             indicator_classes=indicator_classes, selected_class=selected_class,
                             filled_class_ids=filled_class_ids,
                             custom_types=custom_types, custom_values=custom_values,
-                            allowed_hours_due=allowed_hours_due)
+                            allowed_hours_due=allowed_hours_due, group_level=group_level,
+                            group_subject_id=group_subject_id, group_courses=locals().get("group_courses", []))

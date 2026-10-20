@@ -56,7 +56,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='dashboard' }}" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Tableau de bord</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='announcements' }}" href="{{ url_for('announcements') }}"><i class="bi bi-megaphone-fill"></i> Annonces</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['messages_inbox','messages_new','message_view'] }}" href="{{ url_for('messages_inbox') }}"><i class="bi bi-chat-dots-fill"></i> Messagerie</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['correspondence_inbox','correspondence_new','correspondence_view'] }}" href="{{ url_for('correspondence_inbox') }}"><i class="bi bi-journal-text"></i> Carnet numérique</a>
+      {% if not current_user or current_user.role != 'enseignant' %}<a class="sidebar-link {{ 'active' if request.endpoint in ['correspondence_inbox','correspondence_new','correspondence_view'] }}" href="{{ url_for('correspondence_inbox') }}"><i class="bi bi-journal-text"></i> Carnet numérique</a>{% endif %}
       {% if current_user and current_user.role in ['directeur','censeur'] %}<a class="sidebar-link {{ 'active' if request.endpoint=='evaluation_plan' }}" href="{{ url_for('evaluation_plan') }}"><i class="bi bi-clipboard2-check-fill"></i> Évaluations</a>{% endif %}
       {% if current_user and current_user.role in ['directeur','censeur','surveillant_general','conseiller_orientation'] %}
       <a class="sidebar-link {{ 'active' if request.endpoint in ['late_arrivals','late_arrival_new'] }}" href="{{ url_for('late_arrivals') }}"><i class="bi bi-clock-history"></i> Retards</a>
@@ -140,10 +140,6 @@
       <div class="sidebar-section-title">Pédagogie</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_courses' }}" href="{{ url_for('teacher_courses') }}"><i class="bi bi-journal-bookmark-fill"></i> Mes classes</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_schedule' }}" href="{{ url_for('teacher_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Mon emploi du temps</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_availability' }}" href="{{ url_for('teacher_availability') }}"><i class="bi bi-clock-fill"></i> Disponibilités</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_activities' }}" href="{{ url_for('teacher_activities') }}"><i class="bi bi-list-check"></i> Mes activités</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_assessments' }}" href="{{ url_for('teacher_assessments') }}"><i class="bi bi-clipboard2-check-fill"></i> Mes évaluations</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='teacher_indicators' }}" href="{{ url_for('teacher_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
       {% endif %}
 
       {% if current_user and current_user.role == 'eleve' %}

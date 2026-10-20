@@ -12,16 +12,17 @@
     <h3 style="font-size:15px; color:var(--navy-900);">{{ c.subject.name }}</h3>
     <div class="text-muted mb-3" style="font-size:12.5px;">{{ c.school_class.students|length }} élève(s) · coefficient {{ c.subject.coefficient }}</div>
     <details class="mb-3">
-      <summary class="text-muted" style="cursor:pointer; font-size:12px;">Élèves — ordre alphabétique A à Z</summary>
+      <summary class="text-muted" style="cursor:pointer; font-size:12px;">Élèves — prénom A à Z</summary>
       <ol class="mt-2 mb-0 ps-3" style="font-size:12px;">
         {% for student in students_by_course.get(c.id, []) %}
-        <li>{{ student.last_name }} {{ student.first_name }} <span class="text-muted">— né(e) le {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}</span></li>
+        <li>{{ student.first_name }} {{ student.last_name }} <span class="text-muted">— né(e) le {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}</span></li>
         {% endfor %}
       </ol>
     </details>
     <div class="d-grid gap-2">
       {% if current_user.role != 'conseiller_orientation' %}<a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>{% endif %}
       <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
+      {% if current_user.role == 'enseignant' %}<a href="{{ url_for('teacher_indicators', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% endif %}
     </div>
   </div>
 </div>
@@ -29,4 +30,13 @@
 <div class="col-12"><div class="card-ltt text-center text-muted py-4">Aucun cours n’est actuellement programmé dans votre emploi du temps.</div></div>
 {% endfor %}
 </div>
+{% if current_user.role == 'enseignant' and indicator_groups %}
+<div class="card-ltt mt-3">
+  <div class="section-title"><h2>Remplissage groupé des indicateurs</h2></div>
+  <p class="text-muted" style="font-size:12px;">Seules les classes de même niveau présentes dans votre emploi du temps et les matières d’enseignements généraux ou divers sont proposées.</p>
+  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Niveau</th><th>Matière</th><th>Classes programmées</th><th></th></tr></thead><tbody>
+  {% for group in indicator_groups %}<tr><td>{{ group.level }}</td><td>{{ group.subject.name }}</td><td>{{ group.courses|map(attribute='school_class.code')|join(', ') }}</td><td class="text-end"><a class="btn-ltt-navy py-1 px-2" href="{{ url_for('teacher_indicators', group_level=group.level, group_subject_id=group.subject.id) }}"><i class="bi bi-pencil-square"></i> Remplir en groupe</a></td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
 {% endblock %}
