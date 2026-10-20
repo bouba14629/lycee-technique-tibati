@@ -15,6 +15,14 @@ def asset_path(*parts):
     return os.path.join(os.getenv("LTT_PDF_ASSET_ROOT", "/home/ubuntu/webdev-static-assets/ltt"), *parts)
 
 
+def bulletin_logo_pdf_path():
+    """Retourne le logo embarqué, prioritaire sur toute ressource distante."""
+    packaged = os.path.join(BASE_DIR, "templates", "pdf", "bulletin_model", "LOGOLTT.jpg")
+    if os.path.isfile(packaged):
+        return packaged
+    return asset_path("img", "bulletin_official_logo.png")
+
+
 def storage_base_url():
     if os.getenv("LTT_ENV") == "production":
         return f"http://127.0.0.1:{os.getenv('PORT', '3000')}"
@@ -98,7 +106,7 @@ def _lightweight_photo_path(source_path):
 
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
-    logo_path = pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg")
+    logo_path = bulletin_logo_pdf_path()
     embedded_logo = pdf_image_data_uri(logo_path)
     context.setdefault("logo_path", embedded_logo)
     context.setdefault("bulletin_logo_path", embedded_logo)

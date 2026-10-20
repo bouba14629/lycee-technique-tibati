@@ -1281,7 +1281,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri, pdf_asset
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1292,7 +1292,10 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Trimestre 3":
         term = "Annuel"
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first()
-    students = sorted(cls.students, key=lambda s: (s.last_name, s.first_name))
+    students = sorted(cls.students, key=lambda s: (
+        (s.first_name or "").strip().casefold(),
+        (s.last_name or "").strip().casefold(),
+    ))
     bulletin_cache = {}
     if term == "Annuel":
         students_data = [{
@@ -1319,7 +1322,7 @@ def censeur_bulletins_class_pdf(class_id):
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       approval=approval, school_year=get_current_school_year(),
-                      logo_path=pdf_asset(("img", "bulletin_official_logo.png"), "/manus-storage/LOGOLTT_b9c57b93.jpg"))
+                      logo_path=bulletin_logo_pdf_path())
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
