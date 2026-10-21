@@ -104,7 +104,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     ws.title = "Procès-verbal"
     groups = dataset.get("subject_groups", [])
     subjects = [subject for group in groups for subject in group.get("subjects", [])]
-    total_cols = 4 + len(subjects) + 1
+    total_cols = 3 + len(subjects) + 1
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
     title = ws.cell(1, 1, "PROCÈS-VERBAL DU CONSEIL DE CLASSE")
     title.font = Font(bold=True, size=16, color="FFFFFF")
@@ -112,11 +112,13 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     title.alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 28
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols)
-    subtitle = ws.cell(2, 1, f"{school_class.name.upper()} — {term.upper()} — ANNÉE SCOLAIRE {school_year}")
+    class_average = dataset.get("class_general_average")
+    class_average_label = class_average if class_average is not None else "—"
+    subtitle = ws.cell(2, 1, f"{school_class.name.upper()} — {term.upper()} — ANNÉE SCOLAIRE {school_year} — MOYENNE GÉNÉRALE DE LA CLASSE : {class_average_label}/20")
     subtitle.font = Font(bold=True, size=11, color=NAVY)
     subtitle.alignment = Alignment(horizontal="center")
 
-    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne générale", "Coef."]
+    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne Générale"]
     for col, label in enumerate(fixed_headers, 1):
         ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
         cell = ws.cell(4, col, label)
@@ -124,7 +126,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
         cell.fill = PatternFill("solid", fgColor=NAVY)
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = BORDER
-    current_col = 5
+    current_col = 4
     for group in groups:
         count = len(group.get("subjects", []))
         if not count:
@@ -152,7 +154,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     ws.row_dimensions[5].height = 70
 
     for row_index, row in enumerate(dataset.get("students", []), 6):
-        values = [f"{row['student'].last_name.upper()} {row['student'].first_name.upper()}", row.get("rank") or "—", row.get("general_average") if row.get("general_average") is not None else "—", row.get("coefficient") or 0]
+        values = [f"{row['student'].first_name.upper()} {row['student'].last_name.upper()}", row.get("rank") or "—", row.get("general_average") if row.get("general_average") is not None else "—"]
         values.extend(row.get("subjects", {}).get(subject["course_id"]) if row.get("subjects", {}).get(subject["course_id"]) is not None else "—" for subject in subjects)
         values.append("")
         for col, value in enumerate(values, 1):
@@ -162,19 +164,19 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
             cell.font = Font(size=9, bold=(col in (1, 3)))
 
     summary_start = 6 + len(dataset.get("students", []))
-    for offset, label, attr in ((0, "Moyenne", "average"), (1, "Maximum", "maximum"), (2, "Minimum", "minimum")):
+    for offset, label, attr in ((0, "Moyenne Générale", "average"), (1, "Maximum", "maximum"), (2, "Minimum", "minimum")):
         row_index = summary_start + offset
         ws.cell(row_index, 1, label).font = Font(bold=True, size=9)
         for col in range(1, total_cols + 1):
             ws.cell(row_index, col).fill = PatternFill("solid", fgColor="F2F2F2")
             ws.cell(row_index, col).border = BORDER
-        for col, subject in enumerate(subjects, 5):
+        for col, subject in enumerate(subjects, 4):
             value = subject.get(attr)
             ws.cell(row_index, col, value if value is not None else "—")
             ws.cell(row_index, col).alignment = Alignment(horizontal="center")
 
-    widths = {1: 30, 2: 9, 3: 15, 4: 9, total_cols: 18}
-    for col in range(5, total_cols):
+    widths = {1: 30, 2: 9, 3: 15, total_cols: 18}
+    for col in range(4, total_cols):
         widths[col] = 11
     for col, width in widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width

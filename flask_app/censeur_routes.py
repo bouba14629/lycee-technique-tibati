@@ -1098,7 +1098,7 @@ def censeur_honor_roll_register_export_pdf():
 @roles_required("censeur", "directeur")
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path
+    from annual_bulletin_screenshot import render_annual_bulletins
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1108,8 +1108,7 @@ def censeur_annual_bulletin_pdf(student_id):
     if not data:
         abort(404)
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
-    pdf = render_pdf("pdf/bulletin_annual_pdf.html", student=student, data=data, school_year="2025-2026", approval=approval,
-                     student_photo_path=student_photo_pdf_path(student.photo))
+    pdf = render_annual_bulletins([{"student": student, "data": data}], get_current_school_year())
     if not pdf:
         abort(500)
     inline_preview = request.args.get("preview") == "1"
@@ -1129,7 +1128,7 @@ def censeur_annual_bulletin_preview(student_id):
     if not data:
         return render_template("bulletin_annual_unavailable.html", student=student), 404
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
-    return render_template("bulletin_annual_preview.html", student=student, data=data, school_year="2025-2026", approval=approval,
+    return render_template("bulletin_annual_preview.html", student=student, data=data, school_year=get_current_school_year(), approval=approval,
                            pdf_url=url_for("censeur_annual_bulletin_pdf", student_id=student.id),
                            preview_pdf_url=url_for("censeur_annual_bulletin_pdf", student_id=student.id, preview=1))
 
@@ -1153,7 +1152,7 @@ def censeur_annual_bulletins_generation_preview(class_id):
         rows.append({"student": student, "data": annual_data})
     approval = BulletinApproval.query.filter_by(class_id=class_id, term="Annuel", status="Validé").first()
     return render_template("annual_class_generation_preview.html", school_class=school_class, rows=rows,
-                           approval=approval, school_year="2025-2026")
+                           approval=approval, school_year=get_current_school_year())
 
 
 @app.route("/censeur/bulletins/classe/<int:class_id>/valider-annuel", methods=["POST"])
@@ -1307,8 +1306,8 @@ def censeur_bulletins_class_pdf(class_id):
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
             "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
         } for st in students]
-        pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
-                         school_year=get_current_school_year(), approval=approval)
+        from annual_bulletin_screenshot import render_annual_bulletins
+        pdf = render_annual_bulletins(students_data, get_current_school_year())
         if not pdf:
             abort(500)
         filename = f"Bulletins_annuels_{cls.name}.pdf".replace(" ", "_")
@@ -1785,7 +1784,7 @@ def _council_minutes_dataset(school_class, term):
     bulletin_cache = {}
     students = sorted(
         school_class.students,
-        key=lambda item: ((item.last_name or "").strip().casefold(), (item.first_name or "").strip().casefold()),
+        key=lambda item: ((item.first_name or "").strip().casefold(), (item.last_name or "").strip().casefold(), item.id),
     )
     all_courses = sorted(
         {course.id: course for course in school_class.courses}.values(),
@@ -1797,6 +1796,8 @@ def _council_minutes_dataset(school_class, term):
     courses = []
     seen_subjects = set()
     for course in all_courses:
+        if (course.subject.name or "").strip().casefold() == "orientation scolaire":
+            continue
         subject_key = ((course.subject.name or "").strip().casefold(), course.subject.category or "")
         if subject_key in seen_subjects:
             continue
@@ -1815,7 +1816,7 @@ def _council_minutes_dataset(school_class, term):
             continue
         subjects = []
         for course in category_courses:
-            meta = {"course_id": course.id, "label": course.subject.name, "coefficient": course.subject.coefficient or 0}
+            meta = {"course_id": course.id, "label": course.subject.name}
             subjects.append(meta)
             subject_meta[course.id] = meta
         subject_groups.append({"name": category, "subjects": subjects})
@@ -1844,13 +1845,17 @@ def _council_minutes_dataset(school_class, term):
     for row in raw_rows:
         row["rank"] = ranks.get(row["student"].id)
 
+    general_values = [row["general_average"] for row in raw_rows if row["general_average"] is not None]
+    class_general_average = round(sum(general_values) / len(general_values), 2) if general_values else None
+
     for course_id, meta in subject_meta.items():
         numbers = [row["subjects"].get(course_id) for row in raw_rows]
         numbers = [value for value in numbers if value is not None]
         meta["average"] = round(sum(numbers) / len(numbers), 2) if numbers else None
         meta["maximum"] = round(max(numbers), 2) if numbers else None
         meta["minimum"] = round(min(numbers), 2) if numbers else None
-    return {"students": raw_rows, "subject_groups": subject_groups}
+    return {"students": raw_rows, "subject_groups": subject_groups,
+            "class_general_average": class_general_average}
 
 
 @app.route("/censeur/proces-verbaux")

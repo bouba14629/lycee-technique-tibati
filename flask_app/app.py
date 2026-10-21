@@ -613,8 +613,17 @@ def dashboard():
                               grade=user.grade or "", hours_due=0)
             db.session.add(teacher)
             db.session.commit()
-        courses = teacher.courses if teacher else []
-        my_schedule = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all() if teacher else []
+        if teacher:
+            my_schedule = (ScheduleEntry.query.join(Course)
+                           .filter(Course.teacher_id == teacher.id)
+                           .order_by(ScheduleEntry.day, ScheduleEntry.start_time, Course.class_id, Course.subject_id)
+                           .all())
+            scheduled_ids = list(dict.fromkeys(entry.course_id for entry in my_schedule))
+            courses_by_id = {course.id: course for course in teacher.courses if course.id in scheduled_ids}
+            courses = [courses_by_id[course_id] for course_id in scheduled_ids if course_id in courses_by_id]
+        else:
+            my_schedule = []
+            courses = []
         teacher_class_ids = sorted({course.class_id for course in courses if course.class_id})
         teacher_subject_ids = sorted({course.subject_id for course in courses if course.subject_id})
         from utils import dashboard_rates
