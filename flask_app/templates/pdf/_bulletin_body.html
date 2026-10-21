@@ -125,10 +125,10 @@
       </span>
     </td>
     <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PARENT<div style="height:28pt;"></div></td>
-    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">
+      <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">
       VISA DU PROFESSEUR PRINCIPAL<br>
-      <div style="height:8pt;"></div><span style="font-size:6.5pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span><div style="height:20pt;"></div>
-    </td>
-    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PROVISEUR<br><span style="font-size:6pt; color:#6b7688;">TIBATI, le ______</span>{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
+      <div style="height:8pt;"></div><span style="font-size:7.5pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span><div style="height:20pt;"></div>
+      </td>
+    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PROVISEUR<br><span style="font-size:7pt; color:#6b7688;">TIBATI, le ______</span>{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
   </tr>
 </table>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@page { size: A4 landscape; margin: 0.35cm; }
+body { font-family: Helvetica, Arial, sans-serif; color:#000; font-size:5.2pt; }
+.header { width:100%; border-collapse:collapse; margin-bottom:3pt; }
+.header td { border:0; text-align:center; font-size:5.2pt; font-weight:bold; }
+.header .title { font-size:9pt; text-transform:uppercase; }
+.header .sub { font-size:6pt; }
+table.pv { width:100%; border-collapse:collapse; table-layout:fixed; }
+.pv th, .pv td { border:0.55pt solid #000; padding:1.1pt .8pt; overflow:hidden; }
+.pv th { background:#d3d3d3; font-weight:bold; text-align:center; vertical-align:bottom; height:54pt; font-size:4.25pt; }
+.pv th.subject { height:64pt; vertical-align:bottom; }
+.pv th.subject span { display:block; }
+.pv td { height:11pt; font-size:4.8pt; white-space:nowrap; }
+.pv .student { width:18%; text-align:left; font-weight:bold; }
+.pv .rank { width:3.2%; text-align:center; }
+.pv .general { width:5.2%; text-align:center; font-weight:bold; }
+.pv .coef { width:3.7%; text-align:center; }
+.pv .subject-cell { text-align:center; }
+.pv .decision { width:10%; text-align:center; }
+.pv .group { background:#cfcfcf; font-size:4.45pt; text-transform:uppercase; height:16pt; }
+.pv .summary-label { text-align:right; font-weight:bold; }
+.pv .summary td { background:#f2f2f2; font-size:4.7pt; font-weight:bold; height:12pt; }
+.pv .summary .subject-cell { font-weight:normal; }
+.note { margin-top:3pt; font-size:4.8pt; }
+</style>
+</head>
+<body>
+<table class="header">
+<tr>
+<td style="width:27%;">RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie<br>RÉGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>LYCÉE TECHNIQUE DE TIBATI</td>
+<td style="width:46%;"><div class="title">PROCÈS-VERBAL DU CONSEIL DE CLASSE</div><div class="sub">{{ school_class.name|upper }} — {{ term|upper }} — ANNÉE SCOLAIRE {{ school_year }}</div></td>
+<td style="width:27%;">REPUBLIC OF CAMEROON<br>Peace – Work – Fatherland<br>ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>G.T.H.S OF TIBATI</td>
+</tr>
+</table>
+<table class="pv">
+<thead>
+<tr>
+  <th class="student" rowspan="2">Noms et Prénoms</th>
+  <th class="rank" rowspan="2">Rang</th>
+  <th class="general" rowspan="2">Moyenne<br>générale</th>
+  <th class="coef" rowspan="2">Coef.</th>
+  {% for group in subject_groups %}<th class="group" colspan="{{ group.subjects|length }}">{{ group.name }}</th>{% endfor %}
+  <th class="decision" rowspan="2">Décision du conseil</th>
+</tr>
+<tr>
+  {% for group in subject_groups %}{% for subject in group.subjects %}<th class="subject"><span>{{ subject.label|replace(' ', '<br>', 1)|safe }}</span></th>{% endfor %}{% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for row in students %}
+<tr>
+  <td class="student">{{ row.student.last_name|upper }} {{ row.student.first_name|upper }}</td>
+  <td class="rank">{{ row.rank or '—' }}</td>
+  <td class="general">{{ row.general_average if row.general_average is not none else '—' }}</td>
+  <td class="coef">{{ row.coefficient }}</td>
+  {% for group in subject_groups %}{% for subject in group.subjects %}<td class="subject-cell">{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}
+  <td class="decision"></td>
+</tr>
+{% endfor %}
+<tr class="summary"><td class="summary-label" colspan="4">Moyenne</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td class="subject-cell">{{ subject.average if subject.average is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
+<tr class="summary"><td class="summary-label" colspan="4">Maximum</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td class="subject-cell">{{ subject.maximum if subject.maximum is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
+<tr class="summary"><td class="summary-label" colspan="4">Minimum</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td class="subject-cell">{{ subject.minimum if subject.minimum is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
+</tbody>
+</table>
+<div class="note">Les notes reportées correspondent aux moyennes trimestrielles enregistrées dans les bulletins. Les matières, élèves et valeurs sont synchronisés automatiquement avec la classe sélectionnée.</div>
+</body>
+</html>

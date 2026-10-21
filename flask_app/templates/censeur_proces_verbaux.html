@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Procès-verbaux{% endblock %}
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
+  <div><h1>Procès-verbaux</h1><p class="text-muted mb-0">Préparation du procès-verbal du conseil de classe à partir des notes trimestrielles des bulletins.</p></div>
+</div>
+<div class="card-ltt mt-3">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-6"><label class="form-label">Classe</label><select name="class_id" class="form-select" required><option value="">Sélectionner une classe</option>{% for item in classes %}<option value="{{ item.id }}" {% if class_id == item.id %}selected{% endif %}>{{ item.code or item.name }} — {{ item.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Période</label><select name="term" class="form-select">{% for item in terms %}<option value="{{ item }}" {% if term == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><button class="btn-ltt-gold w-100" type="submit">Préparer le PV</button></div>
+  </form>
+</div>
+{% if class_id %}
+<div class="card-ltt mt-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+  <div><strong>Procès-verbal prêt à être consulté</strong><br><span class="text-muted">Le document reprend les matières, les élèves et les moyennes trimestrielles du bulletin.</span></div>
+  <a class="btn-ltt-outline" target="_blank" href="{{ url_for('censeur_proces_verbaux_pdf', class_id=class_id, term=term, preview=1) }}"><i class="bi bi-file-earmark-pdf-fill"></i> Aperçu / Exporter PDF</a>
+</div>
+{% endif %}
+<div class="card-ltt mt-3"><p class="text-muted mb-0"><i class="bi bi-info-circle"></i> L’export du procès-verbal est exclusivement disponible au format PDF, selon la grille officielle importée.</p></div>
+{% endblock %}

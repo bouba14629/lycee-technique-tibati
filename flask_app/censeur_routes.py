@@ -1778,6 +1778,122 @@ def censeur_indicator_edit(course_id):
     return redirect(url_for("censeur_indicators", term=term))
 
 
+def _council_minutes_dataset(school_class, term):
+    """Construit le PV à partir des mêmes moyennes trimestrielles que le bulletin."""
+    from collections import defaultdict
+
+    bulletin_cache = {}
+    students = sorted(
+        school_class.students,
+        key=lambda item: ((item.last_name or "").strip().casefold(), (item.first_name or "").strip().casefold()),
+    )
+    all_courses = sorted(
+        {course.id: course for course in school_class.courses}.values(),
+        key=lambda item: (
+            (item.subject.category or "").casefold(),
+            (item.subject.name or "").strip().casefold(),
+        ),
+    )
+    courses = []
+    seen_subjects = set()
+    for course in all_courses:
+        subject_key = ((course.subject.name or "").strip().casefold(), course.subject.category or "")
+        if subject_key in seen_subjects:
+            continue
+        seen_subjects.add(subject_key)
+        courses.append(course)
+    grouped = defaultdict(list)
+    for course in courses:
+        grouped[course.subject.category or "Enseignements Généraux"].append(course)
+
+    subject_groups = []
+    subject_meta = {}
+    for category in ("Enseignements Généraux", "Enseignements Professionnels Théoriques",
+                     "Enseignements Professionnels Pratiques", "Enseignements Divers"):
+        category_courses = sorted(grouped.get(category, []), key=lambda item: (item.subject.name or "").strip().casefold())
+        if not category_courses:
+            continue
+        subjects = []
+        for course in category_courses:
+            meta = {"course_id": course.id, "label": course.subject.name, "coefficient": course.subject.coefficient or 0}
+            subjects.append(meta)
+            subject_meta[course.id] = meta
+        subject_groups.append({"name": category, "subjects": subjects})
+
+    raw_rows = []
+    for student in students:
+        data = bulletin_data(student, term=term, _cache=bulletin_cache)
+        values = {}
+        for category in data.get("categories", []):
+            for item in category.get("rows", []):
+                course_id = item["course"].id
+                if course_id in subject_meta:
+                    values[course_id] = item.get("notes_trim")
+        raw_rows.append({
+            "student": student,
+            "data": data,
+            "subjects": values,
+            "general_average": data.get("overall_avg"),
+            "coefficient": data.get("overall_coef") or 0,
+        })
+    ranked = sorted(
+        [row for row in raw_rows if row["general_average"] is not None],
+        key=lambda row: (-row["general_average"], row["student"].last_name.casefold(), row["student"].first_name.casefold()),
+    )
+    ranks = {row["student"].id: index for index, row in enumerate(ranked, 1)}
+    for row in raw_rows:
+        row["rank"] = ranks.get(row["student"].id)
+
+    for course_id, meta in subject_meta.items():
+        numbers = [row["subjects"].get(course_id) for row in raw_rows]
+        numbers = [value for value in numbers if value is not None]
+        meta["average"] = round(sum(numbers) / len(numbers), 2) if numbers else None
+        meta["maximum"] = round(max(numbers), 2) if numbers else None
+        meta["minimum"] = round(min(numbers), 2) if numbers else None
+    return {"students": raw_rows, "subject_groups": subject_groups}
+
+
+@app.route("/censeur/proces-verbaux")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_proces_verbaux():
+    user = User.query.get(session["user_id"])
+    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    classes_q = SchoolClass.query.order_by(SchoolClass.level, SchoolClass.name)
+    if scoped_class_ids is not None:
+        classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
+    classes = sort_classes_by_level(classes_q.all())
+    class_id = request.args.get("class_id", type=int)
+    if class_id and class_id not in {item.id for item in classes}:
+        abort(403)
+    term = request.args.get("term", TERMS[0])
+    if term not in TERMS:
+        term = TERMS[0]
+    return render_template("censeur_proces_verbaux.html", classes=classes, class_id=class_id, term=term, terms=TERMS)
+
+
+@app.route("/censeur/proces-verbaux/classe/<int:class_id>.pdf")
+@roles_required("censeur", "censeur_crm", "directeur")
+def censeur_proces_verbaux_pdf(class_id):
+    from flask import send_file
+    from pdf_utils import render_pdf
+    user = User.query.get(session["user_id"])
+    scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
+    if scoped_class_ids is not None and class_id not in scoped_class_ids:
+        abort(403)
+    school_class = SchoolClass.query.get_or_404(class_id)
+    term = request.args.get("term", TERMS[0])
+    if term not in TERMS:
+        term = TERMS[0]
+    dataset = _council_minutes_dataset(school_class, term)
+    pdf = render_pdf("pdf/class_council_minutes.html", school_class=school_class, term=term,
+                     school_year=get_current_school_year(), **dataset)
+    if not pdf:
+        abort(500)
+    inline_preview = request.args.get("preview") == "1"
+    filename = f"Proces_verbal_{school_class.name}_{term}.pdf".replace(" ", "_")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
+
+
 @app.route("/censeur/conseil-de-classe/statistiques")
 @roles_required("censeur", "censeur_crm", "directeur")
 def censeur_council_stats():
