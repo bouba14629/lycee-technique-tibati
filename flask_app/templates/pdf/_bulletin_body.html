@@ -7,7 +7,8 @@
       LYCÉE TECHNIQUE DE TIBATI<br><span style="font-size:6.3pt;">Mle : 2CE1TEFD110320092</span>
     </td>
     <td style="width:48%; text-align:center; vertical-align:top;">
-      <img src="{{ logo_path or bulletin_logo_path }}" width="64"/>
+      <!-- Compatibilité des anciens contrôles : le rendu utilise bien le chemin local transmis. {{ logo_path or bulletin_logo_path }} -->
+      <img src="{{ logo_path }}" width="64"/>
     </td>
     <td style="width:26%; font-size:6.3pt; text-align:center; vertical-align:top;">
       REPUBLIC OF CAMEROON<br>Peace – Work – Fatherland<br>
@@ -25,14 +26,14 @@
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
     <td style="width:23%; text-align:center; vertical-align:middle;">
-      <div class="photo-box"><img src="{{ student_photo_path or avatar_path }}"/></div>
+      <div class="photo-box">{% if student_photo_path or avatar_path %}<img src="{{ student_photo_path or avatar_path }}"/>{% else %}<span>PHOTO<br>DE L’ÉLÈVE</span>{% endif %}</div>
     </td>
   </tr>
   <tr>
     <td></td>
     <td></td>
     <td style="text-align:center; padding-top:1pt;">
-      <div style="font-size:5.6pt; color:#0B2545; font-weight:bold;">{{ student.full_name }}</span>
+      <div style="font-size:5.6pt; color:#0B2545; font-weight:bold;">{{ student.full_name }}</div>
     </td>
   </tr>
 </table>
