@@ -97,6 +97,102 @@ def bulletin_workbook(student, data, term):
     return wb_io
 
 
+def council_minutes_workbook(school_class, term, dataset, school_year):
+    """Export Excel du PV avec en-têtes groupés et matières propres à la classe."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Procès-verbal"
+    groups = dataset.get("subject_groups", [])
+    subjects = [subject for group in groups for subject in group.get("subjects", [])]
+    total_cols = 4 + len(subjects) + 1
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
+    title = ws.cell(1, 1, "PROCÈS-VERBAL DU CONSEIL DE CLASSE")
+    title.font = Font(bold=True, size=16, color="FFFFFF")
+    title.fill = PatternFill("solid", fgColor=NAVY)
+    title.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 28
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols)
+    subtitle = ws.cell(2, 1, f"{school_class.name.upper()} — {term.upper()} — ANNÉE SCOLAIRE {school_year}")
+    subtitle.font = Font(bold=True, size=11, color=NAVY)
+    subtitle.alignment = Alignment(horizontal="center")
+
+    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne générale", "Coef."]
+    for col, label in enumerate(fixed_headers, 1):
+        ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
+        cell = ws.cell(4, col, label)
+        cell.font = Font(bold=True, size=10, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor=NAVY)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = BORDER
+    current_col = 5
+    for group in groups:
+        count = len(group.get("subjects", []))
+        if not count:
+            continue
+        ws.merge_cells(start_row=4, start_column=current_col, end_row=4, end_column=current_col + count - 1)
+        group_cell = ws.cell(4, current_col, group.get("name", "").upper())
+        group_cell.font = Font(bold=True, size=9, color="FFFFFF")
+        group_cell.fill = PatternFill("solid", fgColor=NAVY)
+        group_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        group_cell.border = BORDER
+        for subject in group["subjects"]:
+            cell = ws.cell(5, current_col, subject.get("label", ""))
+            cell.font = Font(bold=True, size=9, color=NAVY)
+            cell.fill = PatternFill("solid", fgColor="D3D3D3")
+            cell.alignment = Alignment(horizontal="center", vertical="center", text_rotation=45, wrap_text=True)
+            cell.border = BORDER
+            current_col += 1
+    decision = ws.cell(4, total_cols, "Décision du conseil")
+    ws.merge_cells(start_row=4, start_column=total_cols, end_row=5, end_column=total_cols)
+    decision.font = Font(bold=True, size=9, color="FFFFFF")
+    decision.fill = PatternFill("solid", fgColor=NAVY)
+    decision.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    decision.border = BORDER
+    ws.row_dimensions[4].height = 30
+    ws.row_dimensions[5].height = 70
+
+    for row_index, row in enumerate(dataset.get("students", []), 6):
+        values = [f"{row['student'].last_name.upper()} {row['student'].first_name.upper()}", row.get("rank") or "—", row.get("general_average") if row.get("general_average") is not None else "—", row.get("coefficient") or 0]
+        values.extend(row.get("subjects", {}).get(subject["course_id"]) if row.get("subjects", {}).get(subject["course_id"]) is not None else "—" for subject in subjects)
+        values.append("")
+        for col, value in enumerate(values, 1):
+            cell = ws.cell(row_index, col, value)
+            cell.border = BORDER
+            cell.alignment = Alignment(horizontal="left" if col == 1 else "center", vertical="center")
+            cell.font = Font(size=9, bold=(col in (1, 3)))
+
+    summary_start = 6 + len(dataset.get("students", []))
+    for offset, label, attr in ((0, "Moyenne", "average"), (1, "Maximum", "maximum"), (2, "Minimum", "minimum")):
+        row_index = summary_start + offset
+        ws.cell(row_index, 1, label).font = Font(bold=True, size=9)
+        for col in range(1, total_cols + 1):
+            ws.cell(row_index, col).fill = PatternFill("solid", fgColor="F2F2F2")
+            ws.cell(row_index, col).border = BORDER
+        for col, subject in enumerate(subjects, 5):
+            value = subject.get(attr)
+            ws.cell(row_index, col, value if value is not None else "—")
+            ws.cell(row_index, col).alignment = Alignment(horizontal="center")
+
+    widths = {1: 30, 2: 9, 3: 15, 4: 9, total_cols: 18}
+    for col in range(5, total_cols):
+        widths[col] = 11
+    for col, width in widths.items():
+        ws.column_dimensions[get_column_letter(col)].width = width
+    ws.freeze_panes = "E6"
+    ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_title_rows = "1:5"
+    ws.print_area = f"A1:{get_column_letter(total_cols)}{summary_start + 2}"
+    wb_io = BytesIO()
+    wb.save(wb_io)
+    wb_io.seek(0)
+    return wb_io
+
+
 def users_workbook(users, title, role_filter=""):
     wb = Workbook()
     ws = wb.active

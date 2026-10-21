@@ -1,8 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Procès-verbaux{% endblock %}
 {% block content %}
+<style>
+.pv-preview { overflow:auto; border:1px solid #c9c1aa; background:#fff; }
+.pv-preview table { border-collapse:collapse; min-width:1100px; width:100%; font-size:11px; }
+.pv-preview th,.pv-preview td { border:1px solid #111; padding:5px 6px; text-align:center; white-space:nowrap; }
+.pv-preview th { background:#d3d3d3; font-weight:700; }
+.pv-preview .pv-group { background:#0B2545; color:#fff; text-transform:uppercase; }
+.pv-preview .pv-name { text-align:left; min-width:190px; }
+.pv-preview .pv-summary td { background:#f2f2f2; font-weight:700; }
+</style>
 <div class="page-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
-  <div><h1>Procès-verbaux</h1><p class="text-muted mb-0">Préparation du procès-verbal du conseil de classe à partir des notes trimestrielles des bulletins.</p></div>
+  <div><h1>Procès-verbaux</h1><p class="text-muted mb-0">Préparez le procès-verbal, visualisez-le immédiatement, puis exportez-le exclusivement en Excel.</p></div>
 </div>
 <div class="card-ltt mt-3">
   <form method="get" class="row g-3 align-items-end">
@@ -11,11 +20,25 @@
     <div class="col-md-3"><button class="btn-ltt-gold w-100" type="submit">Préparer le PV</button></div>
   </form>
 </div>
-{% if class_id %}
-<div class="card-ltt mt-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
-  <div><strong>Procès-verbal prêt à être consulté</strong><br><span class="text-muted">Le document reprend les matières, les élèves et les moyennes trimestrielles du bulletin.</span></div>
-  <a class="btn-ltt-outline" target="_blank" href="{{ url_for('censeur_proces_verbaux_pdf', class_id=class_id, term=term, preview=1) }}"><i class="bi bi-file-earmark-pdf-fill"></i> Aperçu / Exporter PDF</a>
+{% if selected_class %}
+<div class="card-ltt mt-3">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-3">
+    <div><h2 class="h5 mb-1">PV préparé — {{ selected_class.name }}</h2><span class="text-muted">{{ term }} · {{ students|length }} élève(s) · matières synchronisées avec le bulletin</span></div>
+    <a class="btn-ltt-outline" href="{{ url_for('censeur_proces_verbaux_excel', class_id=class_id, term=term) }}"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Exporter en Excel</a>
+  </div>
+  <div class="pv-preview">
+    <table>
+      <thead>
+        <tr><th rowspan="2">Noms et Prénoms</th><th rowspan="2">Rang</th><th rowspan="2">Moyenne générale</th><th rowspan="2">Coef.</th>{% for group in subject_groups %}<th class="pv-group" colspan="{{ group.subjects|length }}">{{ group.name }}</th>{% endfor %}<th rowspan="2">Décision du conseil</th></tr>
+        <tr>{% for group in subject_groups %}{% for subject in group.subjects %}<th>{{ subject.label }}</th>{% endfor %}{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for row in students %}<tr><td class="pv-name">{{ row.student.last_name|upper }} {{ row.student.first_name|upper }}</td><td>{{ row.rank or '—' }}</td><td>{{ row.general_average if row.general_average is not none else '—' }}</td><td>{{ row.coefficient }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
+        {% for label, attr in [('Moyenne','average'),('Maximum','maximum'),('Minimum','minimum')] %}<tr class="pv-summary"><td class="pv-name" colspan="4">{{ label }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject[attr] if subject[attr] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endif %}
-<div class="card-ltt mt-3"><p class="text-muted mb-0"><i class="bi bi-info-circle"></i> L’export du procès-verbal est exclusivement disponible au format PDF, selon la grille officielle importée.</p></div>
+<div class="card-ltt mt-3"><p class="text-muted mb-0"><i class="bi bi-info-circle"></i> Lorsque vous sélectionnez une autre classe et cliquez sur « Préparer le PV », l’aperçu et l’export sont recalculés automatiquement pour remplacer la classe précédente.</p></div>
 {% endblock %}

@@ -1868,14 +1868,20 @@ def censeur_proces_verbaux():
     term = request.args.get("term", TERMS[0])
     if term not in TERMS:
         term = TERMS[0]
-    return render_template("censeur_proces_verbaux.html", classes=classes, class_id=class_id, term=term, terms=TERMS)
+    dataset = None
+    selected_class = None
+    if class_id:
+        selected_class = SchoolClass.query.get_or_404(class_id)
+        dataset = _council_minutes_dataset(selected_class, term)
+    return render_template("censeur_proces_verbaux.html", classes=classes, class_id=class_id, term=term,
+                           terms=TERMS, selected_class=selected_class, **(dataset or {}))
 
 
-@app.route("/censeur/proces-verbaux/classe/<int:class_id>.pdf")
+@app.route("/censeur/proces-verbaux/classe/<int:class_id>.xlsx")
 @roles_required("censeur", "censeur_crm", "directeur")
-def censeur_proces_verbaux_pdf(class_id):
+def censeur_proces_verbaux_excel(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf
+    from excel_utils import council_minutes_workbook
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role == "censeur" else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
@@ -1885,13 +1891,10 @@ def censeur_proces_verbaux_pdf(class_id):
     if term not in TERMS:
         term = TERMS[0]
     dataset = _council_minutes_dataset(school_class, term)
-    pdf = render_pdf("pdf/class_council_minutes.html", school_class=school_class, term=term,
-                     school_year=get_current_school_year(), **dataset)
-    if not pdf:
-        abort(500)
-    inline_preview = request.args.get("preview") == "1"
-    filename = f"Proces_verbal_{school_class.name}_{term}.pdf".replace(" ", "_")
-    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
+    workbook = council_minutes_workbook(school_class, term, dataset, get_current_school_year())
+    filename = f"Proces_verbal_{school_class.name}_{term}.xlsx".replace(" ", "_")
+    return send_file(workbook, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name=filename)
 
 
 @app.route("/censeur/conseil-de-classe/statistiques")

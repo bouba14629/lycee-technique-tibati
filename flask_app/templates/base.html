@@ -92,7 +92,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_conseil' }}" href="{{ url_for('censeur_conseil') }}"><i class="bi bi-clipboard2-data-fill"></i> Conseils de classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_proces_verbaux','censeur_proces_verbaux_pdf'] }}" href="{{ url_for('censeur_proces_verbaux') }}"><i class="bi bi-file-earmark-pdf-fill"></i> Procès-verbaux</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_proces_verbaux','censeur_proces_verbaux_excel'] }}" href="{{ url_for('censeur_proces_verbaux') }}"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Procès-verbaux</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail','student_enroll'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_bulletins' }}" href="{{ url_for('censeur_bulletins') }}"><i class="bi bi-file-earmark-medical-fill"></i> Bulletins</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_honor_roll_register','censeur_honor_roll_register_export'] }}" href="{{ url_for('censeur_honor_roll_register') }}"><i class="bi bi-award-fill"></i> Tableaux d’honneur</a>
@@ -117,7 +117,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_structure' }}" href="{{ url_for('dir_structure') }}"><i class="bi bi-journal-bookmark-fill"></i> Matières &amp; filières</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_council_stats' }}" href="{{ url_for('censeur_council_stats') }}"><i class="bi bi-graph-up"></i> Fiche statistique</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_proces_verbaux','censeur_proces_verbaux_pdf'] }}" href="{{ url_for('censeur_proces_verbaux') }}"><i class="bi bi-file-earmark-pdf-fill"></i> Procès-verbaux</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_proces_verbaux','censeur_proces_verbaux_excel'] }}" href="{{ url_for('censeur_proces_verbaux') }}"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Procès-verbaux</a>
       <div class="text-muted mt-2" style="font-size:10.5px; padding:0 12px;">Consultation et impression uniquement pour l'emploi du temps et les matières — la construction relève des Censeurs de section et du Censeur Enseignements Généraux. Fiche statistique et indicateurs pédagogiques : vue complète de l'établissement.</div>
       {% endif %}
 
