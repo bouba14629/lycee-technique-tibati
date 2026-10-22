@@ -209,7 +209,7 @@ function populateGenericIndicator(select) {
       <tr>
         <td class="fw-semibold">{{ row.teacher.user.full_name }} <span class="text-muted">({{ row.teacher.department.code if row.teacher.department }})</span></td>
         <td><strong>{{ row.course.school_class.code or 'Sans code' }}</strong></td>
-        {% if current_user.role != "chef_orientation" %}<td>{{ row.course.subject.name }}</td>{% endif %}
+        {% if current_user.role != "chef_orientation" %}<td><span class="text-muted" style="font-size:10px;">{{ row.display_category }}</span><br>{{ row.course.subject.name }}</td>{% endif %}
         <td>{{ row.ind.updated_at.strftime("%d/%m/%Y") if row.ind.updated_at else "—" }}</td>
         <td>{{ row.ind.hours_due }}</td><td>{{ row.ind.hours_done }}</td><td>{{ '-' if row.ind.hours_due == 0 and row.ind.hours_done == 0 else (row.pct_hours if row.pct_hours is not none else '—') ~ '%' }}</td>
         <td>{{ row.ind.lessons_planned }}</td><td>{{ row.ind.lessons_done }}</td><td>{{ '-' if row.ind.lessons_planned == 0 and row.ind.lessons_done == 0 else (row.pct_lessons if row.pct_lessons is not none else '—') ~ '%' }}</td>

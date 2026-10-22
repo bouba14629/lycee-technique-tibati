@@ -8,6 +8,17 @@ DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
 ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 COUNSELOR_ALLOWED_HOURS_DUE = (22, 25, 36, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
+GRADE_EDIT_WINDOW_DAYS = 7
+
+
+def _teacher_grade_locked(grade):
+    """Une note existante est verrouillée sept jours après sa première saisie.
+
+    La date historique de la note est utilisée afin de ne pas modifier les données
+    déjà enregistrées ni exiger une migration destructive de la base existante.
+    Les élèves sans note restent toujours complétables par l'enseignant.
+    """
+    return bool(grade and grade.date and (date.today() - grade.date).days >= GRADE_EDIT_WINDOW_DAYS)
 
 
 def current_teacher():
@@ -82,6 +93,9 @@ def teacher_devoir_delete(course_id, grade_id):
     g = Grade.query.get_or_404(grade_id)
     if g.course_id != course.id or g.type != "Devoir":
         abort(403)
+    if _teacher_grade_locked(g):
+        flash("Cette note est verrouillée après 7 jours.", "danger")
+        return redirect(url_for("teacher_devoir_list", course_id=course_id, student_id=g.student_id, term=g.term))
     student_id = g.student_id
     term = g.term
     db.session.delete(g)
@@ -104,13 +118,8 @@ def teacher_grades(course_id):
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
 
     if request.method == "POST":
-        # Une note déjà enregistrée reste modifiable par son enseignant pendant 7 jours.
-        # Les notes plus anciennes sont conservées et ne peuvent plus être écrasées.
-        if request.form.get("assessment_id", type=int):
-            assessment_ref = PlannedAssessment.query.filter_by(id=request.form.get("assessment_id", type=int), course_id=course.id).first()
-            if assessment_ref and assessment_ref.submitted_at and (datetime.utcnow() - assessment_ref.submitted_at).days >= 7:
-                flash("Cette évaluation est verrouillée après le délai de 7 jours.", "danger")
-                return redirect(url_for("teacher_grades", course_id=course_id, term=request.form.get("term", TERMS[0])))
+        # Le verrouillage est appliqué note par note plus bas. Ainsi, un élève
+        # resté sans note au premier enregistrement peut encore être complété.
         term = request.form.get("term", TERMS[0])
         seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
         eval_type = request.form.get("type", "Devoir")  # "Devoir", "Évaluation-A" ou "Évaluation-B"
@@ -155,6 +164,8 @@ def teacher_grades(course_id):
                 existing_grade = Grade.query.filter_by(student_id=student.id, course_id=course.id,
                                                          term=term, type="Évaluation", sequence=seq_num).first()
                 if existing_grade:
+                    if _teacher_grade_locked(existing_grade):
+                        continue
                     existing_grade.value = fval
                     existing_grade.date = date.fromisoformat(eval_date)
                 else:

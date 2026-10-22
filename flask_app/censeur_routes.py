@@ -1529,8 +1529,12 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         if not ind:
             missing.append(c)
             continue
+        subject_name_key = (c.subject.name or "").strip().casefold()
+        display_category = c.subject.category or "Enseignements Généraux"
+        if subject_name_key in {"santé et sécurité", "sante et securite", "qhse", "gso"}:
+            display_category = "Enseignements Professionnels Théoriques"
         rows.append({
-            "teacher": c.teacher, "course": c, "ind": ind,
+            "teacher": c.teacher, "course": c, "ind": ind, "display_category": display_category,
             "pct_hours": _pct(ind.hours_done, ind.hours_due),
             "pct_lessons": _pct(ind.lessons_done, ind.lessons_planned),
             "pct_digital_lessons": _pct(ind.digital_lessons_done, ind.digital_lessons_planned),
@@ -2090,3 +2094,107 @@ def censeur_indicator_type_delete(type_id):
     db.session.commit()
     flash(f"Indicateur « {label} » supprimé.", "info")
     return redirect(url_for("censeur_indicators"))
+
+
+# ---------------------------------------------------------------------------
+# Relevés des notes — consultation synchronisée et correction par le Censeur
+# ---------------------------------------------------------------------------
+def _censeur_accessible_classes(user):
+    scoped_ids = user_scoped_class_ids(user)
+    query = SchoolClass.query.order_by(SchoolClass.level, SchoolClass.name)
+    if scoped_ids is not None:
+        query = query.filter(SchoolClass.id.in_(scoped_ids))
+    return query.all()
+
+
+@app.route("/censeur/releves-notes")
+@roles_required("censeur")
+def censeur_grade_reports():
+    user = User.query.get(session["user_id"])
+    classes = _censeur_accessible_classes(user)
+    class_id = request.args.get("class_id", type=int)
+    term = request.args.get("term", TERMS[0])
+    if term not in TERMS:
+        term = TERMS[0]
+    school_class = next((item for item in classes if item.id == class_id), None) if class_id else None
+    if class_id and school_class is None:
+        abort(403)
+    courses = []
+    students = []
+    rows = []
+    if school_class:
+        courses = (Course.query.filter_by(class_id=school_class.id)
+                   .join(Subject).order_by(Subject.category, Subject.name).all())
+        students = sorted(school_class.students, key=lambda student: (
+            (student.first_name or "").strip().casefold(),
+            (student.last_name or "").strip().casefold(), student.id,
+        ))
+        from utils import course_average
+        for course in courses:
+            seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+            grades = Grade.query.filter_by(course_id=course.id, term=term, type="Évaluation").all()
+            by_key = {(grade.student_id, grade.sequence): grade for grade in grades}
+            for student in students:
+                grade_a = by_key.get((student.id, seq_a))
+                grade_b = by_key.get((student.id, seq_b))
+                average, note_trim, eval_a, eval_b = course_average(student.id, course.id, term)
+                subject_name_key = (course.subject.name or "").strip().casefold()
+                display_category = course.subject.category or "Enseignements Généraux"
+                if subject_name_key in {"santé et sécurité", "sante et securite", "qhse", "gso"}:
+                    display_category = "Enseignements Professionnels Théoriques"
+                rows.append({
+                    "student": student, "course": course, "grade_a": grade_a,
+                    "grade_b": grade_b, "average": average, "note_trim": note_trim,
+                    "eval_a": eval_a, "eval_b": eval_b, "display_category": display_category,
+                })
+    return render_template("censeur_releves_notes.html", classes=classes, class_id=class_id,
+                           school_class=school_class, courses=courses, students=students,
+                           rows=rows, term=term, terms=TERMS,
+                           sequence_labels=TERM_SEQUENCES.get(term, (1, 2)))
+
+
+@app.route("/censeur/releves-notes/<int:course_id>/<int:student_id>/modifier", methods=["POST"])
+@roles_required("censeur")
+def censeur_grade_report_edit(course_id, student_id):
+    user = User.query.get(session["user_id"])
+    course = Course.query.get_or_404(course_id)
+    if course.school_class.id not in {item.id for item in _censeur_accessible_classes(user)}:
+        abort(403)
+    Student.query.filter_by(id=student_id, class_id=course.class_id).first_or_404()
+    term = request.form.get("term", TERMS[0])
+    if term not in TERMS:
+        abort(400)
+    seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    changed = 0
+    for field, sequence in (("evaluation_a", seq_a), ("evaluation_b", seq_b)):
+        raw = request.form.get(field, "").strip()
+        if not raw:
+            continue
+        try:
+            value = float(raw)
+        except ValueError:
+            continue
+        if not 0 <= value <= 20:
+            flash("Une note doit être comprise entre 0 et 20.", "danger")
+            continue
+        grade = Grade.query.filter_by(student_id=student_id, course_id=course.id,
+                                      term=term, type="Évaluation", sequence=sequence).first()
+        if grade is None:
+            grade = Grade(value=value, max_value=20, type="Évaluation", sequence=sequence,
+                          term=term, date=date.today(), student_id=student_id, course_id=course.id)
+            db.session.add(grade)
+        else:
+            grade.value = value
+            grade.max_value = grade.max_value or 20
+            grade.date = date.today()
+        changed += 1
+    if changed:
+        from models import ActivityLog
+        db.session.add(ActivityLog(
+            user_id=session["user_id"],
+            description=f"Correction censeur de {changed} note(s) — {course.subject.name} / {course.school_class.name}",
+            category="pédagogique",
+        ))
+        db.session.commit()
+        flash(f"{changed} note(s) mises à jour par le Censeur.", "success")
+    return redirect(url_for("censeur_grade_reports", class_id=course.class_id, term=term))

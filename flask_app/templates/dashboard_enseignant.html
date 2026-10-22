@@ -15,6 +15,7 @@
   <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-journal-bookmark-fill"></i></div><div class="kpi-value">{{ courses|length }}</div><div class="kpi-label">Cours affectés</div></div>
   <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-people-fill"></i></div><div class="kpi-value">{{ courses|map(attribute='school_class')|map(attribute='students')|map('length')|sum }}</div><div class="kpi-label">Élèves suivis</div></div>
   <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-calendar2-week-fill"></i></div><div class="kpi-value">{{ schedule|length }}</div><div class="kpi-label">Créneaux hebdomadaires</div></div>
+  <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-clock-history"></i></div><div class="kpi-value">{{ teacher_absence_hours|default(0) }}</div><div class="kpi-label">Heures d’absence de mes appels</div></div>
 </div>
 <div class="card-ltt dashboard-table-card">
   <div class="chart-title-row"><div><span class="chart-kicker">Mes enseignements</span><h2>Classes et actions pédagogiques</h2></div><a class="chart-pill" href="{{ url_for('teacher_courses') }}">Tout voir <i class="bi bi-arrow-right"></i></a></div>
