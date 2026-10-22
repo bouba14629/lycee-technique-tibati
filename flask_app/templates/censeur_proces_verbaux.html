@@ -29,12 +29,14 @@
   <div class="pv-preview">
     <table>
       <thead>
-        <tr><th rowspan="2">Noms et Prénoms</th><th rowspan="2">Rang</th><th rowspan="2">Moyenne Générale</th>{% for group in subject_groups %}<th class="pv-group" colspan="{{ group.subjects|length }}">{{ group.name }}</th>{% endfor %}<th rowspan="2">Décision du conseil</th></tr>
+        <tr><th rowspan="2">Noms et Prénoms</th><th rowspan="2">Rang</th><th rowspan="2">Moyenne</th>{% for group in subject_groups %}<th class="pv-group" colspan="{{ group.subjects|length }}">{{ group.name }}</th>{% endfor %}<th rowspan="2">Décision du conseil</th></tr>
         <tr>{% for group in subject_groups %}{% for subject in group.subjects %}<th>{{ subject.label }}</th>{% endfor %}{% endfor %}</tr>
       </thead>
       <tbody>
         {% for row in students %}<tr><td class="pv-name">{{ row.student.first_name|upper }} {{ row.student.last_name|upper }}</td><td>{{ row.rank or '—' }}</td><td>{{ row.general_average if row.general_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
-        {% for label, attr in [('Moyenne Générale','average'),('Maximum','maximum'),('Minimum','minimum')] %}<tr class="pv-summary"><td class="pv-name" colspan="3">{{ label }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject[attr] if subject[attr] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
+        <tr class="pv-summary"><td class="pv-name" colspan="2">Moyenne Générale de la classe</td><td>{{ class_general_average if class_general_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['average'] if subject['average'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
+        <tr class="pv-summary"><td class="pv-name" colspan="2">Plus grande moyenne de la classe</td><td>{{ class_highest_average if class_highest_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['maximum'] if subject['maximum'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
+        <tr class="pv-summary"><td class="pv-name" colspan="2">Plus petite moyenne de la classe</td><td>{{ class_lowest_average if class_lowest_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['minimum'] if subject['minimum'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
       </tbody>
     </table>
   </div>

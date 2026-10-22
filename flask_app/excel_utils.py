@@ -118,7 +118,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     subtitle.font = Font(bold=True, size=11, color=NAVY)
     subtitle.alignment = Alignment(horizontal="center")
 
-    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne Générale"]
+    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne"]
     for col, label in enumerate(fixed_headers, 1):
         ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
         cell = ws.cell(4, col, label)
@@ -164,14 +164,22 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
             cell.font = Font(size=9, bold=(col in (1, 3)))
 
     summary_start = 6 + len(dataset.get("students", []))
-    for offset, label, attr in ((0, "Moyenne Générale", "average"), (1, "Maximum", "maximum"), (2, "Minimum", "minimum")):
+    general_stats = (
+        ("Moyenne Générale de la classe", dataset.get("class_general_average")),
+        ("Plus grande moyenne de la classe", dataset.get("class_highest_average")),
+        ("Plus petite moyenne de la classe", dataset.get("class_lowest_average")),
+    )
+    for offset, (label, general_value) in enumerate(general_stats):
         row_index = summary_start + offset
+        ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=2)
         ws.cell(row_index, 1, label).font = Font(bold=True, size=9)
+        ws.cell(row_index, 3, general_value if general_value is not None else "—")
+        ws.cell(row_index, 3).alignment = Alignment(horizontal="center")
         for col in range(1, total_cols + 1):
             ws.cell(row_index, col).fill = PatternFill("solid", fgColor="F2F2F2")
             ws.cell(row_index, col).border = BORDER
         for col, subject in enumerate(subjects, 4):
-            value = subject.get(attr)
+            value = subject.get(("average", "maximum", "minimum")[offset])
             ws.cell(row_index, col, value if value is not None else "—")
             ws.cell(row_index, col).alignment = Alignment(horizontal="center")
 

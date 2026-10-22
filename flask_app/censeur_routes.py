@@ -1098,7 +1098,7 @@ def censeur_honor_roll_register_export_pdf():
 @roles_required("censeur", "directeur")
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
-    from annual_bulletin_screenshot import render_annual_bulletins
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1108,7 +1108,10 @@ def censeur_annual_bulletin_pdf(student_id):
     if not data:
         abort(404)
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
-    pdf = render_annual_bulletins([{"student": student, "data": data}], get_current_school_year())
+    pdf = render_pdf("pdf/class_annual_bulletins_pdf.html",
+                     students_data=[{"student": student, "data": data,
+                                     "photo_path": pdf_image_data_uri(student_photo_pdf_path(student.photo, lightweight=True))}],
+                     school_year=get_current_school_year(), approval=approval)
     if not pdf:
         abort(500)
     inline_preview = request.args.get("preview") == "1"
@@ -1306,8 +1309,8 @@ def censeur_bulletins_class_pdf(class_id):
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
             "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
         } for st in students]
-        from annual_bulletin_screenshot import render_annual_bulletins
-        pdf = render_annual_bulletins(students_data, get_current_school_year())
+        pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
+                         school_year=get_current_school_year(), approval=approval)
         if not pdf:
             abort(500)
         filename = f"Bulletins_annuels_{cls.name}.pdf".replace(" ", "_")
@@ -1325,8 +1328,10 @@ def censeur_bulletins_class_pdf(class_id):
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
         photo_path = student_photo_pdf_path(st.photo, lightweight=True)
-        if not photo_path:
-            photo_path = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
+        if photo_path:
+            # Les vignettes sont petites : les embarquer évite les chemins /tmp
+            # parfois non résolus par xhtml2pdf lors d’un PDF groupé.
+            photo_path = pdf_image_data_uri(photo_path)
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1847,6 +1852,8 @@ def _council_minutes_dataset(school_class, term):
 
     general_values = [row["general_average"] for row in raw_rows if row["general_average"] is not None]
     class_general_average = round(sum(general_values) / len(general_values), 2) if general_values else None
+    class_highest_average = round(max(general_values), 2) if general_values else None
+    class_lowest_average = round(min(general_values), 2) if general_values else None
 
     for course_id, meta in subject_meta.items():
         numbers = [row["subjects"].get(course_id) for row in raw_rows]
@@ -1855,7 +1862,9 @@ def _council_minutes_dataset(school_class, term):
         meta["maximum"] = round(max(numbers), 2) if numbers else None
         meta["minimum"] = round(min(numbers), 2) if numbers else None
     return {"students": raw_rows, "subject_groups": subject_groups,
-            "class_general_average": class_general_average}
+            "class_general_average": class_general_average,
+            "class_highest_average": class_highest_average,
+            "class_lowest_average": class_lowest_average}
 
 
 @app.route("/censeur/proces-verbaux")
