@@ -3,7 +3,7 @@ import base64
 import mimetypes
 from io import BytesIO
 from urllib.request import urlopen
-from flask import render_template
+from flask import render_template, has_request_context, request
 from xhtml2pdf import pisa
 from PIL import Image
 
@@ -26,11 +26,19 @@ def bulletin_logo_pdf_path():
 def storage_base_url():
     if os.getenv("LTT_ENV") == "production":
         return f"http://127.0.0.1:{os.getenv('PORT', '3000')}"
+    configured = os.getenv("LTT_STORAGE_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    if has_request_context():
+        return request.host_url.rstrip("/")
     return ""
 
 
 def pdf_asset(local_parts, storage_path):
-    if os.getenv("LTT_ENV") == "production":
+    # Les photos élèves sont stockées sous /manus-storage/students/ et doivent
+    # être récupérées même hors du mode production lors d’un aperçu PDF local.
+    should_fetch = os.getenv("LTT_ENV") == "production" or storage_path.startswith("/manus-storage/students/")
+    if should_fetch and storage_base_url():
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
         cache_path = os.path.join(cache_dir, os.path.basename(storage_path))
@@ -40,8 +48,9 @@ def pdf_asset(local_parts, storage_path):
                     with open(cache_path, "wb") as output:
                         output.write(response.read())
             except Exception:
-                return asset_path(*local_parts)
-        return cache_path
+                pass
+        if os.path.isfile(cache_path):
+            return cache_path
     return asset_path(*local_parts)
 
 
