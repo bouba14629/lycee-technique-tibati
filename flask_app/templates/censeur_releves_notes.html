@@ -5,7 +5,8 @@
 {% block content %}
 <div class="card-ltt mb-3">
   <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
-    <div><label class="form-label mb-1">Classe</label><select class="form-select" name="class_id" onchange="this.form.submit()"><option value="">— Choisir une classe —</option>{% for item in classes %}<option value="{{ item.id }}" {{ 'selected' if item.id==class_id }}>{{ item.code or item.name }} — {{ item.name }}</option>{% endfor %}</select></div>
+    <div><label class="form-label mb-1">Classe</label><select class="form-select" name="class_id" onchange="this.form.subject_id.value=''; this.form.submit()"><option value="">— Choisir une classe —</option>{% for item in classes %}<option value="{{ item.id }}" {{ 'selected' if item.id==class_id }}>{{ item.code or item.name }} — {{ item.name }}</option>{% endfor %}</select></div>
+    {% if school_class %}<div><label class="form-label mb-1">Matière</label><select class="form-select" name="subject_id" onchange="this.form.submit()"><option value="">— Toutes les matières —</option>{% for subject in available_subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id==subject_id }}>{{ subject.name }}</option>{% endfor %}</select></div>{% endif %}
     <div><label class="form-label mb-1">Période</label><select class="form-select" name="term" onchange="this.form.submit()">{% for item in terms %}<option value="{{ item }}" {{ 'selected' if item==term }}>{{ item }}</option>{% endfor %}</select></div>
     {% if school_class %}<div class="text-muted small pb-2">Les valeurs affichées sont synchronisées avec les notes enregistrées par les enseignants.</div>{% endif %}
   </form>

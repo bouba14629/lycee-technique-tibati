@@ -627,6 +627,7 @@ def dashboard():
         teacher_class_ids = sorted({course.class_id for course in courses if course.class_id})
         teacher_subject_ids = sorted({course.subject_id for course in courses if course.subject_id})
         teacher_absence_hours = 0
+        teacher_absent_students = []
         if teacher:
             # Périmètre strict : uniquement les appels rattachés aux cours de
             # cet enseignant, jamais les absences d’une classe entière.
@@ -634,18 +635,27 @@ def dashboard():
                                .filter(Course.teacher_id == teacher.id,
                                        Attendance.type == "Absence").all())
             total_minutes = 0
+            absence_by_student = {}
             for attendance in own_attendances:
                 try:
                     start_h, start_m = map(int, (attendance.start_time or "0:0").split(":"))
                     end_h, end_m = map(int, (attendance.end_time or "0:0").split(":"))
-                    total_minutes += max(0, (end_h * 60 + end_m) - (start_h * 60 + start_m))
+                    minutes = max(0, (end_h * 60 + end_m) - (start_h * 60 + start_m))
+                    total_minutes += minutes
+                    absence_by_student.setdefault(attendance.student_id, {"student": attendance.student, "minutes": 0})["minutes"] += minutes
                 except (TypeError, ValueError):
                     continue
             teacher_absence_hours = total_minutes // 60
+            teacher_absent_students = sorted(
+                ({"student": item["student"], "hours": item["minutes"] // 60} for item in absence_by_student.values()),
+                key=lambda item: ((item["student"].first_name or "").strip().casefold(),
+                                  (item["student"].last_name or "").strip().casefold(), item["student"].id),
+            )
         from utils import dashboard_rates
         return render_template("dashboard_enseignant.html", teacher=teacher, courses=courses,
                                 schedule=my_schedule,
                                 teacher_absence_hours=teacher_absence_hours,
+                                teacher_absent_students=teacher_absent_students,
                                 rates=dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"], teacher.id) if teacher else {
                                     "success_rate": 0, "absence_rate": 0, "attendance_rate": 100,
                                     "retard_rate": 0, "active_rate": 0,

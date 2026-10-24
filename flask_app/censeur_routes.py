@@ -1098,7 +1098,7 @@ def censeur_honor_roll_register_export_pdf():
 @roles_required("censeur", "directeur")
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1110,8 +1110,9 @@ def censeur_annual_bulletin_pdf(student_id):
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
     pdf = render_pdf("pdf/class_annual_bulletins_pdf.html",
                      students_data=[{"student": student, "data": data,
-                                     "photo_path": pdf_image_data_uri(student_photo_pdf_path(student.photo, lightweight=True))}],
-                     school_year=get_current_school_year(), approval=approval)
+                                     "photo_path": student_photo_pdf_path(student.photo, lightweight=True)}],
+                     school_year=get_current_school_year(), approval=approval,
+                     avatar_path=pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
     if not pdf:
         abort(500)
     inline_preview = request.args.get("preview") == "1"
@@ -1287,7 +1288,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_image_data_uri, pdf_asset, bulletin_logo_pdf_path
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1307,7 +1308,7 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True)),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1328,10 +1329,6 @@ def censeur_bulletins_class_pdf(class_id):
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
         photo_path = student_photo_pdf_path(st.photo, lightweight=True)
-        if photo_path:
-            # Les vignettes sont petites : les embarquer évite les chemins /tmp
-            # parfois non résolus par xhtml2pdf lors d’un PDF groupé.
-            photo_path = pdf_image_data_uri(photo_path)
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1343,7 +1340,8 @@ def censeur_bulletins_class_pdf(class_id):
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       approval=approval, school_year=get_current_school_year(),
-                      logo_path=bulletin_logo_pdf_path())
+                      logo_path=bulletin_logo_pdf_path(),
+                      avatar_path=pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
@@ -2113,6 +2111,7 @@ def censeur_grade_reports():
     user = User.query.get(session["user_id"])
     classes = _censeur_accessible_classes(user)
     class_id = request.args.get("class_id", type=int)
+    subject_id = request.args.get("subject_id", type=int)
     term = request.args.get("term", TERMS[0])
     if term not in TERMS:
         term = TERMS[0]
@@ -2120,11 +2119,21 @@ def censeur_grade_reports():
     if class_id and school_class is None:
         abort(403)
     courses = []
+    available_subjects = []
     students = []
     rows = []
     if school_class:
-        courses = (Course.query.filter_by(class_id=school_class.id)
-                   .join(Subject).order_by(Subject.category, Subject.name).all())
+        available_subjects = (Subject.query.join(Course)
+                              .filter(Course.class_id == school_class.id)
+                              .distinct().order_by(Subject.category, Subject.name).all())
+        valid_subject_ids = {subject.id for subject in available_subjects}
+        if subject_id and subject_id not in valid_subject_ids:
+            abort(403)
+        courses_query = Course.query.filter_by(class_id=school_class.id)
+        if subject_id:
+            courses_query = courses_query.filter(Course.subject_id == subject_id)
+        courses = (courses_query.join(Subject)
+                   .order_by(Subject.category, Subject.name).all())
         students = sorted(school_class.students, key=lambda student: (
             (student.first_name or "").strip().casefold(),
             (student.last_name or "").strip().casefold(), student.id,
@@ -2148,6 +2157,7 @@ def censeur_grade_reports():
                     "eval_a": eval_a, "eval_b": eval_b, "display_category": display_category,
                 })
     return render_template("censeur_releves_notes.html", classes=classes, class_id=class_id,
+                           subject_id=subject_id, available_subjects=available_subjects,
                            school_class=school_class, courses=courses, students=students,
                            rows=rows, term=term, terms=TERMS,
                            sequence_labels=TERM_SEQUENCES.get(term, (1, 2)))

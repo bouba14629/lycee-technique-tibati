@@ -384,9 +384,23 @@ def bulletin_data(student, term=None, _cache=None):
     non_just_hours = _hours([a for a in absences if not a.justified])
 
     sanctions = Sanction.query.filter_by(student_id=student.id).all()
+    total_absence_hours = just_hours + non_just_hours
     avert_conduite = any("avert" in s.type.lower() for s in sanctions)
     blame_conduite = any("blâme" in s.type.lower() or "blame" in s.type.lower() for s in sanctions)
     exclusions = [s for s in sanctions if "exclusion" in s.type.lower()]
+    conduct_exclusion_label = None
+    if 6 <= total_absence_hours <= 9:
+        avert_conduite = True
+    elif 10 <= total_absence_hours <= 15:
+        blame_conduite = True
+    elif 16 <= total_absence_hours <= 20:
+        conduct_exclusion_label = "03 jours"
+    elif 21 <= total_absence_hours <= 25:
+        conduct_exclusion_label = "05 jours"
+    elif 26 <= total_absence_hours <= 30:
+        conduct_exclusion_label = "08 jours"
+    elif total_absence_hours > 30:
+        conduct_exclusion_label = "Définitive"
 
     # Compétences cochées selon la moyenne du trimestre.
     work_marks = competency_marks(overall_avg)
@@ -405,7 +419,7 @@ def bulletin_data(student, term=None, _cache=None):
         "absences_justified_hours": just_hours, "absences_justified_days": just_days,
         "absences_non_justified_hours": non_just_hours, "absences_non_justified_days": non_just_days,
         "retards": retards, "avert_conduite": avert_conduite, "blame_conduite": blame_conduite,
-        "exclusions": exclusions, "work_marks": work_marks,
+        "exclusions": exclusions, "conduct_exclusion_label": conduct_exclusion_label, "work_marks": work_marks,
         "automatic_work_appreciation": automatic_appreciation,
         "work_appreciation": saved_appreciation.content if saved_appreciation else automatic_appreciation,
         "official_work_appreciation": appreciation_code(overall_avg),

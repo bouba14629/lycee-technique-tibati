@@ -24,4 +24,12 @@
   {% else %}<tr><td colspan="4" class="text-muted text-center py-4">Aucun cours affecté pour le moment.</td></tr>{% endfor %}
   </tbody></table></div>
 </div>
+{% if teacher_absent_students %}
+<div class="card-ltt dashboard-table-card">
+  <div class="chart-title-row"><div><span class="chart-kicker">Présences</span><h2>Élèves absents de mes appels</h2></div><span class="text-muted small">Tri par prénom A à Z</span></div>
+  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Prénom</th><th>Nom</th><th>Classe</th><th class="text-end">Heures d’absence</th></tr></thead><tbody>
+  {% for item in teacher_absent_students %}<tr><td><strong>{{ item.student.first_name }}</strong></td><td>{{ item.student.last_name }}</td><td>{{ item.student.school_class.code or item.student.school_class.name }}</td><td class="text-end">{{ item.hours }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
 {% endblock %}
