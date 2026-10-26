@@ -954,7 +954,7 @@ def _honor_recipients(school_class, term):
         data = bulletin_data(student, term=term)
         if not data or data.get("overall_avg") is None:
             continue
-        if not 12 <= data["overall_avg"] <= 20:
+        if data["overall_avg"] < 12:
             continue
         rank = data.get("rank")
         if rank == 1:
@@ -963,7 +963,7 @@ def _honor_recipients(school_class, term):
         else:
             rank_label = f"{rank}e" if rank else "—"
         recipients.append({"student": student, "average": data["overall_avg"], "rank": rank, "rank_label": rank_label,
-                           "class_size": data.get("class_size", 0)})
+                           "sex": student.sex or "—", "class_size": data.get("class_size", 0)})
     recipients.sort(key=lambda item: (-item["average"], item["student"].last_name, item["student"].first_name))
     return recipients
 
@@ -1053,6 +1053,8 @@ def censeur_honor_roll_pdf(class_id):
 def censeur_honor_roll_register():
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
+    if term not in TERMS:
+        term = TERMS[0]
     class_id = request.args.get("class_id", type=int)
     classes, _ = _honor_classes(user)
     rows = _honor_scope(user, term, class_id)
@@ -1067,6 +1069,8 @@ def censeur_honor_roll_register_export():
     from excel_utils import honor_roll_register_workbook
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
+    if term not in TERMS:
+        term = TERMS[0]
     class_id = request.args.get("class_id", type=int)
     workbook = honor_roll_register_workbook(_honor_scope(user, term, class_id), term, get_current_school_year())
     filename = f"Registre_tableaux_honneur_{term}.xlsx".replace(" ", "_")

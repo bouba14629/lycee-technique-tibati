@@ -664,14 +664,14 @@ def honor_roll_register_workbook(rows, term, school_year):
     wb = Workbook()
     ws = wb.active
     ws.title = "Tableaux d’honneur"
-    for index, width in enumerate([7, 32, 18, 22, 18, 18, 14, 12, 12], start=1):
+    for index, width in enumerate([7, 32, 12, 18, 22, 18, 18, 14, 12, 18], start=1):
         ws.column_dimensions[get_column_letter(index)].width = width
-    _header(ws, 1, 9, "LYCÉE TECHNIQUE DE TIBATI — REGISTRE DES TABLEAUX D’HONNEUR")
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=9)
+    _header(ws, 1, 10, "LYCÉE TECHNIQUE DE TIBATI — REGISTRE DES TABLEAUX D’HONNEUR")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=10)
     subtitle = ws.cell(row=2, column=1, value=f"{term} — Année scolaire {school_year} — Moyennes de 12/20 à 20/20")
     subtitle.font = Font(italic=True, size=10)
     subtitle.alignment = Alignment(horizontal="center")
-    headers = ["N°", "Nom et prénom", "Date de naissance", "Lieu de naissance", "Matricule", "Classe", "Moyenne /20", "Rang", "Effectif"]
+    headers = ["N°", "Nom et prénom", "Sexe", "Date de naissance", "Lieu de naissance", "Matricule", "Classe", "Moyenne /20", "Rang", "Effectif de la classe"]
     for column, header in enumerate(headers, start=1):
         cell = ws.cell(row=4, column=column, value=header)
         cell.font = Font(bold=True, color=NAVY)
@@ -681,7 +681,7 @@ def honor_roll_register_workbook(rows, term, school_year):
     for row_number, item in enumerate(rows, start=5):
         school_class = item["school_class"]
         student = item["student"]
-        values = [row_number - 4, student.full_name,
+        values = [row_number - 4, student.full_name, item.get("sex") or student.sex or "—",
                   student.dob.strftime("%d/%m/%Y") if student.dob else "—", student.birth_place or "—",
                   student.matricule, school_class.name, item["average"], item["rank_label"], item["class_size"]]
         for column, value in enumerate(values, start=1):
@@ -692,7 +692,7 @@ def honor_roll_register_workbook(rows, term, school_year):
                 cell.number_format = "0.00"
                 cell.font = Font(bold=True, color=NAVY)
     if not rows:
-        ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=9)
+        ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=10)
         ws.cell(row=5, column=1, value="Aucun élève admissible pour ce trimestre.").alignment = Alignment(horizontal="center")
     ws.freeze_panes = "A5"
     wb_io = BytesIO()
