@@ -1308,7 +1308,7 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": student_photo_pdf_path(st.photo, lightweight=True),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url),
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1328,7 +1328,7 @@ def censeur_bulletins_class_pdf(class_id):
                 category.get("rows", []),
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
-        photo_path = student_photo_pdf_path(st.photo, lightweight=True)
+        photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
         students_data.append({
             "student": st,
             "data": student_data,

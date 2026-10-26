@@ -34,17 +34,18 @@ def storage_base_url():
     return ""
 
 
-def pdf_asset(local_parts, storage_path):
+def pdf_asset(local_parts, storage_path, base_url=None):
     # Les photos élèves sont stockées sous /manus-storage/students/ et doivent
     # être récupérées même hors du mode production lors d’un aperçu PDF local.
     should_fetch = os.getenv("LTT_ENV") == "production" or storage_path.startswith("/manus-storage/students/")
-    if should_fetch and storage_base_url():
+    fetch_base = (base_url or storage_base_url()).rstrip("/")
+    if should_fetch and fetch_base:
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
         cache_path = os.path.join(cache_dir, os.path.basename(storage_path))
         if not os.path.exists(cache_path):
             try:
-                with urlopen(f"{storage_base_url()}{storage_path}", timeout=10) as response:
+                with urlopen(f"{fetch_base}{storage_path}", timeout=15) as response:
                     with open(cache_path, "wb") as output:
                         output.write(response.read())
             except Exception:
@@ -67,12 +68,12 @@ def pdf_image_data_uri(path, mime_type=None):
         return path
 
 
-def student_photo_pdf_path(photo, lightweight=False):
+def student_photo_pdf_path(photo, lightweight=False, base_url=None):
     """Retourne un chemin local utilisable par xhtml2pdf pour une photo élève."""
     if not photo:
         return None
     if photo.startswith("/manus-storage/"):
-        path = pdf_asset(("img", "avatar_placeholder.png"), photo)
+        path = pdf_asset(("img", "avatar_placeholder.png"), photo, base_url=base_url)
         return _lightweight_photo_path(path) if lightweight and path else path
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
