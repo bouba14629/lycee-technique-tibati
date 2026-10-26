@@ -2207,4 +2207,58 @@ def censeur_grade_report_edit(course_id, student_id):
         ))
         db.session.commit()
         flash(f"{changed} note(s) mises à jour par le Censeur.", "success")
-    return redirect(url_for("censeur_grade_reports", class_id=course.class_id, term=term))
+    return redirect(url_for("censeur_grade_reports", class_id=course.class_id,
+                            subject_id=course.subject_id, term=term))
+
+
+@app.route("/censeur/releves-notes/modifier-tout", methods=["POST"])
+@roles_required("censeur")
+def censeur_grade_report_bulk_edit():
+    """Modifie les deux évaluations de plusieurs élèves d'une même matière."""
+    user = User.query.get(session["user_id"])
+    class_id = request.form.get("class_id", type=int)
+    subject_id = request.form.get("subject_id", type=int)
+    term = request.form.get("term", TERMS[0])
+    if term not in TERMS or not class_id or not subject_id:
+        abort(400)
+    school_class = next((item for item in _censeur_accessible_classes(user) if item.id == class_id), None)
+    if school_class is None:
+        abort(403)
+    courses = Course.query.filter_by(class_id=class_id, subject_id=subject_id).all()
+    if not courses:
+        abort(404)
+    seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    changed = 0
+    for student in school_class.students:
+        for prefix, sequence in (("evaluation_a_", seq_a), ("evaluation_b_", seq_b)):
+            raw = request.form.get(prefix + str(student.id), "").strip()
+            if not raw:
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                continue
+            if not 0 <= value <= 20:
+                continue
+            for course in courses:
+                grade = Grade.query.filter_by(student_id=student.id, course_id=course.id,
+                                              term=term, type="Évaluation", sequence=sequence).first()
+                if grade is None:
+                    grade = Grade(value=value, max_value=20, type="Évaluation", sequence=sequence,
+                                  term=term, date=date.today(), student_id=student.id, course_id=course.id)
+                    db.session.add(grade)
+                else:
+                    grade.value = value
+                    grade.max_value = grade.max_value or 20
+                    grade.date = date.today()
+                changed += 1
+    if changed:
+        from models import ActivityLog
+        subject = Subject.query.get(subject_id)
+        db.session.add(ActivityLog(user_id=session["user_id"],
+                                    description=f"Correction groupée de {changed} note(s) — {subject.name if subject else subject_id}",
+                                    category="pédagogique"))
+        db.session.commit()
+        flash(f"{changed} note(s) mises à jour par le Censeur.", "success")
+    return redirect(url_for("censeur_grade_reports", class_id=class_id,
+                            subject_id=subject_id, term=term))
