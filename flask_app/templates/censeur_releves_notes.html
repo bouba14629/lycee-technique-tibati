@@ -8,20 +8,19 @@
     <div><label class="form-label mb-1">Classe</label><select class="form-select" name="class_id" onchange="this.form.subject_id.value=''; this.form.submit()"><option value="">— Choisir une classe —</option>{% for item in classes %}<option value="{{ item.id }}" {{ 'selected' if item.id==class_id }}>{{ item.code or item.name }} — {{ item.name }}</option>{% endfor %}</select></div>
     {% if school_class %}<div><label class="form-label mb-1">Matière</label><select class="form-select" name="subject_id" onchange="this.form.submit()"><option value="">— Toutes les matières —</option>{% for subject in available_subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id==subject_id }}>{{ subject.name }}</option>{% endfor %}</select></div>{% endif %}
     <div><label class="form-label mb-1">Période</label><select class="form-select" name="term" onchange="this.form.submit()">{% for item in terms %}<option value="{{ item }}" {{ 'selected' if item==term }}>{{ item }}</option>{% endfor %}</select></div>
+    {% if school_class %}<div class="text-muted small pb-2">Les valeurs affichées sont synchronisées avec les notes enregistrées par les enseignants.</div>{% endif %}
   </form>
 </div>
 {% if school_class %}
   {% for course in courses %}
   <section class="card-ltt mb-3">
-    <form method="POST" action="{{ url_for('censeur_grade_report_bulk_edit') }}">
-      <input type="hidden" name="class_id" value="{{ school_class.id }}"><input type="hidden" name="subject_id" value="{{ course.subject_id }}"><input type="hidden" name="term" value="{{ term }}">
-      <div class="d-flex justify-content-between align-items-center mb-2"><div><span class="badge-ltt badge-navy">{{ course.subject.category or 'Enseignement' }}</span><h2 class="h5 mb-0 mt-1">{{ course.subject.name }}</h2></div><div class="d-flex align-items-center gap-2"><span class="text-muted small">{{ course.teacher.user.formal_name if course.teacher and course.teacher.user else '' }}</span><button type="submit" class="btn-ltt-gold py-1 px-2" style="font-size:11px;"><i class="bi bi-pencil-square"></i> Modifier tout</button></div></div>
-      <div class="table-responsive"><table class="table-ltt align-middle"><thead><tr><th>Élève</th><th>Évaluation {{ sequence_labels[0] }}</th><th>Évaluation {{ sequence_labels[1] }}</th><th>Note trimestrielle</th></tr></thead><tbody>
-      {% for row in rows if row.course.id == course.id %}
-        <tr><td><strong>{{ row.student.first_name }} {{ row.student.last_name }}</strong><div class="text-muted" style="font-size:11px;">{{ row.student.matricule }}</div></td><td><input class="form-control form-control-sm" type="number" min="0" max="20" step="0.01" name="evaluation_a_{{ row.student.id }}" value="{{ row.grade_a.value if row.grade_a else '' }}" placeholder="—"></td><td><input class="form-control form-control-sm" type="number" min="0" max="20" step="0.01" name="evaluation_b_{{ row.student.id }}" value="{{ row.grade_b.value if row.grade_b else '' }}" placeholder="—"></td><td><span class="badge-ltt {{ 'badge-success' if row.average is not none and row.average >= 10 else 'badge-warning' }}">{{ row.average if row.average is not none else '—' }}</span></td></tr>
-      {% else %}<tr><td colspan="4" class="text-muted text-center">Aucun élève dans cette classe.</td></tr>{% endfor %}
-      </tbody></table></div>
-    </form>
+    <div class="d-flex justify-content-between align-items-center mb-2"><div><span class="badge-ltt badge-navy">{{ course.subject.category or 'Enseignement' }}</span><h2 class="h5 mb-0 mt-1">{{ course.subject.name }}</h2></div><span class="text-muted small">{{ course.teacher.user.formal_name if course.teacher and course.teacher.user else '' }}</span></div>
+    <div class="table-responsive"><table class="table-ltt align-middle"><thead><tr><th>Élève</th><th>Évaluation {{ sequence_labels[0] }}</th><th>Évaluation {{ sequence_labels[1] }}</th><th>Note trimestrielle</th><th>Action</th></tr></thead><tbody>
+    {% for row in rows if row.course.id == course.id %}
+      <tr><td><strong>{{ row.student.first_name }} {{ row.student.last_name }}</strong><div class="text-muted" style="font-size:11px;">{{ row.student.matricule }}</div></td>
+      <form method="POST" action="{{ url_for('censeur_grade_report_edit', course_id=course.id, student_id=row.student.id) }}"><input type="hidden" name="term" value="{{ term }}"><td><input class="form-control form-control-sm" type="number" min="0" max="20" step="0.01" name="evaluation_a" value="{{ row.grade_a.value if row.grade_a else '' }}" placeholder="—"></td><td><input class="form-control form-control-sm" type="number" min="0" max="20" step="0.01" name="evaluation_b" value="{{ row.grade_b.value if row.grade_b else '' }}" placeholder="—"></td><td><span class="badge-ltt {{ 'badge-success' if row.average is not none and row.average >= 10 else 'badge-warning' }}">{{ row.average if row.average is not none else '—' }}</span></td><td><button class="btn-ltt-gold py-1 px-2" style="font-size:11px;"><i class="bi bi-pencil-square"></i> Modifier</button></td></form></tr>
+    {% else %}<tr><td colspan="5" class="text-muted text-center">Aucun élève dans cette classe.</td></tr>{% endfor %}
+    </tbody></table></div>
   </section>
   {% else %}<div class="card-ltt text-center text-muted py-5">Aucune matière n’est associée à cette classe.</div>{% endfor %}
 {% else %}<div class="card-ltt text-center text-muted py-5"><i class="bi bi-journal-check fs-2 d-block mb-2"></i>Sélectionnez une classe pour afficher le relevé des notes.</div>{% endif %}

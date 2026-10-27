@@ -93,7 +93,16 @@
 
 <table class="box-table">
   <tr>
-    <td style="width:100%;">
+    <td style="width:50%;">
+      <span class="box-title">TRAVAIL DE L'ÉLÈVE</span>
+      <table class="mini-table grid-table">
+        <tr><td>[{{ 'X' if data.work_marks.tableau_honneur else ' ' }}] Tableau d'Honneur</td><td>[{{ 'X' if data.work_marks.travail_insuffisant else ' ' }}] Compétences non acquises</td></tr>
+        <tr><td>[{{ 'X' if data.work_marks.encouragements else ' ' }}] Encouragements</td><td>[{{ 'X' if data.work_marks.bon_travail else ' ' }}] Compétences moyennement acquises</td></tr>
+        <tr><td>[{{ 'X' if data.work_marks.felicitations else ' ' }}] Félicitations</td><td>[{{ 'X' if data.work_marks.travail_passable else ' ' }}] Compétences bien acquises</td></tr>
+        <tr><td>[ ] Avert. Travail</td><td>[{{ 'X' if data.work_marks.assez_bon_travail else ' ' }}] Compétences très bien acquises</td></tr>
+      </table>
+    </td>
+    <td style="width:50%;">
       <span class="box-title">DISCIPLINE</span>
       <table class="mini-table grid-table">
         <tr><td>Absences Nombre d'heures</td><td>{{ (data.absences_justified_hours + data.absences_non_justified_hours)|int }}</td></tr>

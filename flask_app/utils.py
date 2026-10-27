@@ -126,11 +126,8 @@ def student_average(student_id, course_id=None, term=None):
     grades = q.all()
     if not grades:
         return None
-    total = sum((g.value / g.max_value * 20) for g in grades if g.max_value and g.max_value > 0)
-    valid_count = sum(1 for g in grades if g.max_value and g.max_value > 0)
-    if not valid_count:
-        return None
-    return round(total / valid_count, 2)
+    total = sum(g.value / g.max_value * 20 for g in grades)
+    return round(total / len(grades), 2)
 
 
 def subject_averages(student_id, term=None):
@@ -172,9 +169,7 @@ def _notes_trim(student_id, course_id, term):
     grades = Grade.query.filter_by(student_id=student_id, course_id=course_id, term=term, type="Devoir").all()
     if not grades:
         return None
-    vals = [g.value / g.max_value * 20 for g in grades if g.max_value and g.max_value > 0]
-    if not vals:
-        return None
+    vals = [g.value / g.max_value * 20 for g in grades]
     return round(sum(vals) / len(vals), 2)
 
 
@@ -185,8 +180,6 @@ def _sequence_value(student_id, course_id, term, which):
                                 type="Évaluation", sequence=seq_num)
          .order_by(Grade.date.desc()).first())
     if not g:
-        return None
-    if not g.max_value or g.max_value <= 0:
         return None
     return round(g.value / g.max_value * 20, 2)
 
