@@ -242,15 +242,18 @@ def competency_marks(average):
         return marks
     if average >= 16:
         marks["tableau_honneur"] = True
-        marks["felicitations"] = True
-    elif average >= 14:
         marks["encouragements"] = True
-    elif average >= 12:
+        marks["felicitations"] = True
         marks["assez_bon_travail"] = True
+    elif average >= 14:
+        marks["tableau_honneur"] = True
+        marks["encouragements"] = True
+        marks["travail_passable"] = True
+    elif average >= 12:
+        marks["tableau_honneur"] = True
+        marks["travail_passable"] = True
     elif average >= 10:
         marks["bon_travail"] = True
-    elif average >= 8:
-        marks["travail_passable"] = True
     else:
         marks["travail_insuffisant"] = True
     return marks
