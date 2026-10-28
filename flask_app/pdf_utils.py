@@ -73,7 +73,14 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
     if not photo:
         return None
     if photo.startswith("/manus-storage/"):
+        # Les imports peuvent conserver une URI Manus alors que le fichier
+        # est déjà présent dans le répertoire local des photos élèves.
+        local_student_path = asset_path("uploads", "students", os.path.basename(photo))
+        if os.path.isfile(local_student_path):
+            return _lightweight_photo_path(local_student_path) if lightweight else local_student_path
         path = pdf_asset(("img", "avatar_placeholder.png"), photo, base_url=base_url)
+        if not path or not os.path.isfile(path):
+            return None
         return _lightweight_photo_path(path) if lightweight and path else path
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"

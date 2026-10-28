@@ -83,7 +83,7 @@ def _bulletin_pdf_response(student, term=None):
     pdf = render_pdf("pdf/bulletin_pdf.html", student=student, data=data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       bulletin_ref=bulletin_ref, approval=approval, school_year=get_current_school_year(),
-                      student_photo_path=student_photo_pdf_path(student.photo))
+                      student_photo_path=student_photo_pdf_path(student.photo, base_url=request.host_url))
     if not pdf:
         abort(500)
     filename = f"Bulletin_{student.last_name}_{student.first_name}_{term}.pdf".replace(" ", "_")

@@ -1328,6 +1328,9 @@ def censeur_bulletins_class_pdf(class_id):
                 category.get("rows", []),
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
+        # Le rendu utilise volontairement le chemin local de la vignette,
+        # plus fiable pour xhtml2pdf que l’URI data dans un PDF groupé.
+        # Compatibilité du contrat historique : pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))
         photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
         students_data.append({
             "student": st,
