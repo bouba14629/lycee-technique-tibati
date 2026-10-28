@@ -240,23 +240,17 @@ def competency_marks(average):
         "bon_travail", "travail_passable", "travail_insuffisant")}
     if average is None:
         return marks
-    # Barème officiel des mentions et décisions du conseil de classe.
-    # Chaque tranche est exclusive des autres, sauf les mentions cumulatives
-    # explicitement prévues pour les moyennes à partir de 12/20.
     if average >= 16:
         marks["tableau_honneur"] = True
-        marks["encouragements"] = True
         marks["felicitations"] = True
-        marks["assez_bon_travail"] = True
     elif average >= 14:
-        marks["tableau_honneur"] = True
         marks["encouragements"] = True
-        marks["travail_passable"] = True
     elif average >= 12:
-        marks["tableau_honneur"] = True
-        marks["travail_passable"] = True
+        marks["assez_bon_travail"] = True
     elif average >= 10:
         marks["bon_travail"] = True
+    elif average >= 8:
+        marks["travail_passable"] = True
     else:
         marks["travail_insuffisant"] = True
     return marks
