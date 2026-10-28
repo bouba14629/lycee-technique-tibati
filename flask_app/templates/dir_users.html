@@ -49,7 +49,7 @@
     <thead><tr>
       {{ sortable_th('Nom', 'full_name', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
       {{ sortable_th('Identifiant', 'username', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
-      {% if current_user.role == 'directeur' %}<th>Mot de passe</th>{% endif %}
+      {% if current_user.role in ['directeur', 'censeur'] %}<th>Mot de passe enseignant</th>{% endif %}
       {{ sortable_th('Rôle', 'role', sort, sort_dir, '&role=' ~ role_filter ~ '&q=' ~ search) }}
       <th>Contact</th><th>Statut</th>{% if current_user.role == 'directeur' %}<th></th>{% endif %}
     </tr></thead>
@@ -58,7 +58,7 @@
       <tr>
         <td class="fw-semibold">{{ u.full_name }}</td>
         <td><code>{{ u.username }}</code></td>
-        {% if current_user.role == 'directeur' %}<td><code>{{ u.plain_password or '—' }}</code></td>{% endif %}
+        {% if current_user.role in ['directeur', 'censeur'] %}<td><code>{{ u.plain_password if u.role == 'enseignant' and u.plain_password else '—' }}</code></td>{% endif %}
         <td><span class="badge-ltt badge-navy">{{ u.scope_label }}</span></td>
         <td class="text-muted">{{ u.email or u.phone or '—' }}</td>
         <td>{% if u.active %}<span class="badge-ltt badge-success">Actif</span>{% else %}<span class="badge-ltt badge-danger">Désactivé</span>{% endif %}</td>

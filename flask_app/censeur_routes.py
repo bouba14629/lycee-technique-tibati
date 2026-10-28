@@ -963,7 +963,7 @@ def _honor_recipients(school_class, term):
         else:
             rank_label = f"{rank}e" if rank else "—"
         recipients.append({"student": student, "average": data["overall_avg"], "rank": rank, "rank_label": rank_label,
-                           "class_size": data.get("class_size", 0)})
+                           "sex": student.sex or "—", "class_size": data.get("class_size", 0)})
     recipients.sort(key=lambda item: (-item["average"], item["student"].last_name, item["student"].first_name))
     return recipients
 
@@ -1850,7 +1850,10 @@ def _council_minutes_dataset(school_class, term):
     )
     ranks = {row["student"].id: index for index, row in enumerate(ranked, 1)}
     for row in raw_rows:
-        row["rank"] = ranks.get(row["student"].id)
+        # Une moyenne trimestrielle strictement inférieure à 3/20 ne reçoit
+        # pas de rang : le PV affiche explicitement « NC ».
+        average = row["general_average"]
+        row["rank"] = "NC" if average is not None and average < 3 else ranks.get(row["student"].id)
 
     general_values = [row["general_average"] for row in raw_rows if row["general_average"] is not None]
     class_general_average = round(sum(general_values) / len(general_values), 2) if general_values else None
@@ -2123,13 +2126,31 @@ def censeur_grade_reports():
     students = []
     rows = []
     if school_class:
+        # La source des matières du relevé est la même que celle de l'emploi du
+        # temps : un cours doit posséder au moins un créneau programmé. Cela
+        # évite d'afficher dans le relevé une matière retirée de l'emploi du
+        # temps ou une ancienne affectation, tout en conservant les notes déjà
+        # enregistrées sur le cours sélectionné.
+        scheduled_course_ids = {
+            entry.course_id for entry in ScheduleEntry.query.join(Course)
+            .filter(Course.class_id == school_class.id).all()
+        }
+        courses_query = Course.query.filter(Course.class_id == school_class.id)
+        if scheduled_course_ids:
+            courses_query = courses_query.filter(Course.id.in_(scheduled_course_ids))
+        else:
+            courses_query = courses_query.filter(Course.id == -1)
+        courses_query = courses_query.join(Subject).filter(
+            db.func.lower(Subject.name) != "orientation scolaire"
+        )
         available_subjects = (Subject.query.join(Course)
-                              .filter(Course.class_id == school_class.id)
+                              .filter(Course.id.in_(scheduled_course_ids or [-1]))
+                              .filter(db.func.lower(Subject.name) != "orientation scolaire")
                               .distinct().order_by(Subject.category, Subject.name).all())
         valid_subject_ids = {subject.id for subject in available_subjects}
         if subject_id and subject_id not in valid_subject_ids:
             abort(403)
-        courses_query = Course.query.filter_by(class_id=school_class.id)
+        courses_query = courses_query
         if subject_id:
             courses_query = courses_query.filter(Course.subject_id == subject_id)
         courses = (courses_query.join(Subject)

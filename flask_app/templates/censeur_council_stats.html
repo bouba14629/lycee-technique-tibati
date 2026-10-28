@@ -52,6 +52,7 @@ filterCouncilSubjects();
   <td>{% if school_class %}<strong>{{ school_class.code or 'Sans code' }}</strong>{% else %}{{ label }}{% endif %}</td>
   <td>{{ r.inscrits.F }}</td><td>{{ r.inscrits.G }}</td><td class="fw-semibold">{{ r.inscrits.T }}</td>
   <td>{{ r.evalues.F }}</td><td>{{ r.evalues.G }}</td><td class="fw-semibold">{{ r.evalues.T }}</td>
+  <td>{{ r.non_classes.F }}</td><td>{{ r.non_classes.G }}</td><td class="fw-semibold">{{ r.non_classes.T }}</td>
   <td>{{ r.reussite.F }}</td><td>{{ r.reussite.G }}</td><td class="fw-semibold">{{ r.reussite.T }}</td>
   <td>{{ r.pct.F if r.pct.F is not none else '—' }}%</td><td>{{ r.pct.G if r.pct.G is not none else '—' }}%</td><td class="fw-semibold">{{ r.pct.T if r.pct.T is not none else '—' }}%</td>
   <td>{{ r.th.F }}</td><td>{{ r.th.G }}</td><td class="fw-semibold">{{ r.th.T }}</td>
@@ -72,6 +73,7 @@ filterCouncilSubjects();
         <th rowspan="2">Code</th>
         <th colspan="3" class="text-center">Inscrits</th>
         <th colspan="3" class="text-center">Évalués</th>
+        <th colspan="3" class="text-center">NON CLASSÉS (&lt; 3)</th>
         <th colspan="3" class="text-center">Moyenne ≥10</th>
         <th colspan="3" class="text-center">% Réussite</th>
         <th colspan="3" class="text-center">Nbre TH</th>
@@ -83,19 +85,19 @@ filterCouncilSubjects();
         <th rowspan="2">Observations</th>
       </tr>
       <tr>
-        <th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th>
+        <th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th>
         <th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th><th>F</th><th>G</th><th>T</th>
         <th>F</th><th>G</th><th>F</th><th>G</th>
       </tr>
     </thead>
     <tbody>
     {% if stats.cycle1 %}
-      <tr><td colspan="26" class="fw-bold" style="background:var(--navy-900); color:#fff;">PREMIER CYCLE</td></tr>
+      <tr><td colspan="31" class="fw-bold" style="background:var(--navy-900); color:#fff;">PREMIER CYCLE</td></tr>
       {% for r in stats.cycle1 %}{{ stat_row('', r, school_class=r.class) }}{% endfor %}
       {{ stat_row("TOTAL 1", stats.total_cycle1, true) }}
     {% endif %}
     {% if stats.cycle2 %}
-      <tr><td colspan="26" class="fw-bold" style="background:var(--navy-900); color:#fff;">SECOND CYCLE</td></tr>
+      <tr><td colspan="31" class="fw-bold" style="background:var(--navy-900); color:#fff;">SECOND CYCLE</td></tr>
       {% for r in stats.cycle2 %}{{ stat_row('', r, school_class=r.class) }}{% endfor %}
       {{ stat_row("TOTAL 2", stats.total_cycle2, true) }}
     {% endif %}
@@ -103,7 +105,7 @@ filterCouncilSubjects();
       {{ stat_row("TOTAL GÉNÉRAL", stats.total_general, true) }}
     {% endif %}
     {% if not stats.rows %}
-      <tr><td colspan="26" class="text-muted text-center py-4">Aucune classe dans votre périmètre.</td></tr>
+      <tr><td colspan="31" class="text-muted text-center py-4">Aucune classe dans votre périmètre.</td></tr>
     {% endif %}
     </tbody>
   </table>

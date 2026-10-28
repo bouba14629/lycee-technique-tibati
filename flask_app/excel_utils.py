@@ -239,15 +239,16 @@ def council_stats_workbook(stats, term):
     wb = Workbook()
     ws = wb.active
     ws.title = "Fiche statistique"
-    widths = [18] + [7] * 21 + [9] + [7] * 4 + [24]
+    widths = [18] + [7] * 24 + [9] + [7] * 4 + [24]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     _header(ws, 1, len(widths), f"FICHE STATISTIQUE DES RÉSULTATS — {term}")
 
     r = 3
-    groups = [("CODE", 1, 1), ("INSCRITS", 2, 4), ("ÉVALUÉS", 5, 7), ("MOYENNE ≥10", 8, 10),
-              ("% RÉUSSITE", 11, 13), ("NBRE TH", 14, 16), ("ENCOURAGEMENT", 17, 19), ("FÉLICITATIONS", 20, 22),
-              ("MOY. GÉN.", 23, 23), ("FORTE MOY.", 24, 25), ("FAIBLE MOY.", 26, 27), ("OBSERVATIONS", 28, 28)]
+    groups = [("CODE", 1, 1), ("INSCRITS", 2, 4), ("ÉVALUÉS", 5, 7), ("NON CLASSÉS (< 3)", 8, 10),
+              ("MOYENNE ≥10", 11, 13), ("% RÉUSSITE", 14, 16), ("NBRE TH", 17, 19),
+              ("ENCOURAGEMENT", 20, 22), ("FÉLICITATIONS", 23, 25), ("MOY. GÉN.", 26, 26),
+              ("FORTE MOY.", 27, 28), ("FAIBLE MOY.", 29, 30), ("OBSERVATIONS", 31, 31)]
     for label, c1, c2 in groups:
         if c2 > c1:
             ws.merge_cells(start_row=r, start_column=c1, end_row=r, end_column=c2)
@@ -256,7 +257,7 @@ def council_stats_workbook(stats, term):
         cell.fill = PatternFill("solid", fgColor=CREAM)
         cell.alignment = Alignment(horizontal="center")
     r += 1
-    headers = [""] + ["F", "G", "T"] * 7 + [""] + ["F", "G"] * 2 + [""]
+    headers = [""] + ["F", "G", "T"] * 8 + [""] + ["F", "G"] * 2 + [""]
     for i, h in enumerate(headers, start=1):
         c = ws.cell(row=r, column=i, value=h)
         c.font = Font(bold=True, size=8)
@@ -269,6 +270,7 @@ def council_stats_workbook(stats, term):
         vals = [label,
                 row["inscrits"]["F"], row["inscrits"]["G"], row["inscrits"]["T"],
                 row["evalues"]["F"], row["evalues"]["G"], row["evalues"]["T"],
+                row["non_classes"]["F"], row["non_classes"]["G"], row["non_classes"]["T"],
                 row["reussite"]["F"], row["reussite"]["G"], row["reussite"]["T"],
                 row["pct"]["F"], row["pct"]["G"], row["pct"]["T"],
                 row["th"]["F"], row["th"]["G"], row["th"]["T"],
@@ -664,14 +666,14 @@ def honor_roll_register_workbook(rows, term, school_year):
     wb = Workbook()
     ws = wb.active
     ws.title = "Tableaux d’honneur"
-    for index, width in enumerate([7, 32, 18, 22, 18, 18, 14, 12, 12], start=1):
+    for index, width in enumerate([7, 32, 12, 18, 22, 18, 18, 14, 12, 12], start=1):
         ws.column_dimensions[get_column_letter(index)].width = width
-    _header(ws, 1, 9, "LYCÉE TECHNIQUE DE TIBATI — REGISTRE DES TABLEAUX D’HONNEUR")
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=9)
+    _header(ws, 1, 10, "LYCÉE TECHNIQUE DE TIBATI — REGISTRE DES TABLEAUX D’HONNEUR")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=10)
     subtitle = ws.cell(row=2, column=1, value=f"{term} — Année scolaire {school_year} — Moyennes de 12/20 à 20/20")
     subtitle.font = Font(italic=True, size=10)
     subtitle.alignment = Alignment(horizontal="center")
-    headers = ["N°", "Nom et prénom", "Date de naissance", "Lieu de naissance", "Matricule", "Classe", "Moyenne /20", "Rang", "Effectif"]
+    headers = ["N°", "Nom et prénom", "Sexe", "Date de naissance", "Lieu de naissance", "Matricule", "Classe", "Moyenne /20", "Rang", "Effectif"]
     for column, header in enumerate(headers, start=1):
         cell = ws.cell(row=4, column=column, value=header)
         cell.font = Font(bold=True, color=NAVY)
@@ -681,18 +683,18 @@ def honor_roll_register_workbook(rows, term, school_year):
     for row_number, item in enumerate(rows, start=5):
         school_class = item["school_class"]
         student = item["student"]
-        values = [row_number - 4, student.full_name,
+        values = [row_number - 4, student.full_name, item.get("sex") or student.sex or "—",
                   student.dob.strftime("%d/%m/%Y") if student.dob else "—", student.birth_place or "—",
                   student.matricule, school_class.name, item["average"], item["rank_label"], item["class_size"]]
         for column, value in enumerate(values, start=1):
             cell = ws.cell(row=row_number, column=column, value=value)
             cell.border = BORDER
             cell.alignment = Alignment(vertical="center")
-            if column == 7:
+            if column == 8:
                 cell.number_format = "0.00"
                 cell.font = Font(bold=True, color=NAVY)
     if not rows:
-        ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=9)
+        ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=10)
         ws.cell(row=5, column=1, value="Aucun élève admissible pour ce trimestre.").alignment = Alignment(horizontal="center")
     ws.freeze_panes = "A5"
     wb_io = BytesIO()

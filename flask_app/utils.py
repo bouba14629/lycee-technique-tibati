@@ -940,6 +940,8 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
 
     evalues_students = [s for s in students if avg_by_id[s.id] is not None]
     evalues = split(evalues_students, len)
+    non_classes_students = [s for s in students if avg_by_id[s.id] is not None and avg_by_id[s.id] < 3]
+    non_classes = split(non_classes_students, len)
     reussite_students = [s for s in evalues_students if avg_by_id[s.id] >= 10]
     reussite = split(reussite_students, len)
 
@@ -972,7 +974,8 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
     faible_moyenne = {"F": extreme("F", False), "G": extreme("M", False)}
 
     return {
-        "class": cls, "inscrits": inscrits, "evalues": evalues, "reussite": reussite, "pct": pct,
+        "class": cls, "inscrits": inscrits, "evalues": evalues, "non_classes": non_classes,
+        "reussite": reussite, "pct": pct,
         "th": th, "encouragement": enc, "felicitations": fel,
         "moyenne_generale": moyenne_generale, "forte_moyenne": forte_moyenne, "faible_moyenne": faible_moyenne,
         "observation": _observation_label(pct["T"]), "_avgs_by_id": avg_by_id,
@@ -1008,6 +1011,7 @@ def council_statistics(classes, term, subject_category=None, sequence=None, cour
             return {sx: sum(r[key1][sx] for r in group) for sx in ("F", "G", "T")}
         inscrits = sum_key("inscrits", None)
         evalues = sum_key("evalues", None)
+        non_classes = sum_key("non_classes", None)
         reussite = sum_key("reussite", None)
         th = sum_key("th", None)
         enc = sum_key("encouragement", None)
@@ -1021,7 +1025,8 @@ def council_statistics(classes, term, subject_category=None, sequence=None, cour
                  "G": max([r["forte_moyenne"]["G"] for r in group if r["forte_moyenne"]["G"] is not None], default=None)}
         faible = {"F": min([r["faible_moyenne"]["F"] for r in group if r["faible_moyenne"]["F"] is not None], default=None),
                   "G": min([r["faible_moyenne"]["G"] for r in group if r["faible_moyenne"]["G"] is not None], default=None)}
-        return {"inscrits": inscrits, "evalues": evalues, "reussite": reussite, "pct": pct,
+        return {"inscrits": inscrits, "evalues": evalues, "non_classes": non_classes,
+                "reussite": reussite, "pct": pct,
                 "th": th, "encouragement": enc, "felicitations": fel, "moyenne_generale": moyenne_generale,
                 "forte_moyenne": forte, "faible_moyenne": faible, "observation": _observation_label(pct["T"])}
 
