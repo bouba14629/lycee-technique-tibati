@@ -1299,6 +1299,13 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Trimestre 3":
         term = "Annuel"
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first()
+    # xhtml2pdf ignore parfois les URI distantes ou data dans un PDF groupé.
+    # Un chemin local de repli garantit que le cadre et l’avatar restent visibles.
+    fallback_photo = pdf_asset(
+        ("img", "avatar_placeholder.png"),
+        "/manus-storage/avatar_placeholder_42973e92.png",
+        base_url=request.host_url,
+    )
     students = sorted(cls.students, key=lambda s: (
         (s.first_name or "").strip().casefold(),
         (s.last_name or "").strip().casefold(),
@@ -1308,7 +1315,7 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url),
+            "photo_path": student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo,
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1328,7 +1335,10 @@ def censeur_bulletins_class_pdf(class_id):
                 category.get("rows", []),
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
-        photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
+        # Compatibilité historique : pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))
+        # est volontairement conservé comme repère ; le rendu effectif utilise
+        # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
+        photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1341,7 +1351,7 @@ def censeur_bulletins_class_pdf(class_id):
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       approval=approval, school_year=get_current_school_year(),
                       logo_path=bulletin_logo_pdf_path(),
-                      avatar_path=pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
+                      avatar_path=fallback_photo)
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
