@@ -1288,7 +1288,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, bulletin_logo_pdf_path
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1315,7 +1315,9 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = [{
             "student": st,
             "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo,
+            "photo_path": pdf_image_data_uri(
+                student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo
+            ),
         } for st in students]
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1345,7 +1347,9 @@ def censeur_bulletins_class_pdf(class_id):
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
             # Un chemin local est plus fiable que data: URI pour xhtml2pdf dans
             # un PDF groupé volumineux et garantit l'affichage de la zone photo.
-            "photo_path": photo_path,
+            # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
+            # quand le PDF groupé est généré depuis le proxy de stockage.
+            "photo_path": pdf_image_data_uri(photo_path),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
