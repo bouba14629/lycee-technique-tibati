@@ -1288,7 +1288,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, overlay_student_photos
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1330,6 +1330,7 @@ def censeur_bulletins_class_pdf(class_id):
         return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     students_data = []
+    student_photo_paths = []
     for st in students:
         student_data = bulletin_data(st, term=term, _cache=bulletin_cache)
         # Le bulletin groupé doit suivre l'ordre alphabétique des matières dans
@@ -1344,6 +1345,7 @@ def censeur_bulletins_class_pdf(class_id):
         # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
         actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
         photo_path = actual_photo_path or fallback_photo
+        student_photo_paths.append(actual_photo_path)
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1362,6 +1364,9 @@ def censeur_bulletins_class_pdf(class_id):
                       avatar_path=fallback_photo)
     if not pdf:
         abort(500)
+    # Dernière garantie indépendante de xhtml2pdf : la photo validée est
+    # fusionnée directement sur la page correspondant à chaque élève.
+    pdf = overlay_student_photos(pdf, student_photo_paths)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
     inline_preview = request.args.get("preview") == "1"
     return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)

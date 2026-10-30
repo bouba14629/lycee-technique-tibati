@@ -6,6 +6,9 @@ from urllib.request import urlopen
 from flask import render_template, has_request_context, request
 from xhtml2pdf import pisa
 from PIL import Image, ImageOps
+from pypdf import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -148,3 +151,39 @@ def render_pdf(template_name, **context):
     if result.err:
         return None
     return buffer
+
+
+def overlay_student_photos(pdf_buffer, photo_paths):
+    """Incruste les photos validées sur les pages correspondantes du PDF."""
+    if not pdf_buffer or not photo_paths:
+        return pdf_buffer
+    try:
+        reader = PdfReader(pdf_buffer)
+        writer = PdfWriter()
+        for index, page in enumerate(reader.pages):
+            photo_path = photo_paths[index] if index < len(photo_paths) else None
+            if photo_path and os.path.isfile(photo_path):
+                overlay_stream = BytesIO()
+                canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(595.28, 841.89))
+                # Coordonnées fixes du cadre photo du bulletin A4 groupé.
+                # Le cadre est au-dessus de la ligne d’identification de l’élève.
+                x, y, width, height = 451, 707, 50, 60
+                canvas_pdf.setFillColorRGB(1, 1, 1)
+                canvas_pdf.rect(x, y, width, height, fill=1, stroke=0)
+                canvas_pdf.drawImage(
+                    ImageReader(photo_path), x + 2, y + 2, width=46, height=56,
+                    preserveAspectRatio=True, anchor="c", mask="auto",
+                )
+                canvas_pdf.setStrokeColorRGB(0, 0, 0)
+                canvas_pdf.setLineWidth(1.1)
+                canvas_pdf.rect(x, y, width, height, fill=0, stroke=1)
+                canvas_pdf.save()
+                overlay_stream.seek(0)
+                page.merge_page(PdfReader(overlay_stream).pages[0])
+            writer.add_page(page)
+        output = BytesIO()
+        writer.write(output)
+        output.seek(0)
+        return output
+    except Exception:
+        return pdf_buffer
