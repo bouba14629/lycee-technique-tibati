@@ -2176,7 +2176,7 @@ def censeur_grade_reports():
         courses_query = courses_query
         if subject_id:
             courses_query = courses_query.filter(Course.subject_id == subject_id)
-        courses = (courses_query.join(Subject)
+        courses = (courses_query
                    .order_by(Subject.category, Subject.name).all())
         students = sorted(school_class.students, key=lambda student: (
             (student.first_name or "").strip().casefold(),

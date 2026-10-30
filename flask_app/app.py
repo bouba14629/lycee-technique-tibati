@@ -110,7 +110,7 @@ def dashboard_calendar_events():
 def web_app_manifest():
     manifest = {
         "name": "Lycée Technique de Tibati — Plateforme numérique",
-        "short_name": "LTT Tibati",
+        "short_name": "LT Tibati",
         "start_url": "/login",
         "scope": "/",
         "display": "standalone",
