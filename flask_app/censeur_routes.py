@@ -1312,13 +1312,15 @@ def censeur_bulletins_class_pdf(class_id):
     ))
     bulletin_cache = {}
     if term == "Annuel":
-        students_data = [{
-            "student": st,
-            "data": annual_bulletin_data(st, _cache=bulletin_cache),
-            "photo_path": pdf_image_data_uri(
-                student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo
-            ),
-        } for st in students]
+        students_data = []
+        for st in students:
+            actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
+            students_data.append({
+                "student": st,
+                "data": annual_bulletin_data(st, _cache=bulletin_cache),
+                "photo_path": pdf_image_data_uri(actual_photo_path or fallback_photo),
+                "photo_available": bool(actual_photo_path),
+            })
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
         if not pdf:
@@ -1340,7 +1342,8 @@ def censeur_bulletins_class_pdf(class_id):
         # Compatibilité historique : pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))
         # est volontairement conservé comme repère ; le rendu effectif utilise
         # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
-        photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url) or fallback_photo
+        actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
+        photo_path = actual_photo_path or fallback_photo
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1350,6 +1353,7 @@ def censeur_bulletins_class_pdf(class_id):
             # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
             # quand le PDF groupé est généré depuis le proxy de stockage.
             "photo_path": pdf_image_data_uri(photo_path),
+            "photo_available": bool(actual_photo_path),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
