@@ -128,6 +128,22 @@ def _lightweight_photo_path(source_path, lightweight=True):
         return None
 
 
+def select_student_photo_for_pdf(photo, fallback_path, base_url=None):
+    """Choisit automatiquement la stratégie de rendu la plus fiable.
+
+    Une photo réelle est validée/convertie par Pillow, embarquée dans le HTML
+    et conservée pour l’incrustation directe après le rendu PDF. Si elle est
+    absente ou illisible, seul le cadre de secours est conservé.
+    """
+    actual_path = student_photo_pdf_path(photo, lightweight=True, base_url=base_url)
+    return {
+        "path": actual_path or fallback_path,
+        "overlay_path": actual_path,
+        "available": bool(actual_path),
+        "method": "html-and-direct-overlay" if actual_path else "placeholder-frame",
+    }
+
+
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
     logo_path = bulletin_logo_pdf_path()

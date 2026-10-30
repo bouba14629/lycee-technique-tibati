@@ -1288,7 +1288,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, overlay_student_photos
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, overlay_student_photos, select_student_photo_for_pdf
     from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1343,8 +1343,11 @@ def censeur_bulletins_class_pdf(class_id):
         # Compatibilité historique : pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))
         # est volontairement conservé comme repère ; le rendu effectif utilise
         # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
-        actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
-        photo_path = actual_photo_path or fallback_photo
+        # Choix automatique : photo réelle validée si disponible, sinon cadre
+        # de secours ; l’incrustation directe reste la garantie finale.
+        photo_choice = select_student_photo_for_pdf(st.photo, fallback_photo, base_url=request.host_url)
+        actual_photo_path = photo_choice["overlay_path"]
+        photo_path = photo_choice["path"]
         student_photo_paths.append(actual_photo_path)
         students_data.append({
             "student": st,
@@ -1355,7 +1358,7 @@ def censeur_bulletins_class_pdf(class_id):
             # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
             # quand le PDF groupé est généré depuis le proxy de stockage.
             "photo_path": pdf_image_data_uri(photo_path),
-            "photo_available": bool(actual_photo_path),
+            "photo_available": photo_choice["available"],
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
