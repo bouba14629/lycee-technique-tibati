@@ -26,7 +26,7 @@
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
     <td style="width:23%; text-align:center; vertical-align:middle;">
-      <table class="photo-box"><tr><td>{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}"/>{% else %}<span>PHOTO<br>DE L’ÉLÈVE</span>{% endif %}</td></tr></table>
+      {% if not photo_in_meta %}<table class="photo-box"><tr><td>{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}"/>{% else %}<span>PHOTO<br>DE L’ÉLÈVE</span>{% endif %}</td></tr></table>{% endif %}
     </td>
   </tr>
   <tr>
@@ -48,10 +48,16 @@
       <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
     </td>
     <td style="width:50%; padding-left:10pt;">
+      {% if photo_in_meta %}<table style="width:100%; border-collapse:collapse;"><tr><td style="width:74%; padding:0; vertical-align:top;">
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
+      </td><td style="width:26%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if not photo_available %}<span>PHOTO<br>DE L’ÉLÈVE</span>{% endif %}</td></tr></table></td></tr></table>{% else %}
+      <strong>Année Scolaire :</strong> {{ school_year }}<br>
+      <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
+      <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
+      <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}{% endif %}
     </td>
   </tr>
 </table>

@@ -165,9 +165,9 @@ def overlay_student_photos(pdf_buffer, photo_paths):
             if photo_path and os.path.isfile(photo_path):
                 overlay_stream = BytesIO()
                 canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(595.28, 841.89))
-                # Coordonnées fixes du cadre photo du bulletin A4 groupé.
-                # Le cadre est au-dessus de la ligne d’identification de l’élève.
-                x, y, width, height = 451, 707, 50, 60
+                # Coordonnées fixes du cadre photo du bulletin A4 groupé,
+                # alignées sur le modèle importé : à droite du bloc identité.
+                x, y, width, height = 527, 624, 50, 60
                 canvas_pdf.setFillColorRGB(1, 1, 1)
                 canvas_pdf.rect(x, y, width, height, fill=1, stroke=0)
                 canvas_pdf.drawImage(
