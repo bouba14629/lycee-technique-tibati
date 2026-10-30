@@ -5,7 +5,7 @@ from io import BytesIO
 from urllib.request import urlopen
 from flask import render_template, has_request_context, request
 from xhtml2pdf import pisa
-from PIL import Image
+from PIL import Image, ImageOps
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -74,7 +74,11 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
         return None
     if photo.startswith("/manus-storage/"):
         path = pdf_asset(("img", "avatar_placeholder.png"), photo, base_url=base_url)
-        return _lightweight_photo_path(path) if lightweight and path else path
+        # pdf_asset utilise l’avatar comme repli ; il ne doit jamais être
+        # considéré comme la photo réelle de l’élève.
+        if path == asset_path("img", "avatar_placeholder.png"):
+            return None
+        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
@@ -87,31 +91,38 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
             except Exception:
                 return None
         path = cache_path if os.path.exists(cache_path) else None
-        return _lightweight_photo_path(path) if lightweight and path else path
+        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
     local_path = asset_path("uploads", "students", os.path.basename(photo))
     if not os.path.exists(local_path):
         return None
-    if not lightweight:
-        return local_path
-    return _lightweight_photo_path(local_path)
+    return _lightweight_photo_path(local_path, lightweight=lightweight)
 
 
-def _lightweight_photo_path(source_path):
-    """Crée une vignette JPEG réutilisable pour les PDF groupés."""
+def _lightweight_photo_path(source_path, lightweight=True):
+    """Valide et convertit une photo en JPEG RGB lisible par xhtml2pdf."""
     cache_dir = "/tmp/ltt-pdf-assets/lightweight-students"
     os.makedirs(cache_dir, exist_ok=True)
     cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + ".jpg")
     try:
         source_mtime = os.path.getmtime(source_path)
         if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= source_mtime:
+            with Image.open(cache_path) as cached:
+                cached.verify()
             return cache_path
         with Image.open(source_path) as image:
+            image = ImageOps.exif_transpose(image)
+            image.load()
             image = image.convert("RGB")
-            image.thumbnail((320, 400), Image.Resampling.LANCZOS)
-            image.save(cache_path, format="JPEG", quality=72, optimize=True)
+            if lightweight:
+                image.thumbnail((320, 400), Image.Resampling.LANCZOS)
+            else:
+                image.thumbnail((1200, 1600), Image.Resampling.LANCZOS)
+            image.save(cache_path, format="JPEG", quality=85, optimize=True)
+        with Image.open(cache_path) as converted:
+            converted.verify()
         return cache_path
     except Exception:
-        return source_path
+        return None
 
 
 def render_pdf(template_name, **context):
