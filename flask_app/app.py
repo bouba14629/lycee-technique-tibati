@@ -109,7 +109,7 @@ def dashboard_calendar_events():
 @app.get("/manifest.webmanifest")
 def web_app_manifest():
     manifest = {
-        "name": "Lycée Technique de Tibati — Plateforme numérique",
+        "name": "LT Tibati",
         "short_name": "LT Tibati",
         "start_url": "/login",
         "scope": "/",
@@ -133,7 +133,7 @@ def service_worker():
     )]
     assets = ["/manifest.webmanifest", LTT_ASSETS["css/style.css"], LTT_ASSETS["img/logo.png"], *orbit_assets]
     script = """
-	const CACHE_NAME = 'ltt-shell-v20';
+    const CACHE_NAME = 'ltt-shell-v21';
 const ASSETS = __ASSETS__;
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).catch(() => null).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim())));
