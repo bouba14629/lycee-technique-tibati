@@ -949,21 +949,64 @@ def _honor_congratulations():
 
 
 def _honor_recipients(school_class, term):
+    """Calcule les lauréats en une lecture groupée des cours et des notes.
+
+    Le registre est souvent ouvert sans classe sélectionnée. L’ancien calcul
+    appelait bulletin_data pour chaque élève, puis recalculait les camarades
+    pour chaque matière, ce qui pouvait dépasser le délai HTTP et produire une
+    erreur 500 sur les établissements volumineux.
+    """
+    students = list(school_class.students)
+    student_ids = [student.id for student in students]
+    courses = (Course.query.join(ScheduleEntry).filter(Course.class_id == school_class.id)
+               .join(Subject).filter(db.func.lower(Subject.name) != "orientation scolaire")
+               .distinct().all())
+    course_ids = [course.id for course in courses]
+    grades = (Grade.query.filter(Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids), Grade.term == term)
+              .order_by(Grade.date.desc(), Grade.id.desc()).all()) if student_ids and course_ids else []
+    values = {}
+    devoir_values = {}
+    latest_evaluations = {}
+    seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    for grade in grades:
+        normalized = grade.value / (grade.max_value or 20) * 20
+        key = (grade.student_id, grade.course_id)
+        if grade.type == "Devoir":
+            devoir_values.setdefault(key, []).append(normalized)
+        elif grade.type == "Évaluation" and grade.sequence in (seq_a, seq_b):
+            latest_evaluations.setdefault((grade.student_id, grade.course_id, grade.sequence), normalized)
+    for key, devoirs in devoir_values.items():
+        values[key] = [sum(devoirs) / len(devoirs)]
+    for (student_id, course_id, _sequence), value in latest_evaluations.items():
+        values.setdefault((student_id, course_id), []).append(value)
+    coefficients = {course.id: course.subject.coefficient or 1 for course in courses}
+    averages = {}
+    for student_id in student_ids:
+        total_points = 0.0
+        total_coefficients = 0
+        for course_id, coefficient in coefficients.items():
+            course_values = values.get((student_id, course_id), [])
+            if course_values:
+                total_points += (sum(course_values) / len(course_values)) * coefficient
+                total_coefficients += coefficient
+        if total_coefficients:
+            averages[student_id] = round(total_points / total_coefficients, 2)
+    ranked = sorted(averages.items(), key=lambda item: (-item[1], item[0]))
+    ranks = {student_id: index + 1 for index, (student_id, _average) in enumerate(ranked)}
+    class_size = len(averages)
     recipients = []
-    for student in school_class.students:
-        data = bulletin_data(student, term=term)
-        if not data or data.get("overall_avg") is None:
+    for student in students:
+        average = averages.get(student.id)
+        if average is None or not 12 <= average <= 20:
             continue
-        if not 12 <= data["overall_avg"] <= 20:
-            continue
-        rank = data.get("rank")
+        rank = ranks.get(student.id)
         if rank == 1:
             suffix = "ère" if student.sex in {"F", "Féminin"} else "er"
             rank_label = f"1{suffix}"
         else:
             rank_label = f"{rank}e" if rank else "—"
-        recipients.append({"student": student, "average": data["overall_avg"], "rank": rank, "rank_label": rank_label,
-                           "sex": student.sex or "—", "class_size": data.get("class_size", 0)})
+        recipients.append({"student": student, "average": average, "rank": rank, "rank_label": rank_label,
+                           "sex": student.sex or "—", "class_size": class_size})
     recipients.sort(key=lambda item: (-item["average"], item["student"].last_name, item["student"].first_name))
     return recipients
 
