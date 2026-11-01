@@ -179,23 +179,28 @@ def overlay_student_photos(pdf_buffer, photo_paths):
         for index, page in enumerate(reader.pages):
             photo_path = photo_paths[index] if index < len(photo_paths) else None
             if photo_path and os.path.isfile(photo_path):
-                overlay_stream = BytesIO()
-                canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(595.28, 841.89))
-                # Coordonnées fixes du cadre photo du bulletin A4 groupé,
-                # alignées sur le modèle importé : à droite du bloc identité.
-                x, y, width, height = 527, 624, 50, 60
-                canvas_pdf.setFillColorRGB(1, 1, 1)
-                canvas_pdf.rect(x, y, width, height, fill=1, stroke=0)
-                canvas_pdf.drawImage(
-                    ImageReader(photo_path), x + 2, y + 2, width=46, height=56,
-                    preserveAspectRatio=True, anchor="c", mask="auto",
-                )
-                canvas_pdf.setStrokeColorRGB(0, 0, 0)
-                canvas_pdf.setLineWidth(1.1)
-                canvas_pdf.rect(x, y, width, height, fill=0, stroke=1)
-                canvas_pdf.save()
-                overlay_stream.seek(0)
-                page.merge_page(PdfReader(overlay_stream).pages[0])
+                try:
+                    overlay_stream = BytesIO()
+                    canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(595.28, 841.89))
+                    # Coordonnées fixes du cadre photo du bulletin A4 groupé,
+                    # alignées sur le modèle importé : à droite du bloc identité.
+                    x, y, width, height = 527, 624, 50, 60
+                    canvas_pdf.setFillColorRGB(1, 1, 1)
+                    canvas_pdf.rect(x, y, width, height, fill=1, stroke=0)
+                    canvas_pdf.drawImage(
+                        ImageReader(photo_path), x + 2, y + 2, width=46, height=56,
+                        preserveAspectRatio=True, anchor="c", mask="auto",
+                    )
+                    canvas_pdf.setStrokeColorRGB(0, 0, 0)
+                    canvas_pdf.setLineWidth(1.1)
+                    canvas_pdf.rect(x, y, width, height, fill=0, stroke=1)
+                    canvas_pdf.save()
+                    overlay_stream.seek(0)
+                    page.merge_page(PdfReader(overlay_stream).pages[0])
+                except Exception:
+                    # Une photo corrompue ne doit pas empêcher les autres
+                    # élèves de recevoir leur photo dans le même PDF.
+                    pass
             writer.add_page(page)
         output = BytesIO()
         writer.write(output)
