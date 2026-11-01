@@ -21,6 +21,28 @@ def _teacher_grade_locked(grade):
     return bool(grade and grade.date and (date.today() - grade.date).days >= GRADE_EDIT_WINDOW_DAYS)
 
 
+def _teacher_indicator(teacher, course, term):
+    from models import TeacherIndicator
+    return TeacherIndicator.query.filter_by(teacher_id=teacher.id, course_id=course.id, term=term).first()
+
+
+def _teacher_notes_open(teacher, course, term):
+    """Retourne vrai si les indicateurs autorisent actuellement la saisie.
+
+    Après sept jours, une nouvelle mise à jour des indicateurs est nécessaire
+    pour rouvrir la saisie ; cette règle ne modifie aucune note existante.
+    """
+    indicator = _teacher_indicator(teacher, course, term)
+    if not indicator:
+        return False
+    grades = Grade.query.filter_by(course_id=course.id, term=term).all()
+    locked_dates = [grade.date for grade in grades if _teacher_grade_locked(grade) and grade.date]
+    if not locked_dates:
+        return True
+    updated_at = indicator.updated_at.date() if indicator.updated_at else None
+    return bool(updated_at and updated_at > max(locked_dates))
+
+
 def current_teacher():
     user = User.query.get(session["user_id"])
     return user.teacher_profile
@@ -93,9 +115,10 @@ def teacher_devoir_delete(course_id, grade_id):
     g = Grade.query.get_or_404(grade_id)
     if g.course_id != course.id or g.type != "Devoir":
         abort(403)
-    if _teacher_grade_locked(g):
-        flash("Cette note est verrouillée après 7 jours.", "danger")
-        return redirect(url_for("teacher_devoir_list", course_id=course_id, student_id=g.student_id, term=g.term))
+    notes_open = _teacher_notes_open(teacher, course, g.term)
+    if not notes_open:
+        flash("Saisie verrouillée : renseignez d'abord les indicateurs pédagogiques de cette matière.", "warning")
+        return redirect(url_for("teacher_grades", course_id=course_id, term=g.term))
     student_id = g.student_id
     term = g.term
     db.session.delete(g)
@@ -116,11 +139,16 @@ def teacher_grades(course_id):
     if student_sort not in {"asc", "desc"}:
         student_sort = "asc"
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    notes_open = _teacher_notes_open(teacher, course, term)
 
     if request.method == "POST":
+        term = request.form.get("term", TERMS[0])
+        notes_open = _teacher_notes_open(teacher, course, term)
+        if session.get("role") == "enseignant" and not notes_open:
+            flash("Saisie verrouillée : renseignez d'abord les indicateurs pédagogiques de cette matière.", "warning")
+            return redirect(url_for("teacher_grades", course_id=course_id, term=term))
         # Le verrouillage est appliqué note par note plus bas. Ainsi, un élève
         # resté sans note au premier enregistrement peut encore être complété.
-        term = request.form.get("term", TERMS[0])
         seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
         eval_type = request.form.get("type", "Devoir")  # "Devoir", "Évaluation-A" ou "Évaluation-B"
         eval_date = request.form.get("date") or date.today().isoformat()
@@ -164,7 +192,7 @@ def teacher_grades(course_id):
                 existing_grade = Grade.query.filter_by(student_id=student.id, course_id=course.id,
                                                          term=term, type="Évaluation", sequence=seq_num).first()
                 if existing_grade:
-                    if _teacher_grade_locked(existing_grade):
+                    if _teacher_grade_locked(existing_grade) and not notes_open:
                         continue
                     existing_grade.value = fval
                     existing_grade.date = date.fromisoformat(eval_date)
@@ -214,12 +242,18 @@ def teacher_grades(course_id):
             class_avgs.append(avg)
     course_class_avg = round(sum(class_avgs) / len(class_avgs), 2) if class_avgs else None
     planned_assessments = PlannedAssessment.query.filter_by(course_id=course.id, term=term).order_by(PlannedAssessment.sequence).all()
+    locked_grade_ids = {
+        grade.id for grade in (*seq_a_grades.values(), *seq_b_grades.values())
+        if _teacher_grade_locked(grade) and not notes_open
+    }
     return render_template("teacher_grades.html", course=course, students=students, term=term,
                             terms=TERMS, seq_a=seq_a, seq_b=seq_b, notes_trim_preview=notes_trim_preview,
                             seq_a_grades=seq_a_grades, seq_b_grades=seq_b_grades,
                             auto_appreciations=auto_appreciations, course_class_avg=course_class_avg,
                             nb_evaluated=len(class_avgs), planned_assessments=planned_assessments,
-                            student_sort=student_sort)
+                            student_sort=student_sort, indicators_filled=notes_open,
+                            notes_locked=not notes_open and session.get("role") == "enseignant",
+                            locked_grade_ids=locked_grade_ids)
 
 
 @app.route("/enseignant/appel/<int:course_id>", methods=["GET", "POST"])
