@@ -1531,6 +1531,48 @@ def _gender_course_metrics(course, term):
     return {"successful": successful, "rates": rates, "averages": averages}
 
 
+def _gender_course_metrics_bulk(courses, term):
+    """Calcule les métriques par genre pour tous les cours avec une lecture des notes."""
+    course_ids = [course.id for course in courses]
+    class_ids = {course.class_id for course in courses}
+    students = Student.query.filter(Student.class_id.in_(class_ids)).all() if class_ids else []
+    student_by_id = {student.id: student for student in students}
+    grades = (Grade.query.filter(Grade.course_id.in_(course_ids), Grade.term == term).all()
+              if course_ids else [])
+    sums = {}
+    counts = {}
+    for grade in grades:
+        key = (grade.course_id, grade.student_id)
+        sums[key] = sums.get(key, 0.0) + grade.value / (grade.max_value or 20) * 20
+        counts[key] = counts.get(key, 0) + 1
+    metrics = {}
+    for course in courses:
+        buckets = {"Filles": [], "Garçons": []}
+        for student in students:
+            key = (course.id, student.id)
+            if key not in sums:
+                continue
+            sex = (student.sex or "").strip().upper()
+            if sex in {"F", "FILLE", "FILLES"}:
+                bucket = "Filles"
+            elif sex in {"M", "G", "GARÇON", "GARCONS", "GARÇONS"}:
+                bucket = "Garçons"
+            else:
+                continue
+            buckets[bucket].append(sums[key] / counts[key])
+        successful = {key: sum(value >= 10 for value in values) for key, values in buckets.items()}
+        totals = {key: len(values) for key, values in buckets.items()}
+        successful["Total"] = sum(successful.values())
+        totals["Total"] = sum(totals.values())
+        rates = {key: _pct(successful[key], totals[key]) for key in buckets}
+        rates["Total"] = _pct(successful["Total"], totals["Total"])
+        averages = {key: round(sum(values) / len(values), 2) if values else None for key, values in buckets.items()}
+        all_values = [value for values in buckets.values() for value in values]
+        averages["Total"] = round(sum(all_values) / len(all_values), 2) if all_values else None
+        metrics[course.id] = {"successful": successful, "rates": rates, "averages": averages}
+    return metrics
+
+
 def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None, date_from=None, date_to=None):
     from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
     scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1584,13 +1626,17 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
                                                         CustomIndicatorType.section_id.is_(None)))
     custom_types = custom_types_q.order_by(CustomIndicatorType.label).all()
     custom_values_by_course = {}
-    for ct in custom_types:
-        for v in CustomIndicatorValue.query.filter_by(indicator_type_id=ct.id, term=term).all():
-            v.pct = _pct(v.done, v.planned)  # attribut transitoire (non persisté), pour l'affichage uniquement
-            custom_values_by_course.setdefault(v.course_id, {})[ct.id] = v
+    custom_type_ids = [ct.id for ct in custom_types]
+    custom_values = (CustomIndicatorValue.query
+                     .filter(CustomIndicatorValue.indicator_type_id.in_(custom_type_ids),
+                             CustomIndicatorValue.term == term).all()) if custom_type_ids else []
+    for value in custom_values:
+        value.pct = _pct(value.done, value.planned)  # attribut transitoire (non persisté), pour l'affichage uniquement
+        custom_values_by_course.setdefault(value.course_id, {})[value.indicator_type_id] = value
 
     rows = []
     missing = []
+    gender_metrics = _gender_course_metrics_bulk(courses, term)
     for c in courses:
         ind = inds.get(c.id)
         if not ind:
@@ -1607,7 +1653,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
             "pct_digital_lessons": _pct(ind.digital_lessons_done, ind.digital_lessons_planned),
             "pct_tp": _pct(ind.tp_done, ind.tp_planned),
             "pct_digital_tp": _pct(ind.digital_tp_done, ind.digital_tp_planned),
-            "gender_metrics": _gender_course_metrics(c, term),
+            "gender_metrics": gender_metrics.get(c.id, {"successful": {}, "rates": {}, "averages": {}}),
             "custom": custom_values_by_course.get(c.id, {}),
         })
     rows.sort(key=lambda r: (r["teacher"].user.full_name, r["course"].school_class.name))
@@ -1713,10 +1759,21 @@ def censeur_indicators():
         assessments_q = assessments_q.filter(PlannedAssessment.sequence == sequence)
     if assessment_id:
         assessments_q = assessments_q.filter(PlannedAssessment.id == assessment_id)
+    assessments = assessments_q.order_by(PlannedAssessment.scheduled_date).all()
+    assessment_pairs = {(assessment.course_id, assessment.term, assessment.sequence) for assessment in assessments}
+    grades_by_assessment = {}
+    if assessment_pairs:
+        assessment_grades = (Grade.query.filter(Grade.type == "Évaluation",
+                                                 db.or_(*(
+                                                     db.and_(Grade.course_id == course_id, Grade.term == assessment_term,
+                                                             Grade.sequence == assessment_sequence)
+                                                     for course_id, assessment_term, assessment_sequence in assessment_pairs
+                                                 ))).all())
+        for grade in assessment_grades:
+            grades_by_assessment.setdefault((grade.course_id, grade.term, grade.sequence), []).append(grade)
     evaluation_rows = []
-    for assessment in assessments_q.order_by(PlannedAssessment.scheduled_date).all():
-        grades = Grade.query.filter_by(course_id=assessment.course_id, term=assessment.term,
-                                       type="Évaluation", sequence=assessment.sequence).all()
+    for assessment in assessments:
+        grades = grades_by_assessment.get((assessment.course_id, assessment.term, assessment.sequence), [])
         values = [grade.value / grade.max_value * 20 if grade.max_value else grade.value for grade in grades]
         evaluation_rows.append({
             "assessment": assessment, "expected": len(assessment.course.school_class.students),
