@@ -1913,14 +1913,14 @@ def censeur_indicator_edit(course_id):
 def _council_minutes_dataset(school_class, term):
     """Construit le PV à partir des mêmes moyennes trimestrielles que le bulletin."""
     from collections import defaultdict
+    from models import Grade
 
-    bulletin_cache = {}
     students = sorted(
         school_class.students,
         key=lambda item: ((item.first_name or "").strip().casefold(), (item.last_name or "").strip().casefold(), item.id),
     )
     all_courses = sorted(
-        {course.id: course for course in school_class.courses}.values(),
+        Course.query.filter(Course.class_id == school_class.id).join(ScheduleEntry).distinct().all(),
         key=lambda item: (
             (item.subject.category or "").casefold(),
             (item.subject.name or "").strip().casefold(),
@@ -1949,26 +1949,55 @@ def _council_minutes_dataset(school_class, term):
             continue
         subjects = []
         for course in category_courses:
-            meta = {"course_id": course.id, "label": course.subject.name}
+            meta = {"course_id": course.id, "label": course.subject.name, "course": course}
             subjects.append(meta)
             subject_meta[course.id] = meta
         subject_groups.append({"name": category, "subjects": subjects})
 
+    student_ids = [student.id for student in students]
+    course_ids = list(subject_meta)
+    seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    grade_rows = (Grade.query.filter(Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids),
+                                     Grade.term == term).all()
+                  if student_ids and course_ids else [])
+    devoir_values = defaultdict(list)
+    latest_evaluations = {}
+    for grade in grade_rows:
+        key = (grade.student_id, grade.course_id)
+        if grade.type == "Devoir":
+            devoir_values[key].append(grade.value / (grade.max_value or 20) * 20)
+        elif grade.type == "Évaluation" and grade.sequence in (seq_a, seq_b):
+            eval_key = (grade.student_id, grade.course_id, grade.sequence)
+            previous = latest_evaluations.get(eval_key)
+            if previous is None or (grade.date or date.min) >= (previous.date or date.min):
+                latest_evaluations[eval_key] = grade
+
     raw_rows = []
     for student in students:
-        data = bulletin_data(student, term=term, _cache=bulletin_cache)
         values = {}
-        for category in data.get("categories", []):
-            for item in category.get("rows", []):
-                course_id = item["course"].id
-                if course_id in subject_meta:
-                    values[course_id] = item.get("notes_trim")
+        points = 0.0
+        coefficient_total = 0
+        for course_id, meta in subject_meta.items():
+            key = (student.id, course_id)
+            trim_values = devoir_values.get(key, [])
+            notes_trim = round(sum(trim_values) / len(trim_values), 2) if trim_values else None
+            eval_a = latest_evaluations.get((student.id, course_id, seq_a))
+            eval_b = latest_evaluations.get((student.id, course_id, seq_b))
+            eval_values = [grade.value / (grade.max_value or 20) * 20 for grade in (eval_a, eval_b) if grade]
+            display_values = [notes_trim] if notes_trim is not None else eval_values
+            values[course_id] = round(sum(display_values) / len(display_values), 2) if display_values else None
+            official_values = ([notes_trim] if notes_trim is not None else []) + eval_values
+            if official_values:
+                average = round(sum(official_values) / len(official_values), 2)
+                coefficient = (meta["course"].subject.coefficient or 0) if "course" in meta else 0
+                points += average * coefficient
+                coefficient_total += coefficient
         raw_rows.append({
             "student": student,
-            "data": data,
+            "data": {},
             "subjects": values,
-            "general_average": data.get("overall_avg"),
-            "coefficient": data.get("overall_coef") or 0,
+            "general_average": round(points / coefficient_total, 2) if coefficient_total else None,
+            "coefficient": coefficient_total,
         })
     ranked = sorted(
         [row for row in raw_rows if row["general_average"] is not None],

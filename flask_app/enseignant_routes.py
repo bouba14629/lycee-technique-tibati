@@ -8,11 +8,12 @@ DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
 ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 COUNSELOR_ALLOWED_HOURS_DUE = (22, 25, 36, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
-GRADE_EDIT_WINDOW_DAYS = 7
+GRADE_EDIT_WINDOW_DAYS = 10
+GRADE_REOPEN_WINDOW_DAYS = 7
 
 
 def _teacher_grade_locked(grade):
-    """Une note existante est verrouillée sept jours après sa première saisie.
+    """Une note existante est verrouillée dix jours après sa première saisie.
 
     La date historique de la note est utilisée afin de ne pas modifier les données
     déjà enregistrées ni exiger une migration destructive de la base existante.
@@ -29,8 +30,8 @@ def _teacher_indicator(teacher, course, term):
 def _teacher_notes_open(teacher, course, term):
     """Retourne vrai si les indicateurs autorisent actuellement la saisie.
 
-    Après sept jours, une nouvelle mise à jour des indicateurs est nécessaire
-    pour rouvrir la saisie ; cette règle ne modifie aucune note existante.
+    Après dix jours, une nouvelle mise à jour des indicateurs ouvre la saisie
+    pendant sept jours ; cette règle ne modifie aucune note existante.
     """
     indicator = _teacher_indicator(teacher, course, term)
     if not indicator:
@@ -40,7 +41,9 @@ def _teacher_notes_open(teacher, course, term):
     if not locked_dates:
         return True
     updated_at = indicator.updated_at.date() if indicator.updated_at else None
-    return bool(updated_at and updated_at > max(locked_dates))
+    lock_date = max(locked_dates)
+    return bool(updated_at and updated_at >= lock_date
+                and (date.today() - updated_at).days < GRADE_REOPEN_WINDOW_DAYS)
 
 
 def current_teacher():
