@@ -621,12 +621,12 @@ def user_scoped_class_ids(user):
 def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
     """Indicateurs globaux (taux) pour les jauges du tableau de bord, éventuellement limités
     à une liste de classes (portée d'un Censeur/Surveillant Général)."""
-    from models import Grade, Student, Attendance, Teacher, Course
+    from models import Grade, Student, Attendance, Teacher, Course, User
 
     student_q = Student.query
     if class_ids is not None:
         student_q = student_q.filter(Student.class_id.in_(class_ids))
-    student_ids = [s.id for s in student_q.all()]
+    student_ids = [student_id for (student_id,) in student_q.with_entities(Student.id).all()]
     total_students = len(student_ids) or 1
 
     grade_q = Grade.query
@@ -638,9 +638,9 @@ def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
             grade_q = grade_q.filter(Course.subject_id.in_(subject_ids))
         if teacher_id is not None:
             grade_q = grade_q.filter(Course.teacher_id == teacher_id)
-    grades = grade_q.all()
+    grades = grade_q.with_entities(Grade.value, Grade.max_value).all()
     if grades:
-        passing = sum(1 for g in grades if g.max_value and (g.value / g.max_value * 20) >= 10)
+        passing = sum(1 for value, max_value in grades if max_value and (value / max_value * 20) >= 10)
         success_rate = round(passing / len(grades) * 100)
     else:
         success_rate = 0
@@ -654,8 +654,10 @@ def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
             att_q = att_q.filter(Course.subject_id.in_(subject_ids))
         if teacher_id is not None:
             att_q = att_q.filter(Course.teacher_id == teacher_id)
-    absence_students = {a.student_id for a in att_q.filter(Attendance.type == "Absence").all()}
-    retard_students = {a.student_id for a in att_q.filter(Attendance.type == "Retard").all()}
+    absence_students = {student_id for (student_id,) in
+                        att_q.filter(Attendance.type == "Absence").with_entities(Attendance.student_id).distinct().all()}
+    retard_students = {student_id for (student_id,) in
+                       att_q.filter(Attendance.type == "Retard").with_entities(Attendance.student_id).distinct().all()}
     absence_rate = round(len(absence_students) / total_students * 100)
     attendance_rate = 100 - absence_rate
     retard_rate = round(len(retard_students) / total_students * 100)
@@ -670,8 +672,8 @@ def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
         if teacher_id is not None:
             teacher_q = teacher_q.filter(Course.teacher_id == teacher_id)
         teacher_q = teacher_q.distinct()
-    teachers = teacher_q.all()
-    active_rate = round(sum(1 for t in teachers if t.user.active) / (len(teachers) or 1) * 100)
+    teacher_rows = teacher_q.join(User, Teacher.user_id == User.id).with_entities(User.active).all()
+    active_rate = round(sum(1 for (active,) in teacher_rows if active) / (len(teacher_rows) or 1) * 100)
 
     return {
         "success_rate": success_rate,
@@ -684,29 +686,30 @@ def dashboard_rates(class_ids=None, subject_ids=None, teacher_id=None):
 
 def department_success_rates(dept_ids=None):
     """% d'élèves avec moyenne >= 10 (simple, toutes notes confondues), par filière — pour le graphique."""
-    from models import Department, Grade
+    from models import Department, Grade, Student, SchoolClass
 
     q = Department.query
     if dept_ids is not None:
         q = q.filter(Department.id.in_(dept_ids))
     depts = q.order_by(Department.code).all()
-    results = []
-    for d in depts:
-        student_ids = [s.id for c in d.classes for s in c.students]
-        if not student_ids:
-            results.append((d.code, 0))
-            continue
-        rows = (Grade.query.with_entities(Grade.student_id, Grade.value, Grade.max_value)
-                .filter(Grade.student_id.in_(student_ids)).all())
-        per_student = {}
-        for sid, val, maxval in rows:
-            per_student.setdefault(sid, []).append(val / maxval * 20 if maxval else 0)
-        if not per_student:
-            results.append((d.code, 0))
-            continue
-        passing = sum(1 for vals in per_student.values() if sum(vals) / len(vals) >= 10)
-        results.append((d.code, round(passing / len(per_student) * 100)))
-    return results
+    department_ids = [d.id for d in depts]
+    student_rows = (Student.query.with_entities(Student.id, Student.class_id, SchoolClass.department_id)
+                    .join(SchoolClass).filter(SchoolClass.department_id.in_(department_ids)).all()) if department_ids else []
+    student_department = {student_id: department_id for student_id, _class_id, department_id in student_rows}
+    grade_rows = (Grade.query.with_entities(Grade.student_id, Grade.value, Grade.max_value)
+                  .filter(Grade.student_id.in_(list(student_department)))
+                  .all()) if student_department else []
+    per_student = {}
+    for student_id, value, max_value in grade_rows:
+        per_student.setdefault(student_id, []).append(value / max_value * 20 if max_value else 0)
+    by_department = {}
+    for student_id, values in per_student.items():
+        department_id = student_department.get(student_id)
+        if department_id is not None:
+            by_department.setdefault(department_id, []).append(sum(values) / len(values))
+    return [(department.code, round(sum(averages_value >= 10 for averages_value in by_department.get(department.id, [])) /
+                                    len(by_department.get(department.id, [])) * 100)
+             if by_department.get(department.id) else 0) for department in depts]
 
 
 def evolution_series(class_ids=None, term=None):
@@ -774,7 +777,10 @@ def dashboard_alerts(class_ids=None, department_ids=None):
         course_q = course_q.join(SchoolClass).filter(SchoolClass.department_id.in_(department_ids))
         class_q = class_q.filter(SchoolClass.department_id.in_(department_ids))
     courses = course_q.all()
-    courses_without_grades = sum(1 for c in courses if not Grade.query.filter_by(course_id=c.id).first())
+    course_ids = [course.id for course in courses]
+    graded_course_ids = {course_id for (course_id,) in
+                         db.session.query(Grade.course_id).filter(Grade.course_id.in_(course_ids)).distinct().all()} if course_ids else set()
+    courses_without_grades = len(set(course_ids) - graded_course_ids)
     if courses_without_grades:
         alerts.append(("warning", "bi-journal-x", "Évaluations",
                         f"{courses_without_grades} cours sans aucune note saisie", "censeur_indicators"))
@@ -790,11 +796,11 @@ def dashboard_alerts(class_ids=None, department_ids=None):
         alerts.append(("danger", "bi-clipboard2-x-fill", "Évaluations à finaliser",
                        f"{overdue_assessments} évaluation(s) arrivée(s) à échéance sans saisie complète", "evaluation_plan"))
 
-    classes_without_edt = 0
-    for cls in class_q.all():
-        has_entry = ScheduleEntry.query.join(Course).filter(Course.class_id == cls.id).first()
-        if not has_entry:
-            classes_without_edt += 1
+    class_ids = [school_class.id for school_class in class_q.all()]
+    scheduled_class_ids = {class_id for (class_id,) in
+                           db.session.query(Course.class_id).join(ScheduleEntry)
+                           .filter(Course.class_id.in_(class_ids)).distinct().all()} if class_ids else set()
+    classes_without_edt = len(set(class_ids) - scheduled_class_ids)
     if classes_without_edt:
         alerts.append(("info", "bi-calendar2-x-fill", "Emplois du temps",
                         f"{classes_without_edt} classe(s) sans emploi du temps", "censeur_schedule"))

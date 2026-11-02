@@ -199,7 +199,8 @@ def inject_globals():
     if "user_id" in session:
         user = User.query.get(session["user_id"])
         if user:
-            _issue_bulletin_release_notifications(user)
+            if user.role in ("eleve", "parent"):
+                _issue_bulletin_release_notifications(user)
             unread_msgs = Message.query.filter_by(recipient_id=user.id, read=False).count()
             unread_notifs = Notification.query.filter_by(user_id=user.id, read=False).count()
             unread_announcements = Notification.query.filter_by(user_id=user.id, read=False, link="/annonces").count()
@@ -464,10 +465,13 @@ def dashboard():
             maintenance_open=MaintenanceRequest.query.filter(MaintenanceRequest.status != "Résolue").count(),
             demographics=student_demographics(dashboard_filters["class_ids"]),
         )
-        by_section = []
-        for s in Section.query.all():
-            n = sum(len(c.students) for d in s.departments for c in d.classes)
-            by_section.append((s.name, n))
+        by_section = [(name, count) for name, count in
+                      db.session.query(Section.name, db.func.count(Student.id))
+                      .select_from(Section)
+                      .outerjoin(Department, Department.section_id == Section.id)
+                      .outerjoin(SchoolClass, SchoolClass.department_id == Department.id)
+                      .outerjoin(Student, Student.class_id == SchoolClass.id)
+                      .group_by(Section.id, Section.name).order_by(Section.name).all()]
         recent_announcements = Announcement.query.order_by(Announcement.date.desc()).limit(5).all()
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
