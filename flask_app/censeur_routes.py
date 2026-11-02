@@ -2184,9 +2184,9 @@ def censeur_grade_reports():
     classes = _censeur_accessible_classes(user)
     class_id = request.args.get("class_id", type=int)
     subject_id = request.args.get("subject_id", type=int)
-    term = request.args.get("term", TERMS[0])
+    term = request.args.get("term", "")
     if term not in TERMS:
-        term = TERMS[0]
+        term = ""
     school_class = next((item for item in classes if item.id == class_id), None) if class_id else None
     if class_id and school_class is None:
         abort(403)
@@ -2200,10 +2200,9 @@ def censeur_grade_reports():
         # évite d'afficher dans le relevé une matière retirée de l'emploi du
         # temps ou une ancienne affectation, tout en conservant les notes déjà
         # enregistrées sur le cours sélectionné.
-        scheduled_course_ids = {
-            entry.course_id for entry in ScheduleEntry.query.join(Course)
-            .filter(Course.class_id == school_class.id).all()
-        }
+        scheduled_course_ids = {course_id for (course_id,) in
+                                db.session.query(ScheduleEntry.course_id).join(Course)
+                                .filter(Course.class_id == school_class.id).distinct().all()}
         courses_query = Course.query.filter(Course.class_id == school_class.id)
         if scheduled_course_ids:
             courses_query = courses_query.filter(Course.id.in_(scheduled_course_ids))
@@ -2228,24 +2227,39 @@ def censeur_grade_reports():
             (student.first_name or "").strip().casefold(),
             (student.last_name or "").strip().casefold(), student.id,
         ))
-        from utils import course_average
-        for course in courses:
+        if term:
             seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
-            grades = Grade.query.filter_by(course_id=course.id, term=term, type="Évaluation").all()
-            by_key = {(grade.student_id, grade.sequence): grade for grade in grades}
-            for student in students:
-                grade_a = by_key.get((student.id, seq_a))
-                grade_b = by_key.get((student.id, seq_b))
-                average, note_trim, eval_a, eval_b = course_average(student.id, course.id, term)
+            student_ids = [student.id for student in students]
+            course_ids = [course.id for course in courses]
+            all_grades = (Grade.query.filter(Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids), Grade.term == term)
+                          .order_by(Grade.date.desc(), Grade.id.desc()).all()) if student_ids and course_ids else []
+            evaluation_by_key = {}
+            devoir_values = {}
+            for grade in all_grades:
+                normalized = grade.value / (grade.max_value or 20) * 20
+                if grade.type == "Évaluation" and grade.sequence in (seq_a, seq_b):
+                    evaluation_by_key.setdefault((grade.student_id, grade.course_id, grade.sequence), grade)
+                elif grade.type == "Devoir":
+                    devoir_values.setdefault((grade.student_id, grade.course_id), []).append(normalized)
+            for course in courses:
                 subject_name_key = (course.subject.name or "").strip().casefold()
                 display_category = course.subject.category or "Enseignements Généraux"
                 if subject_name_key in {"santé et sécurité", "sante et securite", "qhse", "gso"}:
                     display_category = "Enseignements Professionnels Théoriques"
-                rows.append({
-                    "student": student, "course": course, "grade_a": grade_a,
-                    "grade_b": grade_b, "average": average, "note_trim": note_trim,
-                    "eval_a": eval_a, "eval_b": eval_b, "display_category": display_category,
-                })
+                for student in students:
+                    grade_a = evaluation_by_key.get((student.id, course.id, seq_a))
+                    grade_b = evaluation_by_key.get((student.id, course.id, seq_b))
+                    note_trim_values = devoir_values.get((student.id, course.id), [])
+                    note_trim = round(sum(note_trim_values) / len(note_trim_values), 2) if note_trim_values else None
+                    eval_a = round(grade_a.value / (grade_a.max_value or 20) * 20, 2) if grade_a else None
+                    eval_b = round(grade_b.value / (grade_b.max_value or 20) * 20, 2) if grade_b else None
+                    available_values = [value for value in (note_trim, eval_a, eval_b) if value is not None]
+                    average = round(sum(available_values) / len(available_values), 2) if available_values else None
+                    rows.append({
+                        "student": student, "course": course, "grade_a": grade_a,
+                        "grade_b": grade_b, "average": average, "note_trim": note_trim,
+                        "eval_a": eval_a, "eval_b": eval_b, "display_category": display_category,
+                    })
     return render_template("censeur_releves_notes.html", classes=classes, class_id=class_id,
                            subject_id=subject_id, available_subjects=available_subjects,
                            school_class=school_class, courses=courses, students=students,

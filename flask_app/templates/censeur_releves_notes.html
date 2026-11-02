@@ -7,11 +7,11 @@
   <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
     <div><label class="form-label mb-1">Classe</label><select class="form-select" name="class_id" onchange="this.form.subject_id.value=''; this.form.submit()"><option value="">— Choisir une classe —</option>{% for item in classes %}<option value="{{ item.id }}" {{ 'selected' if item.id==class_id }}>{{ item.code or item.name }} — {{ item.name }}</option>{% endfor %}</select></div>
     {% if school_class %}<div><label class="form-label mb-1">Matière</label><select class="form-select" name="subject_id" onchange="this.form.submit()"><option value="">— Toutes les matières —</option>{% for subject in available_subjects %}<option value="{{ subject.id }}" {{ 'selected' if subject.id==subject_id }}>{{ subject.name }}</option>{% endfor %}</select></div>{% endif %}
-    <div><label class="form-label mb-1">Période</label><select class="form-select" name="term" onchange="this.form.submit()">{% for item in terms %}<option value="{{ item }}" {{ 'selected' if item==term }}>{{ item }}</option>{% endfor %}</select></div>
-    {% if school_class %}<div class="text-muted small pb-2">Les valeurs affichées sont synchronisées avec les notes enregistrées par les enseignants.</div>{% endif %}
+    <div><label class="form-label mb-1">Période</label><select class="form-select" name="term" onchange="this.form.submit()"><option value="" {{ 'selected' if not term }}>— Choisir une période —</option>{% for item in terms %}<option value="{{ item }}" {{ 'selected' if item==term }}>{{ item }}</option>{% endfor %}</select></div>
+    {% if school_class and term %}<div class="text-muted small pb-2">Les valeurs affichées sont synchronisées avec les notes enregistrées par les enseignants.</div>{% endif %}
   </form>
 </div>
-{% if school_class %}
+{% if school_class and term %}
   {% for course in courses %}
   <section class="card-ltt mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2"><div><span class="badge-ltt badge-navy">{{ course.subject.category or 'Enseignement' }}</span><h2 class="h5 mb-0 mt-1">{{ course.subject.name }}</h2></div><span class="text-muted small">{{ course.teacher.user.formal_name if course.teacher and course.teacher.user else '' }}</span></div>
@@ -23,5 +23,6 @@
     </tbody></table></div>
   </section>
   {% else %}<div class="card-ltt text-center text-muted py-5">Aucune matière n’est associée à cette classe.</div>{% endfor %}
-{% else %}<div class="card-ltt text-center text-muted py-5"><i class="bi bi-journal-check fs-2 d-block mb-2"></i>Sélectionnez une classe pour afficher le relevé des notes.</div>{% endif %}
+{% elif school_class %}<div class="card-ltt text-center text-muted py-5"><i class="bi bi-calendar2-check fs-2 d-block mb-2"></i>Sélectionnez une période pour charger les relevés de notes.</div>
+{% else %}<div class="card-ltt text-center text-muted py-5"><i class="bi bi-journal-check fs-2 d-block mb-2"></i>Sélectionnez une classe et une période pour afficher le relevé des notes.</div>{% endif %}
 {% endblock %}
