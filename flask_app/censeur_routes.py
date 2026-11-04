@@ -1362,7 +1362,8 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, select_student_photo_for_pdf
+    from pdf_utils import (render_pdf, pdf_asset, pdf_image_data_uri,
+                           bulletin_logo_pdf_path, select_student_photo_for_pdf)
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1388,12 +1389,12 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Annuel":
         students_data = []
         for st in students:
-            actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
+            photo_choice = select_student_photo_for_pdf(st.photo, fallback_photo, base_url=request.host_url)
             students_data.append({
                 "student": st,
                 "data": annual_bulletin_data(st, _cache=bulletin_cache),
-                "photo_path": pdf_image_data_uri(actual_photo_path or fallback_photo),
-                "photo_available": bool(actual_photo_path),
+                "photo_path": pdf_image_data_uri(photo_choice["path"]),
+                "photo_available": photo_choice["available"],
             })
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1424,20 +1425,17 @@ def censeur_bulletins_class_pdf(class_id):
         # est volontairement conservé comme repère ; le rendu effectif utilise
         # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
         # Choix automatique : photo réelle validée si disponible, sinon cadre
-        # vide. L’image est embarquée dans le HTML et placée dans le cadre du
-        # modèle ; une seconde incrustation PDF provoquerait un doublon et
-        # ralentirait fortement les classes volumineuses.
+        # vide. La photo réelle est ensuite incrustée directement dans la page
+        # PDF : cette étape force son affichage même si xhtml2pdf ignore une
+        # URI data ou perd un chemin local dans un document volumineux.
         photo_choice = select_student_photo_for_pdf(st.photo, fallback_photo, base_url=request.host_url)
-        photo_path = photo_choice["path"]
         students_data.append({
             "student": st,
             "data": student_data,
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
-            # Un chemin local est plus fiable que data: URI pour xhtml2pdf dans
-            # un PDF groupé volumineux et garantit l'affichage de la zone photo.
-            # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
-            # quand le PDF groupé est généré depuis le proxy de stockage.
-            "photo_path": pdf_image_data_uri(photo_path),
+            # La photo vient exclusivement de Student.photo après validation,
+            # conversion et recadrage Pillow ; le cadre reste dans le template.
+            "photo_path": pdf_image_data_uri(photo_choice["path"]),
             "photo_available": photo_choice["available"],
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,

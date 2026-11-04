@@ -48,12 +48,12 @@
       <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
     </td>
     <td style="width:50%; padding-left:10pt;">
-      {% if photo_in_meta %}<table style="width:100%; border-collapse:collapse;"><tr><td style="width:74%; padding:0; vertical-align:top;">
+      {% if photo_in_meta %}<table style="width:100%; border-collapse:collapse;"><tr><td style="width:70%; padding:0; vertical-align:top;">
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
-      </td><td style="width:26%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if photo_available and student_photo_path %}<img src="{{ student_photo_path }}"/>{% endif %}</td></tr></table></td></tr></table>{% else %}
+      </td><td style="width:30%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if photo_available and student_photo_path %}<img src="{{ student_photo_path }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table></td></tr></table>{% else %}
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
