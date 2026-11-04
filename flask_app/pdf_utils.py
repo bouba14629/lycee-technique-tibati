@@ -1,6 +1,5 @@
 import os
 import base64
-import hashlib
 import mimetypes
 from io import BytesIO
 from urllib.request import urlopen
@@ -73,30 +72,8 @@ def pdf_image_data_uri(path, mime_type=None):
 
 
 def student_photo_pdf_path(photo, lightweight=False, base_url=None):
-    """Retourne un chemin local utilisable par xhtml2pdf pour Student.photo.
-
-    Student.photo est normalement une chaîne contenant un chemin ou une URL.
-    Les formes fichier/bytes sont également acceptées pour rendre les imports
-    robustes, sans jamais lever d'exception pendant un PDF.
-    """
+    """Retourne un chemin local utilisable par xhtml2pdf pour une photo élève."""
     if not photo:
-        return None
-    if isinstance(photo, (bytes, bytearray, memoryview)) or hasattr(photo, "read"):
-        try:
-            raw = bytes(photo) if not hasattr(photo, "read") else photo.read()
-            if not raw:
-                return None
-            digest = hashlib.sha256(raw).hexdigest()[:24]
-            source_dir = "/tmp/ltt-pdf-assets/student-binary"
-            os.makedirs(source_dir, exist_ok=True)
-            source_path = os.path.join(source_dir, f"{digest}.bin")
-            if not os.path.exists(source_path):
-                with open(source_path, "wb") as output:
-                    output.write(raw)
-            return _pdf_portrait_photo_path(source_path, lightweight=lightweight)
-        except Exception:
-            return None
-    if not isinstance(photo, str):
         return None
     if photo.startswith("/manus-storage/"):
         path = pdf_asset(("img", "avatar_placeholder.png"), photo, base_url=base_url)
@@ -104,7 +81,7 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
         # considéré comme la photo réelle de l’élève.
         if path == asset_path("img", "avatar_placeholder.png"):
             return None
-        return _pdf_portrait_photo_path(path, lightweight=lightweight) if path else None
+        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
     if photo.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
@@ -117,13 +94,11 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
             except Exception:
                 return None
         path = cache_path if os.path.exists(cache_path) else None
-        return _pdf_portrait_photo_path(path, lightweight=lightweight) if path else None
-    if os.path.isfile(photo):
-        return _pdf_portrait_photo_path(photo, lightweight=lightweight)
+        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
     local_path = asset_path("uploads", "students", os.path.basename(photo))
     if not os.path.exists(local_path):
         return None
-    return _pdf_portrait_photo_path(local_path, lightweight=lightweight)
+    return _lightweight_photo_path(local_path, lightweight=lightweight)
 
 
 def _lightweight_photo_path(source_path, lightweight=True):
@@ -146,36 +121,6 @@ def _lightweight_photo_path(source_path, lightweight=True):
             else:
                 image.thumbnail((1200, 1600), Image.Resampling.LANCZOS)
             image.save(cache_path, format="JPEG", quality=85, optimize=True)
-        with Image.open(cache_path) as converted:
-            converted.verify()
-        return cache_path
-    except Exception:
-        return None
-
-
-def _pdf_portrait_photo_path(source_path, lightweight=True):
-    """Valide, recadre en 3:4 et compresse une photo pour le PDF.
-
-    Le format 255×340 px est suffisant pour une zone imprimée d’environ
-    3×4 cm. Un JPEG progressif optimisé à qualité 78 réduit fortement la
-    taille des exports groupés sans modifier les données de l’élève.
-    """
-    if not source_path or not os.path.isfile(source_path):
-        return None
-    cache_dir = "/tmp/ltt-pdf-assets/portrait-students"
-    os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + "-q78.jpg")
-    try:
-        source_mtime = os.path.getmtime(source_path)
-        if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= source_mtime:
-            with Image.open(cache_path) as cached:
-                cached.verify()
-            return cache_path
-        with Image.open(source_path) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            target = (255, 340) if lightweight else (600, 800)
-            image = ImageOps.fit(image, target, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
-            image.save(cache_path, format="JPEG", quality=78, optimize=True, progressive=True, subsampling=2)
         with Image.open(cache_path) as converted:
             converted.verify()
         return cache_path

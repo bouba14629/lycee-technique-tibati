@@ -12,12 +12,12 @@ bulletin_pdf = (Path(__file__).parent / "templates/pdf/bulletin_pdf.html").read_
 
 assert "Consultez et imprimez le bulletin d'un élève" not in listing_text
 assert "Inclus dans <strong>Imprimer tous</strong>" in listing_text
-assert "student_photo_path=row.photo_path" in grouped_text
+assert "student_photo_path=(row.photo_path or avatar_path)" in grouped_text
 assert "preview=1" in listing_text
 assert "as_attachment=not inline_preview" in (Path(__file__).parent / "censeur_routes.py").read_text(encoding="utf-8")
 assert "as_attachment=not inline_preview" in (Path(__file__).parent / "eleve_routes.py").read_text(encoding="utf-8")
 assert "border-top: 0" in grouped_text and "border-top: 0" in bulletin_pdf
-assert "Photo non disponible" in body_text
+assert "student_photo_path=row.photo_path" not in grouped_text
 assert 'class="title-table"' in body_text
 assert 'class="photo-box"' in body_text
 assert '{{ logo_path or bulletin_logo_path }}' in body_text
@@ -25,7 +25,7 @@ assert 'logo_path=(logo_path or bulletin_logo_path)' in grouped_text
 assert 'bulletin_logo_path=bulletin_logo_path' in grouped_text
 assert 'bulletin_logo_path=(bulletin_logo_path or logo_path)' in annual_grouped_text
 assert 'student_photo_path=(item.photo_path or avatar_path)' in annual_grouped_text
-assert 'select_student_photo_for_pdf(st.photo' in (Path(__file__).parent / "censeur_routes.py").read_text(encoding="utf-8")
+assert 'pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))' in (Path(__file__).parent / "censeur_routes.py").read_text(encoding="utf-8")
 assert 'mimetypes.guess_type(path)' in (Path(__file__).parent / "pdf_utils.py").read_text(encoding="utf-8")
 assert "{{ student.full_name }}" in body_text
 photo_position = body_text.index('class="photo-box"')
