@@ -949,66 +949,76 @@ def _honor_congratulations():
 
 
 def _honor_recipients(school_class, term):
-    """Calcule les lauréats en une lecture groupée des cours et des notes.
+    return _honor_recipients_bulk([school_class], term).get(school_class.id, [])
 
-    Le registre est souvent ouvert sans classe sélectionnée. L’ancien calcul
-    appelait bulletin_data pour chaque élève, puis recalculait les camarades
-    pour chaque matière, ce qui pouvait dépasser le délai HTTP et produire une
-    erreur 500 sur les établissements volumineux.
-    """
-    students = list(school_class.students)
-    student_ids = [student.id for student in students]
-    courses = (Course.query.join(ScheduleEntry).filter(Course.class_id == school_class.id)
+
+def _honor_recipients_bulk(school_classes, term):
+    """Calcule les lauréats de plusieurs classes avec trois lectures groupées."""
+    from collections import defaultdict
+
+    classes = [school_class for school_class in school_classes if school_class is not None]
+    if not classes:
+        return {}
+    class_ids = [school_class.id for school_class in classes]
+    students_by_class = {school_class.id: list(school_class.students) for school_class in classes}
+    student_ids = [student.id for students in students_by_class.values() for student in students]
+    courses = (Course.query.join(ScheduleEntry).filter(Course.class_id.in_(class_ids))
                .join(Subject).filter(db.func.lower(Subject.name) != "orientation scolaire")
                .distinct().all())
+    courses_by_class = defaultdict(list)
+    for course in courses:
+        courses_by_class[course.class_id].append(course)
     course_ids = [course.id for course in courses]
     grades = (Grade.query.filter(Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids), Grade.term == term)
               .order_by(Grade.date.desc(), Grade.id.desc()).all()) if student_ids and course_ids else []
-    values = {}
-    devoir_values = {}
+    devoir_values = defaultdict(list)
     latest_evaluations = {}
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     for grade in grades:
         normalized = grade.value / (grade.max_value or 20) * 20
         key = (grade.student_id, grade.course_id)
         if grade.type == "Devoir":
-            devoir_values.setdefault(key, []).append(normalized)
+            devoir_values[key].append(normalized)
         elif grade.type == "Évaluation" and grade.sequence in (seq_a, seq_b):
             latest_evaluations.setdefault((grade.student_id, grade.course_id, grade.sequence), normalized)
-    for key, devoirs in devoir_values.items():
-        values[key] = [sum(devoirs) / len(devoirs)]
+    values = {key: [sum(items) / len(items)] for key, items in devoir_values.items()}
     for (student_id, course_id, _sequence), value in latest_evaluations.items():
         values.setdefault((student_id, course_id), []).append(value)
-    coefficients = {course.id: course.subject.coefficient or 1 for course in courses}
-    averages = {}
-    for student_id in student_ids:
-        total_points = 0.0
-        total_coefficients = 0
-        for course_id, coefficient in coefficients.items():
-            course_values = values.get((student_id, course_id), [])
-            if course_values:
-                total_points += (sum(course_values) / len(course_values)) * coefficient
-                total_coefficients += coefficient
-        if total_coefficients:
-            averages[student_id] = round(total_points / total_coefficients, 2)
-    ranked = sorted(averages.items(), key=lambda item: (-item[1], item[0]))
-    ranks = {student_id: index + 1 for index, (student_id, _average) in enumerate(ranked)}
-    class_size = len(averages)
-    recipients = []
-    for student in students:
-        average = averages.get(student.id)
-        if average is None or not 12 <= average <= 20:
-            continue
-        rank = ranks.get(student.id)
-        if rank == 1:
-            suffix = "ère" if student.sex in {"F", "Féminin"} else "er"
-            rank_label = f"1{suffix}"
-        else:
-            rank_label = f"{rank}e" if rank else "—"
-        recipients.append({"student": student, "average": average, "rank": rank, "rank_label": rank_label,
-                           "sex": student.sex or "—", "class_size": class_size})
-    recipients.sort(key=lambda item: (-item["average"], item["student"].last_name, item["student"].first_name))
-    return recipients
+
+    result = {}
+    for school_class in classes:
+        class_courses = courses_by_class[school_class.id]
+        coefficients = {course.id: course.subject.coefficient or 1 for course in class_courses}
+        averages = {}
+        for student in students_by_class[school_class.id]:
+            total_points = 0.0
+            total_coefficients = 0
+            for course_id, coefficient in coefficients.items():
+                course_values = values.get((student.id, course_id), [])
+                if course_values:
+                    total_points += (sum(course_values) / len(course_values)) * coefficient
+                    total_coefficients += coefficient
+            if total_coefficients:
+                averages[student.id] = round(total_points / total_coefficients, 2)
+        ranked = sorted(averages.items(), key=lambda item: (-item[1], item[0]))
+        ranks = {student_id: index + 1 for index, (student_id, _average) in enumerate(ranked)}
+        class_size = len(averages)
+        recipients = []
+        for student in students_by_class[school_class.id]:
+            average = averages.get(student.id)
+            if average is None or not 12 <= average <= 20:
+                continue
+            rank = ranks.get(student.id)
+            if rank == 1:
+                suffix = "ère" if student.sex in {"F", "Féminin"} else "er"
+                rank_label = f"1{suffix}"
+            else:
+                rank_label = f"{rank}e" if rank else "—"
+            recipients.append({"student": student, "average": average, "rank": rank, "rank_label": rank_label,
+                               "sex": student.sex or "—", "class_size": class_size})
+        recipients.sort(key=lambda item: (-item["average"], item["student"].last_name, item["student"].first_name))
+        result[school_class.id] = recipients
+    return result
 
 
 def _honor_classes(user):
@@ -1028,8 +1038,9 @@ def _honor_scope(user, term, class_id=None):
         if not classes:
             abort(404)
     rows = []
+    recipients_by_class = _honor_recipients_bulk(classes, term)
     for school_class in classes:
-        for recipient in _honor_recipients(school_class, term):
+        for recipient in recipients_by_class.get(school_class.id, []):
             rows.append({"school_class": school_class, **recipient})
     rows.sort(key=lambda item: (item["school_class"].name, item["rank"] or 999,
                                 item["student"].last_name, item["student"].first_name))
@@ -1331,8 +1342,8 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, overlay_student_photos, select_student_photo_for_pdf
-    from utils import annual_bulletin_data, bulletin_data, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
+    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, select_student_photo_for_pdf
+    from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     if scoped_class_ids is not None and class_id not in scoped_class_ids:
@@ -1373,7 +1384,13 @@ def censeur_bulletins_class_pdf(class_id):
         return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     students_data = []
-    student_photo_paths = []
+    scheduled_courses = (Course.query.filter_by(class_id=class_id).join(ScheduleEntry).distinct().all())
+    prefill_course_average_cache(
+        bulletin_cache,
+        [student.id for student in students],
+        [course.id for course in scheduled_courses],
+        term,
+    )
     for st in students:
         student_data = bulletin_data(st, term=term, _cache=bulletin_cache)
         # Le bulletin groupé doit suivre l'ordre alphabétique des matières dans
@@ -1387,11 +1404,11 @@ def censeur_bulletins_class_pdf(class_id):
         # est volontairement conservé comme repère ; le rendu effectif utilise
         # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
         # Choix automatique : photo réelle validée si disponible, sinon cadre
-        # de secours ; l’incrustation directe reste la garantie finale.
+        # vide. L’image est embarquée dans le HTML et placée dans le cadre du
+        # modèle ; une seconde incrustation PDF provoquerait un doublon et
+        # ralentirait fortement les classes volumineuses.
         photo_choice = select_student_photo_for_pdf(st.photo, fallback_photo, base_url=request.host_url)
-        actual_photo_path = photo_choice["overlay_path"]
         photo_path = photo_choice["path"]
-        student_photo_paths.append(actual_photo_path)
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1410,9 +1427,6 @@ def censeur_bulletins_class_pdf(class_id):
                       avatar_path=fallback_photo)
     if not pdf:
         abort(500)
-    # Dernière garantie indépendante de xhtml2pdf : la photo validée est
-    # fusionnée directement sur la page correspondant à chaque élève.
-    pdf = overlay_student_photos(pdf, student_photo_paths)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
     inline_preview = request.args.get("preview") == "1"
     return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)

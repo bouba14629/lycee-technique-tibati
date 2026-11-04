@@ -195,6 +195,37 @@ def course_average(student_id, course_id, term):
     return round(sum(vals) / len(vals), 2), nt, ea, eb
 
 
+def prefill_course_average_cache(cache, student_ids, course_ids, term):
+    """Précharge les moyennes matières d’un groupe d’élèves en une lecture SQL."""
+    course_cache = cache.setdefault("course_averages", {})
+    student_ids = list(dict.fromkeys(student_ids or []))
+    course_ids = list(dict.fromkeys(course_ids or []))
+    if not student_ids or not course_ids:
+        return course_cache
+    grades = (Grade.query.filter(Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids), Grade.term == term)
+              .order_by(Grade.date.desc(), Grade.id.desc()).all())
+    devoirs, evaluations = {}, {}
+    seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+    for grade in grades:
+        value = round(grade.value / (grade.max_value or 20) * 20, 2)
+        key = (grade.student_id, grade.course_id)
+        if grade.type == "Devoir":
+            devoirs.setdefault(key, []).append(value)
+        elif grade.type == "Évaluation" and grade.sequence in (seq_a, seq_b):
+            evaluations.setdefault((grade.student_id, grade.course_id, grade.sequence), value)
+    for student_id in student_ids:
+        for course_id in course_ids:
+            key = (student_id, course_id)
+            nt_values = devoirs.get(key, [])
+            nt = round(sum(nt_values) / len(nt_values), 2) if nt_values else None
+            ea = evaluations.get((student_id, course_id, seq_a))
+            eb = evaluations.get((student_id, course_id, seq_b))
+            values = [value for value in (nt, ea, eb) if value is not None]
+            course_cache.setdefault((student_id, course_id, term),
+                                    (round(sum(values) / len(values), 2) if values else None, nt, ea, eb))
+    return course_cache
+
+
 def _notes_trim_display(nt, ea, eb):
     """Valeur affichée dans la colonne 'Notes Trim.' du bulletin : la vraie moyenne des notes continues
     si l'enseignant en a saisi, sinon la moyenne des évaluations disponibles (Éval.1/Éval.2) — cette
