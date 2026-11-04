@@ -22,7 +22,7 @@
     <div class="d-grid gap-2">
       {% if current_user.role != 'conseiller_orientation' %}<a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>{% endif %}
       <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
-      {% if current_user.role == 'enseignant' %}<a href="{{ url_for('teacher_indicators', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% endif %}
+      {% if current_user.role == 'enseignant' %}<a href="{{ url_for('teacher_indicators', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% elif current_user.role == 'conseiller_orientation' %}<a href="{{ url_for('teacher_indicators', class_id=c.school_class.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% endif %}
     </div>
   </div>
 </div>

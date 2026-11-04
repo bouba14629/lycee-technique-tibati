@@ -1,7 +1,8 @@
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
+from sqlalchemy.orm import joinedload
 from app import app, db
-from models import Course, Grade, Attendance, Student, Availability, ActivityLog, PlannedAssessment, User
+from models import Course, Grade, Attendance, Student, Availability, ActivityLog, PlannedAssessment, User, SchoolClass, Department
 from utils import roles_required, notify, TERMS, TERM_SEQUENCES, OFFICIAL_PERIODS, build_official_grid, DAYS, schedule_extra_hours
 
 DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi": "THURSDAY",
@@ -351,7 +352,11 @@ def teacher_attendance(course_id):
 def _teacher_schedule_data():
     from models import ScheduleEntry
     teacher = current_teacher()
-    all_entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    all_entries = (ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id)
+                   .options(joinedload(ScheduleEntry.course).joinedload(Course.school_class)
+                            .joinedload(SchoolClass.department).joinedload(Department.section),
+                            joinedload(ScheduleEntry.course).joinedload(Course.subject))
+                   .all())
     section_id = request.args.get("schedule_section_id", type=int)
     department_id = request.args.get("schedule_department_id", type=int)
     class_id = request.args.get("schedule_class_id", type=int)

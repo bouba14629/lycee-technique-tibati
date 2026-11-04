@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
@@ -380,7 +381,11 @@ def _censeur_teacher_schedule_in_scope(teacher, user):
 def _teacher_schedule_context(teacher):
     from enseignant_routes import DAY_EN
     from utils import OFFICIAL_PERIODS, build_official_grid, filled_official_slots
-    entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+    entries = (ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id)
+               .options(joinedload(ScheduleEntry.course).joinedload(Course.school_class)
+                        .joinedload(SchoolClass.department).joinedload(Department.section),
+                        joinedload(ScheduleEntry.course).joinedload(Course.subject))
+               .all())
     grid = build_official_grid(entries)
     return {
         "mode": "individuel",
@@ -407,10 +412,18 @@ def censeur_teacher_schedule_list():
     teachers = teachers_q.order_by(db.func.lower(User.full_name)).all()
     if user.role == "chef_orientation":
         teachers = [teacher for teacher in teachers if teacher.user.role == "conseiller_orientation"]
+    entries_by_teacher = {}
+    teacher_ids = [teacher.id for teacher in teachers]
+    if teacher_ids:
+        schedule_entries = (ScheduleEntry.query.join(Course).filter(Course.teacher_id.in_(teacher_ids))
+                            .options(joinedload(ScheduleEntry.course).joinedload(Course.school_class))
+                            .all())
+        for entry in schedule_entries:
+            entries_by_teacher.setdefault(entry.course.teacher_id, []).append(entry)
     teacher_hours_faites = {}
     teacher_extra_hours = {}
     for teacher in teachers:
-        entries = ScheduleEntry.query.join(Course).filter(Course.teacher_id == teacher.id).all()
+        entries = entries_by_teacher.get(teacher.id, [])
         teacher_hours_faites[teacher.id] = filled_official_slots(build_official_grid(entries))
         teacher_extra_hours[teacher.id] = schedule_extra_hours(
             teacher_hours_faites[teacher.id], teacher.hours_due or 0
@@ -537,7 +550,10 @@ def censeur_absences():
     classes = classes_q.all()
     if class_id and scoped_class_ids is not None and class_id not in scoped_class_ids:
         abort(403)
-    records_q = Attendance.query.join(Student).filter(Attendance.type == "Absence")
+    records_q = (Attendance.query.join(Student)
+                 .options(joinedload(Attendance.student).joinedload(Student.school_class)
+                          .joinedload(SchoolClass.department))
+                 .filter(Attendance.type == "Absence"))
     if class_id:
         records_q = records_q.filter(Student.class_id == class_id)
     elif scoped_class_ids is not None:
@@ -552,7 +568,8 @@ def censeur_absences():
         absence_rows.append({
             "student": student,
             "records": student_records,
-            "hours": _absence_hours(student_id),
+            # Inclut toutes les matières, notamment Orientation Scolaire.
+            "hours": floor_hours(sum(_attendance_duration(record) for record in student_records)),
             "count": len(student_records),
             "types": ", ".join(sorted({r.type for r in student_records})),
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
@@ -576,6 +593,9 @@ def _daily_absence_rows(user, selected_date=None, class_id=None):
     if class_id and scoped is not None and class_id not in scoped:
         abort(403)
     q = (Attendance.query.join(Student).join(Course)
+         .options(joinedload(Attendance.student).joinedload(Student.school_class),
+                  joinedload(Attendance.course).joinedload(Course.teacher).joinedload(Teacher.user),
+                  joinedload(Attendance.course).joinedload(Course.subject))
          .filter(Attendance.type == "Absence"))
     if selected_date:
         q = q.filter(Attendance.date == selected_date)

@@ -956,6 +956,19 @@ def dir_section_edit(section_id):
     return redirect(url_for("dir_structure"))
 
 
+@app.route("/directeur/structure/section/<int:section_id>/supprimer")
+@roles_required("directeur")
+def dir_section_delete(section_id):
+    section = Section.query.get_or_404(section_id)
+    if section.departments:
+        flash(f"Impossible de supprimer « {section.name} » : {len(section.departments)} filière(s) y sont rattachée(s). Supprimez d'abord les filières.", "danger")
+        return redirect(url_for("dir_structure"))
+    db.session.delete(section)
+    db.session.commit()
+    flash("Section supprimée.", "info")
+    return redirect(url_for("dir_structure"))
+
+
 @app.route("/directeur/structure/filiere/nouvelle", methods=["POST"])
 @roles_required("directeur")
 def dir_department_new():
