@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+import random
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
@@ -13,13 +14,22 @@ def make_photo(path, color):
     Image.new("RGB", (480, 640), color).save(path, format="PNG")
 
 
+def make_large_photo(path):
+    rng = random.Random(20261105)
+    image = Image.new("RGB", (1200, 1600))
+    image.putdata([(rng.randrange(256), rng.randrange(256), rng.randrange(256)) for _ in range(1200 * 1600)])
+    image.save(path, format="PNG")
+
+
 def run():
     with TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         first = tmp / "student-one.png"
         second = tmp / "student-two.png"
+        large = tmp / "student-large.png"
         make_photo(first, (25, 90, 160))
         make_photo(second, (180, 50, 45))
+        make_large_photo(large)
 
         # Student.photo sous forme de chemin local, données binaires et fichier.
         path_one = student_photo_pdf_path(str(first), lightweight=True)
@@ -30,6 +40,8 @@ def run():
         assert path_one != path_two
         assert Image.open(path_one).size == (255, 340)
         assert Image.open(path_two).size == (255, 340)
+        compressed_large = student_photo_pdf_path(str(large), lightweight=True)
+        assert compressed_large and Path(compressed_large).stat().st_size < large.stat().st_size
         assert student_photo_pdf_path(None) is None
         assert student_photo_pdf_path("") is None
         assert student_photo_pdf_path(str(tmp / "missing.jpg")) is None

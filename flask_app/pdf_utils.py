@@ -154,12 +154,17 @@ def _lightweight_photo_path(source_path, lightweight=True):
 
 
 def _pdf_portrait_photo_path(source_path, lightweight=True):
-    """Valide, oriente, recadre en 3:4 et convertit une photo pour le PDF."""
+    """Valide, recadre en 3:4 et compresse une photo pour le PDF.
+
+    Le format 255×340 px est suffisant pour une zone imprimée d’environ
+    3×4 cm. Un JPEG progressif optimisé à qualité 78 réduit fortement la
+    taille des exports groupés sans modifier les données de l’élève.
+    """
     if not source_path or not os.path.isfile(source_path):
         return None
     cache_dir = "/tmp/ltt-pdf-assets/portrait-students"
     os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + ".jpg")
+    cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + "-q78.jpg")
     try:
         source_mtime = os.path.getmtime(source_path)
         if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= source_mtime:
@@ -170,7 +175,7 @@ def _pdf_portrait_photo_path(source_path, lightweight=True):
             image = ImageOps.exif_transpose(image).convert("RGB")
             target = (255, 340) if lightweight else (600, 800)
             image = ImageOps.fit(image, target, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
-            image.save(cache_path, format="JPEG", quality=88, optimize=True)
+            image.save(cache_path, format="JPEG", quality=78, optimize=True, progressive=True, subsampling=2)
         with Image.open(cache_path) as converted:
             converted.verify()
         return cache_path
