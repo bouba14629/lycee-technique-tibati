@@ -1362,7 +1362,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, resolve_student_photo, pdf_asset, bulletin_logo_pdf_path
+    from pdf_utils import render_pdf, resolve_student_photo, pdf_image_data_uri, pdf_asset, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1392,7 +1392,9 @@ def censeur_bulletins_class_pdf(class_id):
             students_data.append({
                 "student": st,
                 "data": annual_bulletin_data(st, _cache=bulletin_cache),
-                "photo_path": actual_photo_path or fallback_photo,
+                # Embarquement base64 : le PDF ne dépend plus du chemin local
+                # ou du proxy de stockage au moment du rendu xhtml2pdf.
+                "photo_path": pdf_image_data_uri(actual_photo_path) if actual_photo_path else fallback_photo,
                 "photo_available": bool(actual_photo_path),
             })
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
@@ -1436,7 +1438,9 @@ def censeur_bulletins_class_pdf(class_id):
             # un PDF groupé volumineux et garantit l'affichage de la zone photo.
             # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
             # quand le PDF groupé est généré depuis le proxy de stockage.
-            "photo_path": photo_path or fallback_photo,
+            # Une data URI est indépendante du répertoire de travail et reste
+            # lisible par xhtml2pdf dans chaque page d'un export groupé.
+            "photo_path": pdf_image_data_uri(photo_path) if photo_path else fallback_photo,
             "photo_available": bool(photo_path),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
