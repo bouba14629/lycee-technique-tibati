@@ -1,5 +1,7 @@
 import os
 import base64
+import hashlib
+import logging
 import mimetypes
 from io import BytesIO
 from urllib.request import urlopen
@@ -11,6 +13,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = logging.getLogger(__name__)
 
 
 def asset_path(*parts):
@@ -71,34 +74,104 @@ def pdf_image_data_uri(path, mime_type=None):
         return path
 
 
-def student_photo_pdf_path(photo, lightweight=False, base_url=None):
-    """Retourne un chemin local utilisable par xhtml2pdf pour une photo élève."""
+def _photo_value_to_local_path(photo, base_url=None):
+    """Convertit toute forme de valeur photo en fichier local lisible."""
     if not photo:
         return None
-    if photo.startswith("/manus-storage/"):
-        path = pdf_asset(("img", "avatar_placeholder.png"), photo, base_url=base_url)
+    if isinstance(photo, (bytes, bytearray)):
+        raw = bytes(photo)
+        source_name = "binary-" + hashlib.sha256(raw).hexdigest()[:24]
+        cache_dir = "/tmp/ltt-pdf-assets/raw-students"
+        os.makedirs(cache_dir, exist_ok=True)
+        path = os.path.join(cache_dir, source_name)
+        if not os.path.isfile(path):
+            with open(path, "wb") as output:
+                output.write(raw)
+        return path
+    if hasattr(photo, "read"):
+        try:
+            position = photo.tell()
+        except Exception:
+            position = None
+        try:
+            raw = photo.read()
+        finally:
+            if position is not None:
+                try:
+                    photo.seek(position)
+                except Exception:
+                    pass
+        return _photo_value_to_local_path(raw, base_url=base_url)
+    value = str(photo).strip()
+    if not value:
+        return None
+    if value.startswith("/manus-storage/"):
+        path = pdf_asset(("img", "avatar_placeholder.png"), value, base_url=base_url)
         # pdf_asset utilise l’avatar comme repli ; il ne doit jamais être
         # considéré comme la photo réelle de l’élève.
         if path == asset_path("img", "avatar_placeholder.png"):
             return None
-        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
-    if photo.startswith(("http://", "https://")):
+        return path if path and os.path.isfile(path) else None
+    if value.startswith(("http://", "https://")):
         cache_dir = "/tmp/ltt-pdf-assets"
         os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, os.path.basename(photo.split("?", 1)[0]))
+        cache_path = os.path.join(cache_dir, os.path.basename(value.split("?", 1)[0]))
         if not os.path.exists(cache_path):
             try:
-                with urlopen(photo, timeout=10) as response:
+                with urlopen(value, timeout=10) as response:
                     with open(cache_path, "wb") as output:
                         output.write(response.read())
             except Exception:
                 return None
         path = cache_path if os.path.exists(cache_path) else None
-        return _lightweight_photo_path(path, lightweight=lightweight) if path else None
-    local_path = asset_path("uploads", "students", os.path.basename(photo))
-    if not os.path.exists(local_path):
-        return None
-    return _lightweight_photo_path(local_path, lightweight=lightweight)
+        return path if path and os.path.isfile(path) else None
+    candidate = value
+    if candidate.startswith("static/"):
+        candidate = candidate[len("static/"):]
+    if candidate.startswith("/static/"):
+        candidate = candidate[len("/static/"):]
+    if os.path.isabs(candidate) and os.path.isfile(candidate):
+        return candidate
+    if candidate.startswith("uploads/students/"):
+        return asset_path(*candidate.split("/")) if os.path.isfile(asset_path(*candidate.split("/"))) else None
+    local_path = asset_path("uploads", "students", os.path.basename(candidate))
+    return local_path if os.path.isfile(local_path) else None
+
+
+def resolve_student_photo(student, lightweight=True, base_url=None):
+    """Résout Student.photo et retourne un chemin local prêt pour le PDF.
+
+    Le diagnostic est volontairement détaillé dans les logs afin de suivre chaque
+    élève dans un export groupé sans exposer ces informations dans le bulletin.
+    """
+    raw = getattr(student, "photo", None)
+    source_path = _photo_value_to_local_path(raw, base_url=base_url)
+    final_path = _lightweight_photo_path(source_path, lightweight=lightweight) if source_path else None
+    image_format = None
+    size = None
+    if final_path and os.path.isfile(final_path):
+        size = os.path.getsize(final_path)
+        try:
+            with Image.open(final_path) as image:
+                image_format = image.format
+        except Exception:
+            final_path = None
+    logger.info(
+        "Student photo diagnostic id=%s raw=%r type=%s final=%r exists=%s size=%s format=%s",
+        getattr(student, "id", None), raw, type(raw).__name__, final_path,
+        bool(final_path and os.path.isfile(final_path)), size, image_format,
+    )
+    return final_path
+
+
+def student_photo_pdf_path(photo, lightweight=False, base_url=None):
+    """Compatibilité historique : résout directement une valeur photo."""
+    class PhotoHolder:
+        pass
+    holder = PhotoHolder()
+    holder.id = None
+    holder.photo = photo
+    return resolve_student_photo(holder, lightweight=lightweight, base_url=base_url)
 
 
 def _lightweight_photo_path(source_path, lightweight=True):
@@ -162,11 +235,22 @@ def render_pdf(template_name, **context):
     context.setdefault("storage_base_url", storage_base_url())
     html = render_template(template_name, **context)
     buffer = BytesIO()
-    result = pisa.CreatePDF(html, dest=buffer)
+    result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
     buffer.seek(0)
     if result.err:
         return None
     return buffer
+
+
+def _pdf_link_callback(uri, rel):
+    """Permet à xhtml2pdf de lire les chemins locaux transmis aux balises img."""
+    if not uri or uri.startswith("data:"):
+        return uri
+    if os.path.isfile(uri):
+        return uri
+    if uri.startswith("file://") and os.path.isfile(uri[7:]):
+        return uri[7:]
+    return uri
 
 
 def overlay_student_photos(pdf_buffer, photo_paths):

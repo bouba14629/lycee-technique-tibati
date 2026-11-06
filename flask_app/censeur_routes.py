@@ -1172,7 +1172,7 @@ def censeur_honor_roll_register_export_pdf():
 @roles_required("censeur", "directeur")
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset
+    from pdf_utils import render_pdf, resolve_student_photo, pdf_asset
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1184,7 +1184,7 @@ def censeur_annual_bulletin_pdf(student_id):
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
     pdf = render_pdf("pdf/class_annual_bulletins_pdf.html",
                      students_data=[{"student": student, "data": data,
-                                     "photo_path": student_photo_pdf_path(student.photo, lightweight=True)}],
+                                     "photo_path": resolve_student_photo(student, lightweight=True, base_url=request.host_url)}],
                      school_year=get_current_school_year(), approval=approval,
                      avatar_path=pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
     if not pdf:
@@ -1362,7 +1362,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, student_photo_pdf_path, pdf_asset, pdf_image_data_uri, bulletin_logo_pdf_path, select_student_photo_for_pdf
+    from pdf_utils import render_pdf, resolve_student_photo, pdf_asset, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1388,11 +1388,11 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Annuel":
         students_data = []
         for st in students:
-            actual_photo_path = student_photo_pdf_path(st.photo, lightweight=True, base_url=request.host_url)
+            actual_photo_path = resolve_student_photo(st, lightweight=True, base_url=request.host_url)
             students_data.append({
                 "student": st,
                 "data": annual_bulletin_data(st, _cache=bulletin_cache),
-                "photo_path": pdf_image_data_uri(actual_photo_path or fallback_photo),
+                "photo_path": actual_photo_path or fallback_photo,
                 "photo_available": bool(actual_photo_path),
             })
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
@@ -1427,8 +1427,7 @@ def censeur_bulletins_class_pdf(class_id):
         # vide. L’image est embarquée dans le HTML et placée dans le cadre du
         # modèle ; une seconde incrustation PDF provoquerait un doublon et
         # ralentirait fortement les classes volumineuses.
-        photo_choice = select_student_photo_for_pdf(st.photo, fallback_photo, base_url=request.host_url)
-        photo_path = photo_choice["path"]
+        photo_path = resolve_student_photo(st, lightweight=True, base_url=request.host_url)
         students_data.append({
             "student": st,
             "data": student_data,
@@ -1437,8 +1436,8 @@ def censeur_bulletins_class_pdf(class_id):
             # un PDF groupé volumineux et garantit l'affichage de la zone photo.
             # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
             # quand le PDF groupé est généré depuis le proxy de stockage.
-            "photo_path": pdf_image_data_uri(photo_path),
-            "photo_available": photo_choice["available"],
+            "photo_path": photo_path or fallback_photo,
+            "photo_available": bool(photo_path),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
