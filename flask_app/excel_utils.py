@@ -104,7 +104,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     ws.title = "Procès-verbal"
     groups = dataset.get("subject_groups", [])
     subjects = [subject for group in groups for subject in group.get("subjects", [])]
-    total_cols = 3 + len(subjects) + 1
+    total_cols = 5 + len(subjects) + 1
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
     title = ws.cell(1, 1, "PROCÈS-VERBAL DU CONSEIL DE CLASSE")
     title.font = Font(bold=True, size=16, color="FFFFFF")
@@ -118,7 +118,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     subtitle.font = Font(bold=True, size=11, color=NAVY)
     subtitle.alignment = Alignment(horizontal="center")
 
-    fixed_headers = ["Noms et Prénoms", "Rang", "Moyenne"]
+    fixed_headers = ["Noms et Prénoms", "Date de naissance", "Lieu de naissance", "Rang", "Moyenne"]
     for col, label in enumerate(fixed_headers, 1):
         ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
         cell = ws.cell(4, col, label)
@@ -126,7 +126,7 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
         cell.fill = PatternFill("solid", fgColor=NAVY)
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = BORDER
-    current_col = 4
+    current_col = 6
     for group in groups:
         count = len(group.get("subjects", []))
         if not count:
@@ -154,7 +154,10 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     ws.row_dimensions[5].height = 70
 
     for row_index, row in enumerate(dataset.get("students", []), 6):
-        values = [f"{row['student'].first_name.upper()} {row['student'].last_name.upper()}", row.get("rank") or "—", row.get("general_average") if row.get("general_average") is not None else "—"]
+        values = [f"{row['student'].first_name.upper()} {row['student'].last_name.upper()}",
+                  row["student"].dob.strftime("%d/%m/%Y") if row["student"].dob else "—",
+                  row["student"].birth_place or "—", row.get("rank") or "—",
+                  row.get("general_average") if row.get("general_average") is not None else "—"]
         values.extend(row.get("subjects", {}).get(subject["course_id"]) if row.get("subjects", {}).get(subject["course_id"]) is not None else "—" for subject in subjects)
         values.append("")
         for col, value in enumerate(values, 1):
@@ -171,14 +174,14 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
     )
     for offset, (label, general_value) in enumerate(general_stats):
         row_index = summary_start + offset
-        ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=2)
+        ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=4)
         ws.cell(row_index, 1, label).font = Font(bold=True, size=9)
-        ws.cell(row_index, 3, general_value if general_value is not None else "—")
-        ws.cell(row_index, 3).alignment = Alignment(horizontal="center")
+        ws.cell(row_index, 5, general_value if general_value is not None else "—")
+        ws.cell(row_index, 5).alignment = Alignment(horizontal="center")
         for col in range(1, total_cols + 1):
             ws.cell(row_index, col).fill = PatternFill("solid", fgColor="F2F2F2")
             ws.cell(row_index, col).border = BORDER
-        for col, subject in enumerate(subjects, 4):
+        for col, subject in enumerate(subjects, 6):
             value = subject.get(("average", "maximum", "minimum")[offset])
             ws.cell(row_index, col, value if value is not None else "—")
             ws.cell(row_index, col).alignment = Alignment(horizontal="center")

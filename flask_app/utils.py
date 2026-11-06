@@ -290,6 +290,16 @@ def competency_marks(average):
     return marks
 
 
+def scheduled_courses_for_class(class_id):
+    """Cours matière/enseignant réellement présents dans l'emploi du temps."""
+    if not class_id:
+        return []
+    return (Course.query.filter(Course.class_id == class_id)
+            .join(ScheduleEntry)
+            .distinct()
+            .all())
+
+
 def bulletin_data(student, term=None, _cache=None):
     """Calcule toutes les données du bulletin officiel : matières groupées par catégorie,
     totaux, rang par matière et général, profil de classe, discipline et mentions."""
@@ -306,7 +316,7 @@ def bulletin_data(student, term=None, _cache=None):
 
     if not student.class_id:
         return None
-    courses = [course for course in Course.query.filter_by(class_id=student.class_id).join(ScheduleEntry).distinct().all()
+    courses = [course for course in scheduled_courses_for_class(student.class_id)
                if "orientation scolaire" not in (course.subject.name or "").casefold()]
     classmates = student.school_class.students
 
@@ -494,7 +504,7 @@ def annual_bulletin_data(student, _cache=None):
         return grade_values_cache[key]
 
     terms = TERMS[:3]
-    courses = [course for course in Course.query.filter_by(class_id=student.class_id).join(ScheduleEntry).distinct().all()
+    courses = [course for course in scheduled_courses_for_class(student.class_id)
                if "orientation scolaire" not in (course.subject.name or "").casefold()]
     categories, points_total, coef_total = [], 0.0, 0
     term_points, term_coefs = [0.0, 0.0, 0.0], [0, 0, 0]

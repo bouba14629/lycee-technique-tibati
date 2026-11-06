@@ -11,7 +11,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, get_current_school_year, schedule_extra_hours, floor_hours)
+                    bulletin_data, scheduled_courses_for_class, get_current_school_year, schedule_extra_hours, floor_hours)
 
 
 def _is_stt_class(school_class):
@@ -1404,7 +1404,7 @@ def censeur_bulletins_class_pdf(class_id):
         return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     students_data = []
-    scheduled_courses = (Course.query.filter_by(class_id=class_id).join(ScheduleEntry).distinct().all())
+    scheduled_courses = scheduled_courses_for_class(class_id)
     prefill_course_average_cache(
         bulletin_cache,
         [student.id for student in students],
@@ -1953,7 +1953,7 @@ def _council_minutes_dataset(school_class, term):
         key=lambda item: ((item.first_name or "").strip().casefold(), (item.last_name or "").strip().casefold(), item.id),
     )
     all_courses = sorted(
-        Course.query.filter(Course.class_id == school_class.id).join(ScheduleEntry).distinct().all(),
+        scheduled_courses_for_class(school_class.id),
         key=lambda item: (
             (item.subject.category or "").casefold(),
             (item.subject.name or "").strip().casefold(),
