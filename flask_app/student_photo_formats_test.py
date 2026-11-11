@@ -66,5 +66,9 @@ with app.test_request_context():
         assert source and source.startswith("data:image/jpeg;base64,")
         assert get_student_photo_source(type("PhotoStudent", (), {"id": 102, "photo": None})()) is None
         assert get_student_photo_source(type("PhotoStudent", (), {"id": 103, "photo": os.path.join(tmpdir, "missing.jpg")})()) is None
+        corrupt_path = os.path.join(tmpdir, "corrupt.jpg")
+        with open(corrupt_path, "wb") as corrupt_file:
+            corrupt_file.write(b"not-an-image")
+        assert get_student_photo_source(type("PhotoStudent", (), {"id": 104, "photo": corrupt_path})()) is None
 
 print("STUDENT_PHOTO_FORMATS_TEST_OK")

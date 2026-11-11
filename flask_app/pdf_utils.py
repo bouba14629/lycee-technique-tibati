@@ -145,8 +145,13 @@ def resolve_student_photo(student, lightweight=True, base_url=None):
     élève dans un export groupé sans exposer ces informations dans le bulletin.
     """
     raw = getattr(student, "photo", None)
-    source_path = _photo_value_to_local_path(raw, base_url=base_url)
-    final_path = _lightweight_photo_path(source_path, lightweight=lightweight) if source_path else None
+    try:
+        source_path = _photo_value_to_local_path(raw, base_url=base_url)
+        final_path = _lightweight_photo_path(source_path, lightweight=lightweight) if source_path else None
+    except Exception:
+        logger.exception("Student photo resolution failed id=%s", getattr(student, "id", None))
+        source_path = None
+        final_path = None
     image_format = None
     size = None
     if final_path and os.path.isfile(final_path):
@@ -172,8 +177,12 @@ def get_student_photo_source(student, base_url=None):
     octets. La conversion en data URI évite que xhtml2pdf perde le fichier
     local lorsque plusieurs bulletins sont rendus dans un même PDF.
     """
-    local_path = resolve_student_photo(student, lightweight=True, base_url=base_url)
-    return pdf_image_data_uri(local_path) if local_path else None
+    try:
+        local_path = resolve_student_photo(student, lightweight=True, base_url=base_url)
+        return pdf_image_data_uri(local_path) if local_path else None
+    except Exception:
+        logger.exception("Student photo source creation failed id=%s", getattr(student, "id", None))
+        return None
 
 
 def student_photo_pdf_path(photo, lightweight=False, base_url=None):
@@ -245,13 +254,18 @@ def render_pdf(template_name, **context):
     context.setdefault("bulletin_serif_italic", pdf_asset(("fonts", "LiberationSerif-Italic.ttf"), "/manus-storage/LiberationSerif-Italic_df811de7.ttf"))
     context.setdefault("bulletin_sans_regular", pdf_asset(("fonts", "LiberationSans-Regular.ttf"), "/manus-storage/LiberationSans-Regular_e967eb0a.ttf"))
     context.setdefault("storage_base_url", storage_base_url())
-    html = render_template(template_name, **context)
-    buffer = BytesIO()
-    result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
-    buffer.seek(0)
-    if result.err:
+    try:
+        html = render_template(template_name, **context)
+        buffer = BytesIO()
+        result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
+        buffer.seek(0)
+        if result.err:
+            logger.error("PDF rendering reported errors template=%s errors=%s", template_name, result.err)
+            return None
+        return buffer
+    except Exception:
+        logger.exception("PDF rendering failed template=%s", template_name)
         return None
-    return buffer
 
 
 def _pdf_link_callback(uri, rel):

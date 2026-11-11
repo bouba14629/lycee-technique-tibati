@@ -1400,6 +1400,14 @@ def censeur_bulletins_class_pdf(class_id):
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
         if not pdf:
+            # Une image atypique ne doit jamais empêcher l’édition du relevé
+            # annuel complet. On conserve la mise en page et remplace
+            # uniquement les sources photo par le cadre de secours.
+            safe_students_data = [dict(row, photo_path=fallback_photo, photo_available=False)
+                                  for row in students_data]
+            pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=safe_students_data,
+                             school_year=get_current_school_year(), approval=approval)
+        if not pdf:
             abort(500)
         filename = f"Bulletins_annuels_{cls.name}.pdf".replace(" ", "_")
         inline_preview = request.args.get("preview") == "1"
@@ -1448,6 +1456,13 @@ def censeur_bulletins_class_pdf(class_id):
                       approval=approval, school_year=get_current_school_year(),
                       logo_path=bulletin_logo_pdf_path(),
                       avatar_path=fallback_photo)
+    if not pdf:
+        safe_students_data = [dict(row, photo_path=fallback_photo, photo_available=False)
+                              for row in students_data]
+        pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=safe_students_data, term=term,
+                         TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
+                         approval=approval, school_year=get_current_school_year(),
+                         logo_path=bulletin_logo_pdf_path(), avatar_path=fallback_photo)
     if not pdf:
         abort(500)
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
