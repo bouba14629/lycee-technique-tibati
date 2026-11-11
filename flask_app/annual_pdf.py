@@ -136,9 +136,9 @@ class AnnualPage:
         section_name = school_class.department.section.name if school_class and school_class.department and school_class.department.section else ''
         self.text('SECTION ' + str(section_name).upper().replace('SECTION ', ''), PAGE_W/2, 124.75,
                   size=9.9, color=BLUE, align='center', max_width=RIGHT-LEFT-20, char_space=.67)
-        self.bar(145.5)
-        self.text(student.full_name, 496.25, 153.75, size=6.6, color=BLUE, align='center', max_width=165)
-        self.bar(163.5)
+        self.bar(137.5)
+        self.text(student.full_name, 496.25, 145.75, size=6.6, color=BLUE, align='center', max_width=165)
+        self.bar(151.5)
         dob = student.dob.strftime('%d/%m/%Y') if student.dob else '—'
         left_meta = ['Noms et Prénoms : ' + student.full_name,
                      'Date de naissance : ' + dob + ' à ' + (student.birth_place or '—'),

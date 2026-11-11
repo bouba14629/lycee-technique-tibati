@@ -13,6 +13,8 @@ assert 'SECTION {{ student.school_class.department.section.name|upper' in body
 assert 'line-height:1pt; height:1pt;' in body
 assert 'vertical-align:bottom; padding:2pt .8pt 0; height:48pt;' in body
 assert '<div style="margin-bottom:31pt;">VISA DU PROFESSEUR PRINCIPAL</div>' in body
+assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
+assert 'VISA DU PROVISEUR<br>' not in body
 assert '<img src="{{ logo_path }}" width="64"/>' in body
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
