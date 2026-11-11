@@ -40,14 +40,14 @@
 
 <table class="meta-table">
   <tr>
-    <td width="50%" style="width:50%;">
+    <td width="48%" style="width:48%;">
       <strong>Noms et Prénoms :</strong> {{ student.full_name }}<br>
       <strong>Date de naissance :</strong> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>
       <strong>Genre :</strong> {{ student.sex or '—' }}<br>
       <strong>Identifiant Unique :</strong> {{ student.matricule }}<br>
       <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
     </td>
-    <td width="27%" style="width:27%; padding-left:10pt;">
+    <td width="29%" style="width:29%; padding-left:0;">
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>

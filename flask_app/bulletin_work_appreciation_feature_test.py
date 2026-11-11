@@ -1,5 +1,8 @@
 import os
 import sys
+from io import BytesIO
+
+from pypdf import PdfReader
 
 os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-bulletin-work-appreciation.sqlite"
 os.environ["LTT_ENV"] = "development"
@@ -12,9 +15,11 @@ from app import app
 from models import (BulletinWorkAppreciation, Course, Department, Grade, ScheduleEntry, SchoolClass,
                     Section, Student, Subject, Teacher, User, db)
 from utils import bulletin_data
+from pdf_utils import render_pdf
 
 
 with app.app_context():
+    assert db.engine.url.drivername == "sqlite" and db.engine.url.database == "/tmp/ltt-bulletin-work-appreciation.sqlite"
     db.drop_all()
     db.create_all()
     censeur_user = User(username="censeur.appreciation", full_name="Censeur Test", role="censeur", active=True)
@@ -53,17 +58,58 @@ with app.app_context():
     db.session.commit()
 
     data = bulletin_data(student, "Trimestre 1")
-    assert data["automatic_work_appreciation"] == "Un effort s’impose en cet enseignement."
-    assert data["work_appreciation"] == "Un effort s’impose en cet enseignement."
+    assert data["automatic_work_appreciation"] == ""
+    assert data["work_appreciation"] == ""
+    initial_overall_avg = data["overall_avg"]
 
     Grade.query.filter_by(student_id=student.id, course_id=professional_course.id, term="Trimestre 1").one().value = 7
     db.session.commit()
     data = bulletin_data(student, "Trimestre 1")
-    assert data["automatic_work_appreciation"] == "Un effort s’impose en tout."
+    assert data["automatic_work_appreciation"] == ""
+    assert data["work_appreciation"] == ""
+    assert data["overall_avg"] != initial_overall_avg
+    assert [grade.value for grade in Grade.query.filter_by(student_id=student.id).order_by(Grade.id)] == [8, 7]
+
+    # Même bloc scolaire élargi et même appréciation vide dans les deux modèles PDF.
+    school_class.name = "TERMINALE ESF"
+    school_class.homeroom_teacher_id = teacher.id
+    teacher_user.full_name = "DJIMDO ALI"
+    teacher_user.civility = "Mme."
+    db.session.commit()
+    data = bulletin_data(student, "Trimestre 1")
+    grade_values = [grade.value for grade in Grade.query.filter_by(student_id=student.id).order_by(Grade.id)]
+    header = "Professeur Principal : Mme. DJIMDO ALI"
+    with app.test_request_context("/"):
+        common = dict(school_year="2026-2027", term="Trimestre 1", term_ordinal="PREMIER",
+                      TERM_SEQ_A=1, TERM_SEQ_B=2, approval=None, student_photo_path=None,
+                      photo_available=False, bulletin_ref="APP-001-T1")
+        solo = render_pdf("pdf/bulletin_pdf.html", student=student, data=data, **common)
+        grouped = render_pdf("pdf/class_bulletins_pdf.html", students_data=[dict(student=student, data=data,
+                             photo_path=None, photo_available=False, bulletin_ref="APP-001-T1")], **common)
+        texts = []
+        for pdf in (solo, grouped):
+            assert pdf is not None
+            reader = PdfReader(BytesIO(pdf.getvalue()))
+            assert len(reader.pages) == 1
+            text = reader.pages[0].extract_text()
+            assert any(header in line for line in text.splitlines()), text
+            assert "APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE" in " ".join(text.split())
+            assert "effort s" not in text and "en cet enseignement" not in text
+            texts.append(text)
+        assert texts[0] == texts[1], "Le modèle individuel et le modèle groupé divergent"
+    assert grade_values == [grade.value for grade in Grade.query.filter_by(student_id=student.id).order_by(Grade.id)]
+    print("BULLETIN_HEADER_SINGLE_LINE_AND_GROUPED_PARITY_OK")
 
     db.session.add(BulletinWorkAppreciation(student_id=student.id, term="Trimestre 1", updated_by_id=censeur_user.id,
                                              content="Le Censeur a ajouté son appréciation."))
     db.session.commit()
-    assert bulletin_data(student, "Trimestre 1")["work_appreciation"] == "Le Censeur a ajouté son appréciation."
+    data = bulletin_data(student, "Trimestre 1")
+    assert data["automatic_work_appreciation"] == ""
+    assert data["work_appreciation"] == "Le Censeur a ajouté son appréciation."
+    assert data["overall_avg"] != initial_overall_avg
+    with app.test_request_context("/"):
+        pdf = render_pdf("pdf/bulletin_pdf.html", student=student, data=data, **common)
+        text = PdfReader(BytesIO(pdf.getvalue())).pages[0].extract_text()
+        assert "Le Censeur a ajouté son appréciation." in " ".join(text.split())
 
 print("BULLETIN_WORK_APPRECIATION_FEATURE_TEST_OK")

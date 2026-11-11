@@ -452,7 +452,6 @@ def bulletin_data(student, term=None, _cache=None):
     work_marks = competency_marks(overall_avg)
 
     saved_appreciation = BulletinWorkAppreciation.query.filter_by(student_id=student.id, term=term).first()
-    automatic_appreciation = automatic_work_appreciation(categories)
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     return {
         "term": term, "term_seq_a": seq_a, "term_seq_b": seq_b, "categories": categories,
@@ -466,8 +465,8 @@ def bulletin_data(student, term=None, _cache=None):
         "absences_non_justified_hours": non_just_hours, "absences_non_justified_days": non_just_days,
         "retards": retards, "avert_conduite": avert_conduite, "blame_conduite": blame_conduite,
         "exclusions": exclusions, "conduct_exclusion_label": conduct_exclusion_label, "work_marks": work_marks,
-        "automatic_work_appreciation": automatic_appreciation,
-        "work_appreciation": saved_appreciation.content if saved_appreciation else automatic_appreciation,
+        "automatic_work_appreciation": "",
+        "work_appreciation": saved_appreciation.content if saved_appreciation else "",
         "official_work_appreciation": appreciation_code(overall_avg),
     }
 
