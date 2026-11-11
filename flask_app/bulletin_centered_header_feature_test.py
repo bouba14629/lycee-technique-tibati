@@ -10,6 +10,8 @@ assert 'width:54%; text-align:center; vertical-align:middle;' in body
 assert 'width:23%; text-align:center; vertical-align:middle;' in body
 assert 'BULLETIN DU {{ term_ordinal }} TRIMESTRE' in body
 assert 'SECTION {{ student.school_class.department.section.name|upper' in body
+assert 'line-height:1pt; height:1pt;' in body
+assert '<div style="height:31pt;"></div><span' in body
 assert '<img src="{{ logo_path }}" width="64"/>' in body
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
