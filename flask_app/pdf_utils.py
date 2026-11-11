@@ -164,6 +164,18 @@ def resolve_student_photo(student, lightweight=True, base_url=None):
     return final_path
 
 
+def get_student_photo_source(student, base_url=None):
+    """Retourne une source HTML/PDF autonome pour la photo de cet élève.
+
+    ``Student.photo`` est actuellement une chaîne (chemin ``/manus-storage``
+    ou nom de fichier), mais la résolution accepte aussi les fichiers et les
+    octets. La conversion en data URI évite que xhtml2pdf perde le fichier
+    local lorsque plusieurs bulletins sont rendus dans un même PDF.
+    """
+    local_path = resolve_student_photo(student, lightweight=True, base_url=base_url)
+    return pdf_image_data_uri(local_path) if local_path else None
+
+
 def student_photo_pdf_path(photo, lightweight=False, base_url=None):
     """Compatibilité historique : résout directement une valeur photo."""
     class PhotoHolder:

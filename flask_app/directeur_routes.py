@@ -908,6 +908,13 @@ def dir_structure():
     if scoped_dept_ids is not None:
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
     available_teachers = teachers_q.all()
+    # Les matières affichées et celles proposées dans l’emploi du temps
+    # proviennent des mêmes objets Subject/Course ; le tri serveur stabilise
+    # l’ordre, sans dupliquer ni modifier les données existantes.
+    for section in sections:
+        for department in section.departments:
+            department.classes.sort(key=lambda item: (item.name or "").casefold())
+            department.subjects.sort(key=lambda item: (item.name or "").casefold())
     return render_template("dir_structure.html", sections=sections, scoped_dept_ids=scoped_dept_ids,
                            last_subject_class_id=last_subject_class_id, available_classes=available_classes,
                            available_levels=available_levels, available_teachers=available_teachers)

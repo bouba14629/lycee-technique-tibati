@@ -7,7 +7,7 @@
 
 <table class="title-row"><tr>
   <td style="width:82%; text-align:center;"><span class="title">BULLETIN ANNUEL</span><br><span class="section-title">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') }}</span></td>
-  <td style="width:18%; text-align:center;"><div class="photo-frame">{% if student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}"/>{% endif %}</div><div class="student-name">{{ student.full_name }}</div></td>
+  <td style="width:18%; text-align:center;"><div class="photo-frame">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}"/>{% else %}<div class="photo-placeholder">Photo non disponible</div>{% endif %}</div><div class="student-name">{{ student.full_name }}</div></td>
 </tr></table>
 
 <table class="meta"><tr>

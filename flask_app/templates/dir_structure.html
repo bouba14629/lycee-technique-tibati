@@ -94,7 +94,7 @@
   </div></div></div>
   {% endif %}
   <div class="row g-3">
-    {% for dept in section.departments %}
+    {% for dept in section.departments|sort(attribute='name') %}
     <div class="col-md-6 col-lg-4">
       <div style="background:var(--cream); border:1px solid #eee3c8; border-radius:12px; padding:14px;">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -110,7 +110,7 @@
         <div class="text-muted mb-2" style="font-size:12px;">{{ dept.classes|length }} classe(s) · {{ dept.subjects|length }} matière(s) rattachée(s) aux classes</div>
 
         <div class="mb-2" style="font-size:11.5px;">
-          {% for c in dept.classes %}
+          {% for c in dept.classes|sort(attribute='name') %}
           <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
             <span class="badge-ltt badge-gold" data-bs-toggle="modal" data-bs-target="#classEdit{{ c.id }}Modal" style="cursor:pointer;">{{ c.code or 'Sans code' }} · {{ c.name }} ({{ c.students|length }})</span>
             <span class="text-muted" data-bs-toggle="modal" data-bs-target="#hr{{ c.id }}Modal" style="cursor:pointer;">
@@ -167,7 +167,7 @@
 
         {% if (current_user.role == 'directeur' or (current_user.role in ['censeur','chef_orientation'] and scoped_dept_ids is none) or (current_user.role in ['censeur','chef_orientation'] and scoped_dept_ids is not none and dept.id in scoped_dept_ids)) and dept.subjects %}
         <div class="mb-2" style="font-size:11px; max-height:140px; overflow-y:auto;">
-          {% for subj in dept.subjects %}
+          {% for subj in dept.subjects|sort(attribute='name') %}
           <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px dashed #e5ddc4;">
             <span>{{ subj.name }} {% if subj.is_tronc_commun %}<span class="badge-ltt badge-gold">Tronc commun</span>{% endif %}<span class="text-muted">(coef. {{ subj.coefficient }} · {{ 'Classe : ' ~ subj.school_class.name if subj.class_id else 'Classe non définie' }})</span></span>
             <span class="d-flex gap-1">

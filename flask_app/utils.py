@@ -294,10 +294,12 @@ def scheduled_courses_for_class(class_id):
     """Cours matière/enseignant réellement présents dans l'emploi du temps."""
     if not class_id:
         return []
-    return (Course.query.filter(Course.class_id == class_id)
-            .join(ScheduleEntry)
-            .distinct()
-            .all())
+    courses = (Course.query.filter(Course.class_id == class_id)
+               .join(ScheduleEntry)
+               .distinct()
+               .order_by(Course.id)
+               .all())
+    return sorted(courses, key=lambda course: ((course.subject.name or "").casefold(), course.id))
 
 
 def bulletin_data(student, term=None, _cache=None):
@@ -422,7 +424,7 @@ def bulletin_data(student, term=None, _cache=None):
                 total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
             except Exception:
                 pass
-        return math.floor(total)
+        return round(total, 2)
 
     just_hours = _hours([a for a in absences if a.justified])
     non_just_hours = _hours([a for a in absences if not a.justified])

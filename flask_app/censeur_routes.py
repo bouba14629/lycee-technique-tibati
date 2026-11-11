@@ -11,7 +11,7 @@ from models import (
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
-                    bulletin_data, scheduled_courses_for_class, get_current_school_year, schedule_extra_hours, floor_hours)
+                    bulletin_data, scheduled_courses_for_class, get_current_school_year, schedule_extra_hours)
 
 
 def _is_stt_class(school_class):
@@ -138,7 +138,7 @@ def censeur_schedule():
             Subject.class_id == current_class.id,
             and_(Subject.class_id.is_(None), or_(Subject.department_id == current_class.department_id, Subject.department_id.is_(None))),
         ))
-            subjects = subjects_q.order_by(Subject.name).all()
+            subjects = subjects_q.order_by(db.func.lower(Subject.name), Subject.id).all()
     else:
         subjects = []
     # Les Conseillers d’orientation peuvent aussi être affectés à un créneau.
@@ -569,13 +569,13 @@ def censeur_absences():
             "student": student,
             "records": student_records,
             # Inclut toutes les matières, notamment Orientation Scolaire.
-            "hours": floor_hours(sum(_attendance_duration(record) for record in student_records)),
+            "hours": round(sum(_attendance_duration(record) for record in student_records), 2),
             "count": len(student_records),
             "types": ", ".join(sorted({r.type for r in student_records})),
             "reasons": ", ".join(sorted({r.reason for r in student_records if r.reason})) or "—",
         })
     absence_rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = floor_hours(sum(row["hours"] for row in absence_rows))
+    total_hours = round(sum(row["hours"] for row in absence_rows), 2)
     return render_template("censeur_absences.html", absence_rows=absence_rows, classes=classes, class_id=class_id, total_hours=total_hours)
 
 
@@ -583,7 +583,7 @@ def _attendance_duration(record):
     try:
         h1, m1 = map(int, (record.start_time or "00:00").split(":"))
         h2, m2 = map(int, (record.end_time or record.start_time or "00:00").split(":"))
-        return floor_hours((h2 * 60 + m2 - h1 * 60 - m1) / 60)
+        return max(0, round((h2 * 60 + m2 - h1 * 60 - m1) / 60, 2))
     except Exception:
         return 0
 
@@ -630,7 +630,7 @@ def surveillant_daily_absences():
     classes = SchoolClass.query.filter(SchoolClass.id.in_(scoped)).order_by(SchoolClass.name).all() if scoped is not None else SchoolClass.query.order_by(SchoolClass.name).all()
     rows = _daily_absence_rows(user, selected_date, class_id)
     rows.sort(key=lambda row: (-row["hours"], row["student"].last_name, row["student"].first_name))
-    total_hours = floor_hours(sum(row["hours"] for row in rows))
+    total_hours = round(sum(row["hours"] for row in rows), 2)
     return render_template("surveillant_daily_absences.html", rows=rows, classes=classes, class_id=class_id, selected_date=raw_date, total_hours=total_hours)
 
 
@@ -1362,7 +1362,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, resolve_student_photo, pdf_image_data_uri, pdf_asset, bulletin_logo_pdf_path
+    from pdf_utils import render_pdf, get_student_photo_source, resolve_student_photo, pdf_asset, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1394,7 +1394,7 @@ def censeur_bulletins_class_pdf(class_id):
                 "data": annual_bulletin_data(st, _cache=bulletin_cache),
                 # Embarquement base64 : le PDF ne dépend plus du chemin local
                 # ou du proxy de stockage au moment du rendu xhtml2pdf.
-                "photo_path": pdf_image_data_uri(actual_photo_path) if actual_photo_path else fallback_photo,
+                "photo_path": get_student_photo_source(st, base_url=request.host_url) or fallback_photo,
                 "photo_available": bool(actual_photo_path),
             })
         pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
@@ -1440,7 +1440,7 @@ def censeur_bulletins_class_pdf(class_id):
             # quand le PDF groupé est généré depuis le proxy de stockage.
             # Une data URI est indépendante du répertoire de travail et reste
             # lisible par xhtml2pdf dans chaque page d'un export groupé.
-            "photo_path": pdf_image_data_uri(photo_path) if photo_path else fallback_photo,
+            "photo_path": get_student_photo_source(st, base_url=request.host_url) or fallback_photo,
             "photo_available": bool(photo_path),
         })
     pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
@@ -1480,7 +1480,7 @@ def _absence_hours(student_id):
             total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
         except Exception:
             pass
-    return floor_hours(total)
+    return round(total, 2)
 
 
 @app.route("/surveillant/sanctions")

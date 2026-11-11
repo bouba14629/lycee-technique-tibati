@@ -73,14 +73,14 @@ def student_bulletin_xlsx_staff(student_id):
 
 
 def _bulletin_pdf_response(student, term=None):
-    from pdf_utils import render_pdf, resolve_student_photo
+    from pdf_utils import render_pdf, get_student_photo_source
     from utils import TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     term = term or request.args.get("term", T[0])
     data = bulletin_data(student, term=term)
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term=term, status="Validé").first()
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
     bulletin_ref = f"{student.matricule}-T{T.index(term)+1}-2025"
-    photo_path = resolve_student_photo(student, lightweight=True, base_url=request.host_url)
+    photo_path = get_student_photo_source(student, base_url=request.host_url)
     pdf = render_pdf("pdf/bulletin_pdf.html", student=student, data=data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       bulletin_ref=bulletin_ref, approval=approval, school_year=get_current_school_year(),

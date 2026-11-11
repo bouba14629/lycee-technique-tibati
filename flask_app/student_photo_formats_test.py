@@ -2,6 +2,8 @@ import io
 import json
 import os
 import sys
+import tempfile
+from PIL import Image
 from werkzeug.datastructures import FileStorage
 
 os.environ["DATABASE_URL"] = "sqlite:////tmp/ltt-student-photo-formats.sqlite"
@@ -46,6 +48,7 @@ for extension, mime in (("jpg", "image/jpeg"), ("jpeg", "image/jpeg"), ("png", "
     assert mime in {"image/jpeg", "image/png", "image/webp"}
 
 from app import app
+from pdf_utils import get_student_photo_source
 
 with app.test_request_context():
     assert student_photo_url(None).endswith("avatar_placeholder_0074e93d.png")
@@ -54,5 +57,14 @@ with app.test_request_context():
     assert student_photo_url("static/uploads/students/portrait.webp").endswith("uploads/students/portrait.webp")
     assert student_photo_url("/static/uploads/students/portrait.jpeg").endswith("/static/uploads/students/portrait.jpeg")
     assert student_photo_url("/manus-storage/students/portrait.jpg") == "/manus-storage/students/portrait.jpg"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        photo_path = os.path.join(tmpdir, "student.png")
+        Image.new("RGB", (90, 120), (25, 80, 140)).save(photo_path, format="PNG")
+        student = type("PhotoStudent", (), {"id": 101, "photo": photo_path})()
+        source = get_student_photo_source(student)
+        assert source and source.startswith("data:image/jpeg;base64,")
+        assert get_student_photo_source(type("PhotoStudent", (), {"id": 102, "photo": None})()) is None
+        assert get_student_photo_source(type("PhotoStudent", (), {"id": 103, "photo": os.path.join(tmpdir, "missing.jpg")})()) is None
 
 print("STUDENT_PHOTO_FORMATS_TEST_OK")
