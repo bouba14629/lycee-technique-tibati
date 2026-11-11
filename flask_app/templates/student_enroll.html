@@ -42,8 +42,8 @@
       </div>
       <div class="col-md-9">
         <div class="row g-3">
-          <div class="col-md-6"><label>Prénom</label><input type="text" name="first_name" id="fnInput" class="form-control" required oninput="updatePhotoCaption()"></div>
-          <div class="col-md-6"><label>Nom</label><input type="text" name="last_name" id="lnInput" class="form-control" required oninput="updatePhotoCaption()"></div>
+          <div class="col-md-6"><label>Prénom (obligatoire)</label><input type="text" name="first_name" id="fnInput" class="form-control" required oninput="updatePhotoCaption()"></div>
+          <div class="col-md-6"><label>Nom (facultatif)</label><input type="text" name="last_name" id="lnInput" class="form-control" oninput="this.value=this.value.replace(/\./g, ''); updatePhotoCaption()"></div>
           <div class="col-md-6"><label>Matricule</label><input type="text" name="matricule" class="form-control" maxlength="30" placeholder="Ex. LTT-2026-001" required autocomplete="off" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><div class="text-muted mt-1" style="font-size:11px;">Code unique officiel de l’élève.</div></div>
         </div>
       </div>

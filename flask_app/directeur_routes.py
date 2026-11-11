@@ -296,6 +296,12 @@ def dir_user_reset(user_id):
 @roles_required("directeur")
 def dir_user_edit(user_id):
     u = User.query.get_or_404(user_id)
+    if u.role == "eleve" and u.student_profile:
+        first_name = request.form.get("first_name", u.student_profile.first_name).strip()
+        last_name = request.form.get("last_name", u.student_profile.last_name).replace(".", "").strip()
+        if not first_name:
+            flash("Le prénom de l’élève est obligatoire. Le nom est facultatif.", "warning")
+            return redirect(url_for("dir_users", role="eleve"))
     u.full_name = request.form.get("full_name", u.full_name).strip()
     u.email = request.form.get("email", u.email or "").strip()
     u.phone = request.form.get("phone", u.phone or "").strip()
@@ -321,8 +327,8 @@ def dir_user_edit(user_id):
                 u.parent_profile.children.append(student)
     elif u.role == "eleve" and u.student_profile:
         student = u.student_profile
-        student.first_name = request.form.get("first_name", student.first_name).strip()
-        student.last_name = request.form.get("last_name", student.last_name).strip()
+        student.first_name = first_name
+        student.last_name = last_name
         student.address = request.form.get("address", student.address or "").strip()
         student.birth_place = request.form.get("birth_place", student.birth_place or "").strip()
         student.sex = request.form.get("sex", student.sex or "") or None
@@ -432,7 +438,7 @@ def student_enroll():
         return_class_id = None
     if request.method == "POST":
         first = request.form.get("first_name", "").strip()
-        last = request.form.get("last_name", "").strip()
+        last = request.form.get("last_name", "").replace(".", "").strip()
         matricule = request.form.get("matricule", "").strip().upper()
         sex = request.form.get("sex")
         dob = request.form.get("dob")
@@ -445,8 +451,8 @@ def student_enroll():
         reinscription = request.form.get("status") == "Réinscrit"
         is_repeater = request.form.get("is_repeater") == "1"
 
-        if not (first and last and matricule and class_id):
-            flash("Nom, prénom, matricule et classe sont obligatoires.", "warning")
+        if not (first and matricule and class_id):
+            flash("Prénom, matricule et classe sont obligatoires. Le nom est facultatif.", "warning")
             return redirect(url_for("student_enroll", return_class_id=return_class_id))
         if len(matricule) > 30:
             flash("Le matricule ne peut pas dépasser 30 caractères.", "warning")
@@ -456,9 +462,10 @@ def student_enroll():
             return redirect(url_for("student_enroll", return_class_id=return_class_id))
 
         # Compte de connexion de l'élève — exclusif, pour qu'il consulte uniquement ses propres informations
-        student_uname = gen_username(f"{first} {last}")
+        full_name = f"{first} {last}".strip()
+        student_uname = gen_username(full_name)
         student_temp_pw = "0000"
-        su = User(username=student_uname, role="eleve", full_name=f"{first} {last}",
+        su = User(username=student_uname, role="eleve", full_name=full_name,
                   must_change_password=True)
         su.set_password(student_temp_pw)
         db.session.add(su)
@@ -753,8 +760,14 @@ def student_edit(student_id):
     return_class_id = request.form.get("return_class_id", type=int)
     if return_class_id and not SchoolClass.query.get(return_class_id):
         return_class_id = None
-    student.first_name = request.form.get("first_name", student.first_name).strip()
-    student.last_name = request.form.get("last_name", student.last_name).strip()
+    first_name = request.form.get("first_name", student.first_name).strip()
+    last_name = request.form.get("last_name", student.last_name).replace(".", "").strip()
+    if not first_name:
+        flash("Le prénom de l’élève est obligatoire. Le nom est facultatif.", "warning")
+        return redirect(url_for("student_detail", student_id=student.id,
+                                return_class_id=return_class_id))
+    student.first_name = first_name
+    student.last_name = last_name
     student.sex = request.form.get("sex", student.sex)
     if "dob" in request.form:
         raw_dob = request.form.get("dob", "").strip()
@@ -785,7 +798,7 @@ def student_edit(student_id):
         student.user.set_password(new_pw)
         student.user.must_change_password = False
     if student.user:
-        student.user.full_name = f"{student.first_name} {student.last_name}"
+        student.user.full_name = f"{student.first_name} {student.last_name}".strip()
     db.session.commit()
     flash("Fiche élève modifiée.", "success")
     if return_class_id:

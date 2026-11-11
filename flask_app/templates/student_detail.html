@@ -26,8 +26,8 @@
           <div class="fw-semibold" style="font-size:12px; color:var(--navy-900);">{{ student.full_name }}</div>
           <input type="file" name="photo" id="studentEditPhoto" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm mt-1">
         </div>
-        <div class="col-6"><label>Prénom</label><input type="text" name="first_name" class="form-control" value="{{ student.first_name }}"></div>
-        <div class="col-6"><label>Nom</label><input type="text" name="last_name" class="form-control" value="{{ student.last_name }}"></div>
+        <div class="col-6"><label>Prénom (obligatoire)</label><input type="text" name="first_name" class="form-control" value="{{ student.first_name }}" required></div>
+        <div class="col-6"><label>Nom (facultatif)</label><input type="text" name="last_name" class="form-control" value="{{ student.last_name }}" oninput="this.value=this.value.replace(/\./g, '')"></div>
         <div class="col-6"><label>Matricule</label><input type="text" name="matricule" class="form-control" value="{{ student.matricule }}"></div>
         <div class="col-6">
           <label>Sexe</label>
@@ -71,7 +71,7 @@
 <div class="row g-3">
   <div class="col-lg-4">
     <div class="card-ltt text-center">
-      <div class="avatar mx-auto mb-3" style="width:64px;height:64px;font-size:20px;">{{ student.first_name[0] }}{{ student.last_name[0] }}</div>
+      <div class="avatar mx-auto mb-3" style="width:64px;height:64px;font-size:20px;">{{ student.first_name[:1] }}{{ student.last_name[:1] }}</div>
       <div class="fw-semibold" style="font-size:16px;">{{ student.full_name }}</div>
       <div class="text-muted" style="font-size:12.5px;">{{ student.sex }} · Né(e) le {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}{{ ' à ' + student.birth_place if student.birth_place else '' }}</div>
       <div class="text-muted" style="font-size:12.5px;">Matricule : {{ student.matricule }}</div>
