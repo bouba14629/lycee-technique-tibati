@@ -54,7 +54,7 @@
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
     </td>
     <td width="23%" style="width:23%; padding:0; text-align:center; vertical-align:top;">
-      <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:6pt; color:#555;">Photo non disponible</span>{% endif %}</p>
+      <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt; border:1pt solid #000;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:6pt; color:#555;">Photo non disponible</span>{% endif %}</p>
     </td>
   </tr>
 </table>
@@ -132,6 +132,6 @@
       <div style="margin-bottom:31pt;">VISA DU PROFESSEUR PRINCIPAL</div>
       <span style="display:block; font-size:7.5pt; line-height:8pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span>
       </td>
-    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;"><span style="font-size:7pt; color:#6b7688;">TIBATI, le ______</span><br><span style="display:block; margin-top:2pt;">LE PROVISEUR</span>{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
+    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;"><span style="font-size:7pt; line-height:7pt; color:#6b7688;">TIBATI, le ______</span><br><span style="display:block; margin-top:0; line-height:7pt;">LE PROVISEUR</span>{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
   </tr>
 </table>

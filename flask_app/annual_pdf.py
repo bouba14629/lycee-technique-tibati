@@ -150,9 +150,9 @@ class AnnualPage:
                       'Effectif : ' + str(data.get('class_size', 0)),
                       'Professeur Principal : ' + (teacher.user.formal_name if teacher and teacher.user else '—')]
         for i, label in enumerate(left_meta):
-            self.text(label, 16.5, 185.25+i*12.75, size=7.95, max_width=287)
+            self.text(label, 16.5, 166.5+i*12.75, size=7.95, max_width=287)
         for i, label in enumerate(right_meta):
-            self.text(label, 313.5, 185.25+i*12.75, size=7.95, max_width=208.875)
+            self.text(label, 313.5, 166.5+i*12.75, size=7.95, max_width=208.875)
 
     def photo(self, row):
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
