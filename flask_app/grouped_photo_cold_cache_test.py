@@ -32,6 +32,25 @@ def image_bytes(color, mode="RGB", fmt="PNG"):
     return output.getvalue()
 
 
+def assert_photo_dimensions(page):
+    operations = page.get_contents().operations
+    found = 0
+    for index, (operands, operator) in enumerate(operations):
+        if operator != b"Do":
+            continue
+        image = page["/Resources"]["/XObject"][operands[0]]
+        if not (100 <= image.get("/Width", 0) <= 320 and 100 <= image.get("/Height", 0) <= 400):
+            continue
+        matrix, previous_operator = operations[index - 1]
+        assert previous_operator == b"cm"
+        # xhtml2pdf lit les attributs width/height en pixels (0,75 pt/px).
+        # L'image passe de 46x56 à 50x61, soit environ +9 % par côté.
+        assert abs(float(matrix[0]) - 37.5) < 0.01, matrix
+        assert abs(float(matrix[3]) - 45.75) < 0.01, matrix
+        found += 1
+    return found
+
+
 def assert_photos(pdf_bytes):
     reader = PdfReader(io.BytesIO(pdf_bytes))
     assert len(reader.pages) == 5, len(reader.pages)
@@ -45,6 +64,7 @@ def assert_photos(pdf_bytes):
             assert "Photo non disponible" in " ".join(text.split()), (index, text)
         else:
             assert len(images) == 1, (index, len(images))
+            assert assert_photo_dimensions(page) == 1
             image = images[0].image.convert("RGB")
             pixel = image.getpixel((image.width // 2, image.height // 2))
             assert all(abs(a - b) <= 8 for a, b in zip(pixel, color)), (index, pixel, color)
@@ -170,6 +190,20 @@ def main():
                     response.direct_passthrough = False
                     assert_photos(response.get_data())
                 assert len(calls) == 6, len(calls)
+                first = calls[0][0]
+                from utils import annual_bulletin_data, get_current_school_year
+                from flask import render_template
+                for template, data in (
+                    ("pdf/bulletin_pdf.html", first["data"]),
+                    ("pdf/bulletin_annual_pdf.html", annual_bulletin_data(first["student"])),
+                ):
+                    individual_html = render_template(template, student=first["student"], data=data,
+                                                      student_photo_path=first["photo_path"], photo_available=True,
+                                                      school_year=get_current_school_year(), term="Trimestre 1",
+                                                      term_ordinal="PREMIER", TERM_SEQ_A=1, TERM_SEQ_B=2)
+                    assert 'style="width:50pt; height:61pt;" width="50" height="61"' in individual_html
+                    assert first["photo_path"] in individual_html
+                print("ENLARGED_PHOTO_DIMENSIONS_GROUPED_AND_INDIVIDUAL_HTML_MATCH_OK", flush=True)
             print("ASSEMBLY_FALLBACK_PRESERVES_PHOTOS_OK", flush=True)
         finally:
             if process:
