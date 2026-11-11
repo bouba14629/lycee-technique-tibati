@@ -297,14 +297,23 @@ def render_pdf(template_name, **context):
     try:
         if template_name in ("pdf/bulletin_annual_pdf.html", "pdf/class_annual_bulletins_pdf.html"):
             from annual_pdf import render_annual_bulletins_pdf
-            return render_annual_bulletins_pdf(**context)
-        html = render_template(template_name, **context)
-        buffer = BytesIO()
-        result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
-        buffer.seek(0)
-        if result.err:
-            logger.error("PDF rendering reported errors template=%s errors=%s", template_name, result.err)
-            return None
+            buffer = render_annual_bulletins_pdf(**context)
+        else:
+            html = render_template(template_name, **context)
+            buffer = BytesIO()
+            result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
+            buffer.seek(0)
+            if result.err:
+                logger.error("PDF rendering reported errors template=%s errors=%s", template_name, result.err)
+                return None
+        from bulletin_qr_pdf import BULLETIN_TEMPLATES, add_bulletin_qr_codes
+        if template_name in BULLETIN_TEMPLATES:
+            from utils import get_current_school_year
+            rows = context.get("students_data")
+            if rows is None:
+                rows = [{"student": context["student"], "data": context["data"]}]
+            term = "Annuel" if "annual" in template_name else context.get("term", "Trimestre 1")
+            buffer = add_bulletin_qr_codes(buffer, rows, context.get("school_year") or get_current_school_year(), term)
         return buffer
     except Exception:
         logger.exception("PDF rendering failed template=%s", template_name)
