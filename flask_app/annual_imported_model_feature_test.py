@@ -76,8 +76,9 @@ def main():
                 text = ' '.join(page.extract_text().split())
                 for expected in ['BULLETIN ANNUEL', 'LTT20262222', '3A MACO', 'RAPPEL DES MOYENNES TRIMESTRIELLES',
                                  'APPRÉCIATION DU TRAVAIL', 'DÉCISION DU CONSEIL DE CLASSE',
-                                 "VISA DU CHEF D'ÉTABLISSEMENT", 'LE PROVISEUR', 'Trim. 1', 'Trim. 2', 'Trim. 3']:
+                                 'TIBATI, le ______________', 'LE PROVISEUR', 'Trim. 1', 'Trim. 2', 'Trim. 3']:
                     assert expected in text, (label, expected, text)
+                assert "VISA DU CHEF D'ÉTABLISSEMENT" not in text
                 assert all(name in text for subjects in names for name in subjects)
                 assert abs(float(page.mediabox.width) - 595.92) < .01
                 assert abs(float(page.mediabox.height) - 842.88) < .01
@@ -88,7 +89,7 @@ def main():
                                   [212.25,258,293.25,328.5,363.75,392.25,427.5,457.5,582]):
                     assert (x0, round(842.88-245.25-27,3), round(x1-x0,3),27) in rectangles
                 assert (13.5, round(842.88-145.5-2.25,3),568.5,2.25) in rectangles
-                assert (13.5, round(842.88-168.75-2.25,3),568.5,2.25) in rectangles
+                assert (13.5, round(842.88-163.5-2.25,3),568.5,2.25) in rectangles
                 fonts = [font.get_object() for font in page['/Resources']['/Font'].values()]
                 liberation = [font for font in fonts if 'LiberationSans' in str(font.get('/BaseFont',''))]
                 assert len(liberation) >= 2

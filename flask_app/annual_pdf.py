@@ -134,11 +134,11 @@ class AnnualPage:
         self.text('BULLETIN ANNUEL', PAGE_W/2, 106.5, size=17.625, align='center')
         school_class = student.school_class
         section_name = school_class.department.section.name if school_class and school_class.department and school_class.department.section else ''
-        self.text('SECTION ' + str(section_name).upper().replace('SECTION ', ''), PAGE_W/2, 132.75,
+        self.text('SECTION ' + str(section_name).upper().replace('SECTION ', ''), PAGE_W/2, 124.75,
                   size=9.9, color=BLUE, align='center', max_width=RIGHT-LEFT-20, char_space=.67)
         self.bar(145.5)
-        self.text(student.full_name, 496.25, 155.25, size=6.6, color=BLUE, align='center', max_width=165)
-        self.bar(168.75)
+        self.text(student.full_name, 496.25, 153.75, size=6.6, color=BLUE, align='center', max_width=165)
+        self.bar(163.5)
         dob = student.dob.strftime('%d/%m/%Y') if student.dob else '—'
         left_meta = ['Noms et Prénoms : ' + student.full_name,
                      'Date de naissance : ' + dob + ' à ' + (student.birth_place or '—'),
@@ -280,9 +280,8 @@ class AnnualPage:
         self.text('[ ] REDOUBLE LA CLASSE DE : ____________________________',17.25,top+32.25)
         self.text('[ ] Exclu(e)  [ ] Travail insuffisant  [ ] Conduite  [ ] Ne peut tripler  [ ] Démissionnaire  [ ] Insolvabilité',
                   17.25,top+45,max_width=369)
-        self.text("VISA DU CHEF D'ÉTABLISSEMENT",485.1,top+9.75,color=BLUE,align='center')
-        self.text('TIBATI, le ______________',485.1,top+24.75,color=colors.HexColor('#6b7385'),align='center')
-        self.text('LE PROVISEUR',485.1,top+39.75,color=BLUE,align='center')
+        self.text('TIBATI, le ______________',485.1,top+9.75,color=colors.HexColor('#6b7385'),align='center')
+        self.text('LE PROVISEUR',485.1,top+24.75,color=BLUE,align='center')
         return top+49.5
 
 
