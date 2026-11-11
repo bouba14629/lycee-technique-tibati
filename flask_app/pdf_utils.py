@@ -289,7 +289,15 @@ def render_pdf(template_name, **context):
     context.setdefault("bulletin_serif_italic", pdf_asset(("fonts", "LiberationSerif-Italic.ttf"), "/manus-storage/LiberationSerif-Italic_df811de7.ttf"))
     context.setdefault("bulletin_sans_regular", pdf_asset(("fonts", "LiberationSans-Regular.ttf"), "/manus-storage/LiberationSans-Regular_e967eb0a.ttf"))
     context.setdefault("storage_base_url", storage_base_url())
+    if template_name in ("pdf/bulletin_annual_pdf.html", "pdf/class_annual_bulletins_pdf.html"):
+        context.setdefault("annual_sans_regular", pdf_asset(("fonts", "LiberationSans-Regular.ttf"), "/manus-storage/LiberationSans-Regular_4bbc26b5.ttf"))
+        context.setdefault("annual_sans_bold", pdf_asset(("fonts", "LiberationSans-Bold.ttf"), "/manus-storage/LiberationSans-Bold_62710961.ttf"))
+        context.setdefault("annual_sans_bold_italic", pdf_asset(("fonts", "LiberationSans-BoldItalic.ttf"), "/manus-storage/LiberationSans-BoldItalic_1aa70013.ttf"))
+        context.setdefault("annual_logo_path", pdf_image_data_uri(pdf_asset(("img", "annual_reference_logo.jpeg"), "/manus-storage/annual_reference_logo_8d168140.jpeg")))
     try:
+        if template_name in ("pdf/bulletin_annual_pdf.html", "pdf/class_annual_bulletins_pdf.html"):
+            from annual_pdf import render_annual_bulletins_pdf
+            return render_annual_bulletins_pdf(**context)
         html = render_template(template_name, **context)
         buffer = BytesIO()
         result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)

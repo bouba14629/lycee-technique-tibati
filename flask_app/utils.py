@@ -492,7 +492,7 @@ def schedule_group_labels(entries):
 
 def annual_bulletin_data(student, _cache=None):
     """Calcule le bulletin annuel sur les trois trimestres sans modifier le bulletin trimestriel."""
-    from models import SUBJECT_CATEGORIES
+    from models import SUBJECT_CATEGORIES, Attendance, Sanction
     if not student.class_id:
         return None
     cache = _cache if _cache is not None else {}
@@ -511,7 +511,7 @@ def annual_bulletin_data(student, _cache=None):
     categories, points_total, coef_total = [], 0.0, 0
     term_points, term_coefs = [0.0, 0.0, 0.0], [0, 0, 0]
     for category in SUBJECT_CATEGORIES:
-        rows = []
+        rows, pending_count = [], 0
         for course in courses:
             if course.subject.category != category:
                 continue
@@ -523,6 +523,8 @@ def annual_bulletin_data(student, _cache=None):
             annual = round(sum(known) / len(known), 2) if known else None
             coef = course.subject.coefficient or 1
             points = round(annual * coef, 2) if annual is not None else None
+            if annual is None:
+                pending_count += 1
             for index, value in enumerate(term_values):
                 if value is not None:
                     term_points[index] += value * coef
@@ -540,7 +542,9 @@ def annual_bulletin_data(student, _cache=None):
                         peer_annuals.append(sum(peer_terms) / len(peer_terms))
                 rank = 1 + sum(1 for peer_annual in peer_annuals if peer_annual > annual)
             rows.append({"course": course, "teacher": course.teacher, "terms": term_values, "annual": annual,
-                         "coef": coef, "points": points, "rank": rank})
+                         "coef": coef, "points": points, "rank": rank,
+                         "pending": annual is None,
+                         "appreciation": appreciation_code(annual) if annual is not None else "Notes en attente"})
             if points is not None:
                 points_total += points
                 coef_total += coef
@@ -548,6 +552,7 @@ def annual_bulletin_data(student, _cache=None):
             cat_points = round(sum(row["points"] or 0 for row in rows), 2)
             cat_coef = sum(row["coef"] for row in rows if row["annual"] is not None)
             categories.append({"name": category, "rows": rows, "total_points": cat_points, "total_coef": cat_coef,
+                               "pending_count": pending_count,
                                "average": round(cat_points / cat_coef, 2) if cat_coef else None})
     overall_avg = round(points_total / coef_total, 2) if coef_total else None
 
@@ -568,6 +573,46 @@ def annual_bulletin_data(student, _cache=None):
     class_averages = [peer_annual_average(peer) for peer in student.school_class.students]
     class_averages = [value for value in class_averages if value is not None]
     class_rank = 1 + sum(1 for value in class_averages if overall_avg is not None and value > overall_avg)
+    # Le bulletin annuel reprend la discipline, mais les heures imprimées sont
+    # des entiers par défaut (sans changer les valeurs ni la formule des notes).
+    absences = Attendance.query.filter_by(student_id=student.id, type="Absence").all()
+    retards = Attendance.query.filter_by(student_id=student.id, type="Retard").count()
+    just_days = sum(1 for absence in absences if absence.justified)
+    non_just_days = sum(1 for absence in absences if not absence.justified)
+
+    def _absence_hours(records):
+        total = 0.0
+        for absence in records:
+            try:
+                h1, m1 = map(int, (absence.start_time or "").split(":"))
+                h2, m2 = map(int, (absence.end_time or "").split(":"))
+                total += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
+            except (AttributeError, TypeError, ValueError):
+                pass
+        return total
+
+    just_hours = _absence_hours([absence for absence in absences if absence.justified])
+    non_just_hours = _absence_hours([absence for absence in absences if not absence.justified])
+    total_absence_hours = just_hours + non_just_hours
+    sanctions = Sanction.query.filter_by(student_id=student.id).all()
+    avert_conduite = any("avert" in (sanction.type or "").lower() for sanction in sanctions)
+    blame_conduite = any("blâme" in (sanction.type or "").lower() or "blame" in (sanction.type or "").lower()
+                         for sanction in sanctions)
+    exclusions = [sanction for sanction in sanctions if "exclusion" in (sanction.type or "").lower()]
+    conduct_exclusion_label = None
+    if 6 <= total_absence_hours <= 9:
+        avert_conduite = True
+    elif 10 <= total_absence_hours <= 15:
+        blame_conduite = True
+    elif 16 <= total_absence_hours <= 20:
+        conduct_exclusion_label = "03 jours"
+    elif 21 <= total_absence_hours <= 25:
+        conduct_exclusion_label = "05 jours"
+    elif 26 <= total_absence_hours <= 30:
+        conduct_exclusion_label = "08 jours"
+    elif total_absence_hours > 30:
+        conduct_exclusion_label = "Définitive"
+
     return {"terms": terms, "categories": categories, "overall_points": round(points_total, 2),
             "overall_coef": coef_total, "overall_avg": overall_avg,
             "term_averages": [round(term_points[index] / term_coefs[index], 2) if term_coefs[index] else None for index in range(3)],
@@ -576,7 +621,15 @@ def annual_bulletin_data(student, _cache=None):
             "class_high": max(class_averages) if class_averages else None,
             "class_low": min(class_averages) if class_averages else None,
             "rank": class_rank if overall_avg is not None else None,
-            "work_marks": competency_marks(overall_avg)}
+            "work_marks": competency_marks(overall_avg),
+            "official_work_appreciation": appreciation_code(overall_avg),
+            "absences_justified_hours": floor_hours(just_hours), "absences_justified_days": just_days,
+            "absences_non_justified_hours": floor_hours(non_just_hours), "absences_non_justified_days": non_just_days,
+            "total_absence_hours": floor_hours(total_absence_hours),
+            "absences_total_hours": floor_hours(total_absence_hours),
+            "total_absence_days": just_days + non_just_days, "retards": retards,
+            "avert_conduite": avert_conduite, "blame_conduite": blame_conduite,
+            "exclusions": exclusions, "conduct_exclusion_label": conduct_exclusion_label}
 
 
 def build_official_grid(entries, days=None):

@@ -1172,7 +1172,7 @@ def censeur_honor_roll_register_export_pdf():
 @roles_required("censeur", "directeur")
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
-    from pdf_utils import render_pdf, resolve_student_photo, pdf_asset
+    from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1182,11 +1182,11 @@ def censeur_annual_bulletin_pdf(student_id):
     if not data:
         abort(404)
     approval = BulletinApproval.query.filter_by(class_id=student.class_id, term="Annuel", status="Validé").first()
-    pdf = render_pdf("pdf/class_annual_bulletins_pdf.html",
+    photo_source = get_student_photo_source(student)
+    pdf = render_grouped_bulletins_pdf("pdf/class_annual_bulletins_pdf.html",
                      students_data=[{"student": student, "data": data,
-                                     "photo_path": resolve_student_photo(student, lightweight=True, base_url=request.host_url)}],
-                     school_year=get_current_school_year(), approval=approval,
-                     avatar_path=pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png"))
+                                     "photo_path": photo_source, "photo_available": bool(photo_source)}],
+                     school_year=get_current_school_year(), approval=approval, avatar_path=None)
     if not pdf:
         abort(500)
     inline_preview = request.args.get("preview") == "1"

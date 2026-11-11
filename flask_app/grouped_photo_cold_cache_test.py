@@ -42,7 +42,7 @@ def image_bytes(color, mode="RGB", fmt="PNG"):
     return output.getvalue()
 
 
-def assert_photo_dimensions(page):
+def assert_photo_dimensions(page, annual=False):
     operations = page.get_contents().operations
     found = 0
     for index, (operands, operator) in enumerate(operations):
@@ -55,8 +55,11 @@ def assert_photo_dimensions(page):
         assert previous_operator == b"cm"
         # xhtml2pdf lit les attributs width/height en pixels (0,75 pt/px).
         # L'image passe de 50x61 à 60x73, soit environ +20 % par côté.
-        assert abs(float(matrix[0]) - 45) < 0.01, matrix
-        assert abs(float(matrix[3]) - 54.75) < 0.01, matrix
+        assert abs(float(matrix[0]) - (49.5 if annual else 45)) < 0.01, matrix
+        assert abs(float(matrix[3]) - (55.5 if annual else 54.75)) < 0.01, matrix
+        if annual:
+            assert abs(float(matrix[4]) - 528.75) < .01, matrix
+            assert abs(float(matrix[5]) - (float(page.mediabox.height) - 232.5)) < .01, matrix
         found += 1
     return found
 
@@ -251,8 +254,10 @@ def assert_photos(pdf_bytes):
             assert "Photo non disponible" in " ".join(text.split()), (index, text)
         else:
             assert len(images) == 1, (index, len(images))
-            assert assert_photo_dimensions(page) == 1
-            assert_name_photo_geometry(page, full_name)
+            annual = 'BULLETIN ANNUEL' in text
+            assert assert_photo_dimensions(page, annual=annual) == 1
+            if not annual:
+                assert_name_photo_geometry(page, full_name)
             image = images[0].image.convert("RGB")
             pixel = image.getpixel((image.width // 2, image.height // 2))
             assert all(abs(a - b) <= 8 for a, b in zip(pixel, color)), (index, pixel, color)
@@ -390,8 +395,9 @@ def main():
                                                       student_photo_path=first["photo_path"], photo_available=True,
                                                       school_year=get_current_school_year(), term="Trimestre 1",
                                                       term_ordinal="PREMIER", TERM_SEQ_A=1, TERM_SEQ_B=2)
-                    assert 'width="60" height="73"' in individual_html
-                    expected_style = ('width:45pt; height:54.75pt;' if 'annual' in template
+                    expected_attributes = ('width="66" height="74"' if 'annual' in template else 'width="60" height="73"')
+                    assert expected_attributes in individual_html
+                    expected_style = ('width:49.5pt; height:55.5pt;' if 'annual' in template
                                       else 'width:60pt; height:73pt;')
                     assert expected_style in individual_html
                     assert first["photo_path"] in individual_html

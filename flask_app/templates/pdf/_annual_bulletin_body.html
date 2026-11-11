@@ -1,40 +1,60 @@
+{% set marks = data.work_marks %}
+{% set avg = data.overall_avg %}
 <table class="institution"><tr>
-  <td>RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie<br>RÉGION DE L’ADAMAOUA<br>DDRES/DDES-DJEREM<br>LYCÉE TECHNIQUE DE TIBATI</td>
-  <!-- width="52" is retained as a legacy template marker; the rendered logo is intentionally enlarged to 68. -->
-  <td class="center"><img src="{{ bulletin_logo_path }}" width="68"/></td>
-  <td>REPUBLIC OF CAMEROON<br>Peace – Work – Fatherland<br>ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>G.T.H.S OF TIBATI</td>
+  <td width="28%">RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie<br>RÉGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>LYCÉE TECHNIQUE DE TIBATI<br>Mle : 2CE1TEFD110320092</td>
+  <td width="44%" class="center"><img src="{{ annual_logo_path or bulletin_logo_path }}" width="76" height="77" style="width:57pt; height:57.75pt;" alt="Logo du Lycée Technique de Tibati"/></td>
+  <td width="28%">REPUBLIC OF CAMEROON<br>Peace – Work – Fatherland<br>ADAMAWA REGION<br>RDSE/DDES-DJEREM<br>G.T.H.S OF TIBATI<br>Mle : 2CE1TEFD110320092</td>
 </tr></table>
-
-<table class="title-row"><tr>
-  <td style="width:82%; text-align:center;"><span class="title">BULLETIN ANNUEL</span><br><span class="section-title">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') }}</span></td>
-  <td style="width:18%; text-align:center; vertical-align:top; padding:0;">
-    <div class="student-name" style="margin:0 0 1pt;">{{ student.full_name }}</div>
-    <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:45pt; height:54.75pt;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:5.8pt; color:#5f6875;">Photo non disponible</span>{% endif %}</p>
-  </td>
-</tr></table>
-
+<table class="title-table"><tr><td>
+  <div class="annual-title">BULLETIN ANNUEL</div>
+  <div class="annual-section">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
+</td></tr></table>
+<table class="name-line"><tr><td width="70%"></td><td width="30%">{{ student.full_name }}</td></tr></table>
 <table class="meta"><tr>
-  <td><b>Noms et Prénoms :</b> {{ student.full_name }}<br><b>Date de naissance :</b> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br><b>Genre :</b> {{ student.sex or '—' }}<br><b>Identifiant Unique :</b> {{ student.matricule }}<br><b>Professeur principal :</b> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class.homeroom_teacher else '—' }}</td>
-  <td><b>Année scolaire :</b> {{ school_year }}<br><b>Classe :</b> {{ student.school_class.name }}<br><b>Effectif :</b> {{ data.class_size }}<br><b>Redoublant :</b> {{ 'Oui' if student.is_repeater else 'Non' }}</td>
+  <td width="50%">Noms et Prénoms : {{ student.full_name }}<br>Date de naissance : {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>Genre : {{ student.sex or '—' }}<br>Identifiant Unique : {{ student.matricule }}<br>Redoublant : {{ 'Oui' if student.is_repeater else 'Non' }}</td>
+  <td width="36%" class="school-meta">Année Scolaire : {{ school_year }}<br>Classe : {{ student.school_class.name if student.school_class else '—' }}<br>Effectif : {{ data.class_size }}<br>Professeur Principal : {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}</td>
+  <td width="14%" class="photo-meta"><p class="student-photo-placement" align="right">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% else %}<span class="photo-placeholder">Photo non disponible</span>{% endif %}</p></td>
 </tr></table>
-
-<table class="grid" width="100%" style="width:100%; table-layout:fixed"><thead><tr><th style="width:21%">Matières / Enseignant</th><th style="width:6%">Notes<br>annuelles</th><th style="width:5%">Trim. 1</th><th style="width:5%">Trim. 2</th><th style="width:5%">Trim. 3</th><th style="width:5%">Coef.</th><th style="width:6%">N × C</th><th style="width:5%">Rang</th><th style="width:42%">Appréciations / Signatures</th></tr></thead><tbody>
-{% for category in data.categories %}
-  <tr class="cat"><td colspan="9">{{ category.name|upper }}</td></tr>
+<table class="annual-grades" width="100%">
+  <tr>
+    <th width="34.96042%" class="subject">Matières/Enseignant</th><th width="8.04749%">Notes<br>annuelles</th><th width="6.20053%">Trim. 1</th><th width="6.20053%">Trim. 2</th><th width="6.20053%">Trim. 3</th><th width="5.01319%">Coef.</th><th width="6.20053%">N×C</th><th width="5.27704%">Rang</th><th width="21.89974%" class="subject">Appréciations/Signatures</th>
+  </tr>
+  {% for category in data.categories %}
+  <tr class="category"><td colspan="9">{{ category.name }}</td></tr>
   {% for row in category.rows %}
-  <tr><td class="subject">{{ row.course.subject.name }}<br><span class="teacher">{{ row.teacher.user.formal_name }}</span></td><td class="center"><b>{{ row.annual if row.annual is not none else '—' }}</b></td>{% for value in row.terms %}<td class="center">{{ value if value is not none else '—' }}</td>{% endfor %}<td class="center">{{ row.coef }}</td><td class="center">{{ row.points if row.points is not none else '—' }}</td><td class="center">{{ row.rank if row.rank else '—' }}{{ 'e' if row.rank }}</td><td></td></tr>
+  {% set teacher_name = row.teacher.user.full_name if row.teacher and row.teacher.user else '—' %}
+  {% set compact_subject = (row.course.subject.name|length + teacher_name|length) > 55 %}
+  <tr>
+    <td class="subject"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>{{ row.course.subject.name }} <span class="teacher"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>({{ teacher_name }})</span></td>
+    <td class="center{{ ' low-score' if row.annual is not none and row.annual < 10 }}">{{ row.annual if row.annual is not none else '—' }}</td>
+    {% for value in row.terms %}<td class="center{{ ' low-score' if value is not none and value < 10 }}">{{ value if value is not none else '—' }}</td>{% endfor %}
+    <td class="center">{{ row.coef }}</td><td class="center">{{ row.points if row.points is not none else '—' }}</td><td class="center">{{ (row.rank|string) ~ 'e' if row.rank else '—' }}</td>
+    <td class="appreciation"{% if (row.appreciation|default('Notes en attente'))|length > 38 %} style="font-size:6.225pt;"{% endif %}>{{ row.appreciation|default('Notes en attente') }}</td>
+  </tr>
   {% endfor %}
-  <tr class="total"><td colspan="9">Total Points : {{ category.total_points }} &nbsp;&nbsp;&nbsp; Total Coef. : {{ category.total_coef }} &nbsp;&nbsp;&nbsp; Moyenne/20 : {{ category.average if category.average is not none else '—' }}</td></tr>
-{% endfor %}
-</tbody></table>
-
-<table class="summary"><tr>
-  <td><div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span class="summary-title">TRAVAIL DE L’ÉLÈVE</span><span class="summary-title">PROFIL DE LA CLASSE</span></div><table class="mini"><tr><td class="label">Total Points</td><td>{{ data.overall_points }}</td></tr><tr><td class="label">Moyenne annuelle</td><td><b>{{ data.overall_avg if data.overall_avg is not none else '—' }}</b></td></tr><tr><td class="label">Rang</td><td>{{ data.rank if data.rank else '—' }} / {{ data.class_size }}</td></tr><tr><td class="label">Moyenne Générale de la classe</td><td>{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr><tr><td class="label">Moy. du premier</td><td>{{ data.class_high if data.class_high is not none else '—' }}</td></tr><tr><td class="label">Moy. du dernier</td><td>{{ data.class_low if data.class_low is not none else '—' }}</td></tr></table><table class="checks"><tr><td>[{{ 'X' if data.work_marks.travail_insuffisant else ' ' }}] Compétences non acquises</td><td>[{{ 'X' if data.work_marks.bon_travail else ' ' }}] Compétences moyennement acquises</td></tr><tr><td>[{{ 'X' if data.work_marks.travail_passable else ' ' }}] Compétences bien acquises</td><td>[{{ 'X' if data.work_marks.assez_bon_travail else ' ' }}] Compétences très bien acquises</td></tr></table></td>
-  <td><span class="summary-title">DISCIPLINE</span><table class="mini"><tr><td class="label">Absences</td><td>N. heures</td><td>—</td></tr><tr><td class="label"></td><td>N. jours</td><td>—</td></tr><tr><td class="label">Exclusions</td><td>N. heures</td><td>—</td></tr><tr><td class="label"></td><td>N. jours</td><td>—</td></tr></table><table class="checks"><tr><td>□ Avert. conduite</td><td>□ Blâme conduite</td></tr></table></td>
-</tr></table>
-
-<table class="decision"><tr>
-  <td style="width:25%"><span class="decision-title">RAPPEL DES MOYENNES TRIMESTRIELLES</span><table class="term-list"><tr><td>Trimestre 1</td><td>{{ data.term_averages[0] if data.term_averages[0] is not none else '—' }}</td></tr><tr><td>Trimestre 2</td><td>{{ data.term_averages[1] if data.term_averages[1] is not none else '—' }}</td></tr><tr><td>Trimestre 3</td><td>{{ data.term_averages[2] if data.term_averages[2] is not none else '—' }}</td></tr></table></td>
-  <td style="width:45%"><span class="decision-title">DÉCISION DU CONSEIL DE CLASSE</span>□ ADMIS(E) EN CLASSE DE : ___________________________<br>□ REDOUBLE LA CLASSE DE : __________________________<br><br>□ Exclu(e) &nbsp;&nbsp; □ Travail insuffisant &nbsp;&nbsp; □ Conduite<br>□ Ne peut tripler &nbsp;&nbsp; □ Démissionnaire &nbsp;&nbsp; □ Insolvabilité</td>
-  <td class="visa" style="width:30%">TIBATI, le __________{% if approval %}<br><span class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div class="visa-space"></div><b>LE PROVISEUR</b></td>
+  <tr class="total"><td colspan="5" class="right">Total Points : {{ '%.1f'|format(category.total_points) }}</td><td class="center">{{ category.total_coef }}</td><td colspan="3" class="{{ 'low-score' if category.average is not none and category.average < 10 }}">Moyenne/20 : {{ category.average if category.average is not none else '—' }} — {{ category.pending_count|default(0) }} en attente</td></tr>
+  {% endfor %}
+</table>
+<table class="annual-summary" width="100%">
+  <tr><th colspan="2" width="50%">TRAVAIL DE L'ÉLÈVE</th><th colspan="2" width="50%">PROFIL DE LA CLASSE</th></tr>
+  <tr><td width="25%">Total des points</td><td width="25%">{{ data.overall_points }}</td><td width="35%">Moyenne Générale de la classe</td><td width="15%">{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
+  <tr><td>Coefficient</td><td>{{ data.overall_coef }}</td><td>Moyenne du premier</td><td>{{ data.class_high if data.class_high is not none else '—' }}</td></tr>
+  <tr><td>Moyenne annuelle</td><td>{{ avg if avg is not none else '—' }}</td><td>Moyenne du dernier</td><td class="{{ 'low-score' if data.class_low is not none and data.class_low < 10 }}">{{ data.class_low if data.class_low is not none else '—' }}</td></tr>
+  <tr><td>Rang</td><td>{{ (data.rank|string) ~ 'e' if data.rank else '—' }}/{{ data.class_size }}</td><td></td><td></td></tr>
+</table>
+<table class="term-recap" width="100%">
+  <tr><th colspan="6">RAPPEL DES MOYENNES TRIMESTRIELLES</th></tr>
+  <tr>{% for value in data.term_averages %}<td width="18%">Trimestre {{ loop.index }}</td><td width="15.33333%" class="{{ 'low-score' if value is not none and value < 10 }}">{{ value if value is not none else '—' }}</td>{% endfor %}</tr>
+</table>
+<table class="work-discipline" width="100%">
+  <tr><th colspan="2" width="50%">APPRÉCIATION DU TRAVAIL</th><th colspan="2" width="50%">DISCIPLINE</th></tr>
+  <tr><td width="25%">[{{ 'X' if marks.tableau_honneur else ' ' }}] Tableau d'Honneur</td><td width="25%">[{{ 'X' if marks.travail_insuffisant else ' ' }}] Travail insuffisant</td><td width="35%">Absences Nombre d'heures</td><td width="15%">{{ data.absences_total_hours if data.absences_total_hours is defined else (data.absences_justified_hours|default(0)) + (data.absences_non_justified_hours|default(0)) }}</td></tr>
+  <tr><td>[{{ 'X' if marks.encouragements else ' ' }}] Encouragements</td><td>[{{ 'X' if marks.bon_travail else ' ' }}] Travail médiocre</td><td>Absences Nombre de jours</td><td>{{ (data.absences_justified_days|default(0)) + (data.absences_non_justified_days|default(0)) }}</td></tr>
+  <tr><td>[{{ 'X' if marks.felicitations else ' ' }}] Félicitations</td><td>[{{ 'X' if marks.travail_passable and avg is not none and avg < 14 else ' ' }}] Travail passable</td><td>Exclusions Nombre d'heures</td><td>—</td></tr>
+  <tr><td>[ ] Avert. Travail</td><td>[{{ 'X' if avg is not none and avg >= 14 and avg < 16 else ' ' }}] Assez bon travail</td><td>Exclusions Nombre de jours</td><td class="{{ 'low-score' if data.exclusions|default([]) or data.conduct_exclusion_label|default(none) }}">{{ data.conduct_exclusion_label|default(none) or ((data.exclusions|length) if data.exclusions is defined else '—') }}</td></tr>
+  <tr><td>[ ] Blâme Travail</td><td>[{{ 'X' if marks.assez_bon_travail else ' ' }}] Bon travail</td><td>[{{ 'X' if data.avert_conduite|default(false) else ' ' }}] Avert. Conduite</td><td>[{{ 'X' if data.blame_conduite|default(false) else ' ' }}] Blâme Conduite</td></tr>
+</table>
+<table class="council-decision" width="100%"><tr>
+  <td width="66%"><div class="council-title">DÉCISION DU CONSEIL DE CLASSE</div><div>[ ] ADMIS(E) EN CLASSE DE : ______________________________</div><div>[ ] REDOUBLE LA CLASSE DE : ____________________________</div><div>[ ] Exclu(e) &nbsp; [ ] Travail insuffisant &nbsp; [ ] Conduite &nbsp; [ ] Ne peut tripler &nbsp; [ ] Démissionnaire &nbsp; [ ] Insolvabilité</div></td>
+  <td width="34%" class="visa"><div class="council-title">VISA DU CHEF D'ÉTABLISSEMENT</div><div class="visa-date">TIBATI, le ______________</div><div>LE PROVISEUR</div></td>
 </tr></table>
