@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Emplois du temps par classe{% endblock %}
+{% block page_title %}Emplois du temps par classe{% endblock %}
+{% block page_subtitle %}Classes où vous intervenez — consultation des créneaux publiés{% endblock %}
+{% block content %}
+<div class="card-ltt mb-3">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-calendar2-range-fill" style="font-size:26px;color:var(--gold-500);"></i>
+    <div><strong style="font-size:14px;">Emploi complet de la classe</strong><p class="text-muted mb-0" style="font-size:12.5px;">Seules les classes comportant un cours qui vous est affecté et un créneau programmé sont proposées. La grille affiche uniquement les créneaux publiés, sans édition ni affectation.</p></div>
+  </div>
+</div>
+<div class="row g-3">
+{% for row in class_rows %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card-ltt h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <span class="badge-ltt badge-navy">{{ row.school_class.code or row.school_class.name }}</span>
+        <span class="text-muted" style="font-size:11px;">{{ row.published_count }} publié{{ 's' if row.published_count != 1 else '' }}</span>
+      </div>
+      <h2 style="font-size:16px;color:var(--navy-900);">{{ row.school_class.name }}</h2>
+      <div class="text-muted mb-3" style="font-size:12px;">{{ row.school_class.department.name }} · {{ row.course_count }} cours dans votre service</div>
+      <a href="{{ url_for('teacher_class_schedule', class_id=row.school_class.id) }}" class="btn-ltt-navy mt-auto w-100 justify-content-center"><i class="bi bi-calendar2-week-fill"></i> Consulter la classe</a>
+    </div>
+  </div>
+{% else %}
+  <div class="col-12"><div class="card-ltt text-center text-muted py-5"><i class="bi bi-calendar2-x" style="font-size:28px;"></i><p class="mt-2 mb-0">Aucune classe ne comporte actuellement de cours programmé dans votre service.</p></div></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -24,7 +24,7 @@ def student_grades():
 @roles_required("eleve")
 def student_schedule():
     student = current_student()
-    if not student.class_id:
+    if not student or not student.class_id:
         abort(403)
     entries = ScheduleEntry.query.join(Course).filter(Course.class_id == student.class_id,
                                                         ScheduleEntry.published == True).all()  # noqa: E712

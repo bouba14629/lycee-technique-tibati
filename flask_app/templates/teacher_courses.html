@@ -3,7 +3,7 @@
 {% block page_title %}Mes classes &amp; matières{% endblock %}
 {% block page_subtitle %}{{ teacher.department.name if teacher.department }}{% endblock %}
 {% block content %}
-{% if schedule_synced %}<div class="alert alert-info mb-3"><i class="bi bi-calendar2-check"></i> Cette liste est synchronisée avec les cours présents dans votre emploi du temps individuel.</div>{% endif %}
+{% if schedule_synced %}<div class="alert alert-info mb-3"><i class="bi bi-calendar2-check"></i> Cette liste est synchronisée avec les cours présents dans votre emploi du temps individuel. <a class="alert-link" href="{{ url_for('teacher_classes') }}">Consulter l’emploi complet par classe</a> — consultation uniquement.</div>{% endif %}
 <div class="row g-3">
 {% for c in courses %}
 <div class="col-md-6 col-lg-4">
@@ -22,6 +22,7 @@
     <div class="d-grid gap-2">
       {% if current_user.role != 'conseiller_orientation' %}<a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-navy"><i class="bi bi-pencil-square"></i> Saisir les notes</a>{% endif %}
       <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-clipboard2-check"></i> Faire l'appel</a>
+      <a href="{{ url_for('teacher_class_schedule', class_id=c.school_class.id) }}" class="btn-ltt-outline"><i class="bi bi-calendar2-week-fill"></i> Voir l’emploi complet de la classe</a>
       {% if current_user.role == 'enseignant' %}<a href="{{ url_for('teacher_indicators', course_id=c.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% elif current_user.role == 'conseiller_orientation' %}<a href="{{ url_for('teacher_indicators', class_id=c.school_class.id) }}" class="btn-ltt-outline"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>{% endif %}
     </div>
   </div>

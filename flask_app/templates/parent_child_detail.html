@@ -4,6 +4,7 @@
 {% block page_subtitle %}{{ student.school_class.name if student.school_class }} · Matricule {{ student.matricule }}{% endblock %}
 {% block content %}
 <div class="d-flex gap-2 mb-3 no-print">
+  <a href="{{ url_for('parent_schedules') }}" class="btn-ltt-outline"><i class="bi bi-people-fill"></i> Choisir un enfant</a>
   <a href="{{ url_for('parent_child_schedule', student_id=student.id) }}" class="btn-ltt-outline"><i class="bi bi-calendar2-week-fill"></i> Emploi du temps</a>
   <a href="{{ url_for('parent_child_bulletin', student_id=student.id) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-medical-fill"></i> Bulletin</a>
   <a href="{{ url_for('messages_new') }}" class="btn-ltt-gold ms-auto"><i class="bi bi-chat-dots-fill"></i> Contacter un enseignant</a>

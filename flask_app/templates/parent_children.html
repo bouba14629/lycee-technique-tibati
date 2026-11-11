@@ -2,6 +2,10 @@
 {% block title %}Mes enfants{% endblock %}
 {% block page_title %}Mes enfants{% endblock %}
 {% block content %}
+<div class="card-ltt mb-3 d-flex align-items-center justify-content-between gap-3">
+  <div><strong style="font-size:14px;">Emplois du temps des classes</strong><div class="text-muted" style="font-size:12px;">Consultez les créneaux publiés de la classe de chaque enfant.</div></div>
+  <a href="{{ url_for('parent_schedules') }}" class="btn-ltt-navy"><i class="bi bi-calendar2-week-fill"></i> Choisir un enfant</a>
+</div>
 <div class="row g-3">
 {% for child, avg in data %}
 <div class="col-md-6 col-lg-4">

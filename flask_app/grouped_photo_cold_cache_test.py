@@ -44,9 +44,9 @@ def assert_photo_dimensions(page):
         matrix, previous_operator = operations[index - 1]
         assert previous_operator == b"cm"
         # xhtml2pdf lit les attributs width/height en pixels (0,75 pt/px).
-        # L'image passe de 46x56 à 50x61, soit environ +9 % par côté.
-        assert abs(float(matrix[0]) - 37.5) < 0.01, matrix
-        assert abs(float(matrix[3]) - 45.75) < 0.01, matrix
+        # L'image passe de 50x61 à 60x73, soit environ +20 % par côté.
+        assert abs(float(matrix[0]) - 45) < 0.01, matrix
+        assert abs(float(matrix[3]) - 54.75) < 0.01, matrix
         found += 1
     return found
 
@@ -201,7 +201,10 @@ def main():
                                                       student_photo_path=first["photo_path"], photo_available=True,
                                                       school_year=get_current_school_year(), term="Trimestre 1",
                                                       term_ordinal="PREMIER", TERM_SEQ_A=1, TERM_SEQ_B=2)
-                    assert 'style="width:50pt; height:61pt;" width="50" height="61"' in individual_html
+                    assert 'width="60" height="73"' in individual_html
+                    expected_style = ('width:45pt; height:54.75pt;' if 'annual' in template
+                                      else 'width:60pt; height:73pt;')
+                    assert expected_style in individual_html
                     assert first["photo_path"] in individual_html
                 print("ENLARGED_PHOTO_DIMENSIONS_GROUPED_AND_INDIVIDUAL_HTML_MATCH_OK", flush=True)
             print("ASSEMBLY_FALLBACK_PRESERVES_PHOTOS_OK", flush=True)

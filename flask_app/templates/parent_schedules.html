@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Emplois du temps des enfants{% endblock %}
+{% block page_title %}Emplois du temps des enfants{% endblock %}
+{% block page_subtitle %}Consultation des créneaux publiés de la classe de chaque enfant{% endblock %}
+{% block content %}
+<div class="card-ltt mb-3">
+  <div class="section-title"><h2><i class="bi bi-calendar2-week-fill me-1" style="color:var(--gold-500);"></i> Choisir un enfant</h2></div>
+  <p class="text-muted mb-0" style="font-size:12.5px;">Chaque bouton ouvre l'emploi du temps complet de la classe de l'enfant. Seuls les créneaux publiés par l'établissement sont affichés.</p>
+</div>
+<div class="row g-3">
+{% for child in children %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card-ltt">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="avatar" style="width:50px;height:50px;font-size:16px;">{{ child.first_name[:1] }}{{ child.last_name[:1] }}</div>
+        <div>
+          <div class="fw-semibold" style="font-size:15px;">{{ child.full_name }}</div>
+          <div class="text-muted" style="font-size:12.5px;">{{ child.school_class.name if child.school_class else 'Classe non renseignée' }}</div>
+        </div>
+      </div>
+      {% if child.class_id %}
+      <a href="{{ url_for('parent_child_schedule', student_id=child.id) }}" class="btn-ltt-navy w-100 justify-content-center"><i class="bi bi-calendar2-week-fill"></i> Voir l'emploi de la classe</a>
+      {% else %}
+      <div class="text-muted" style="font-size:12px;">Aucune classe rattachée : emploi indisponible.</div>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="col-12"><div class="card-ltt text-center text-muted py-4">Aucun enfant rattaché à votre compte.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

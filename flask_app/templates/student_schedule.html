@@ -1,8 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Emploi du temps{% endblock %}
-{% block page_title %}Emploi du temps{{ ' — ' ~ student.full_name if parent_view }}{% endblock %}
-{% block page_subtitle %}{{ student.school_class.name if student.school_class }}{% endblock %}
+{% block page_title %}Emploi du temps{% if parent_view %} — {{ student.full_name }}{% elif teacher_view %} — {{ schedule_class.name }}{% endif %}{% endblock %}
+{% block page_subtitle %}{% if schedule_class %}{{ schedule_class.name }}{% elif student and student.school_class %}{{ student.school_class.name }}{% else %}Classe non renseignée{% endif %}{% endblock %}
 {% block content %}
+{% if teacher_view %}
+<div class="alert alert-info py-2 no-print" style="font-size:12px; border-radius:10px;"><i class="bi bi-eye-fill"></i> Consultation uniquement — les autres enseignants de la classe sont affichés. Seuls les créneaux publiés sont visibles.</div>
+{% elif parent_view %}
+<div class="alert alert-info py-2 no-print" style="font-size:12px; border-radius:10px;"><i class="bi bi-eye-fill"></i> Consultation uniquement — créneaux publiés de la classe de {{ student.full_name }}.</div>
+{% else %}
+<div class="alert alert-info py-2 no-print" style="font-size:12px; border-radius:10px;"><i class="bi bi-eye-fill"></i> Consultation uniquement — créneaux publiés de votre classe.</div>
+{% endif %}
+{% if teacher_view %}<div class="mb-3 no-print"><a href="{{ url_for('teacher_classes') }}" class="btn-ltt-outline"><i class="bi bi-arrow-left"></i> Mes classes</a></div>{% elif parent_view %}<div class="mb-3 no-print"><a href="{{ url_for('parent_schedules') }}" class="btn-ltt-outline"><i class="bi bi-arrow-left"></i> Emplois du temps de mes enfants</a></div>{% endif %}
 <div class="card-ltt">
   <div class="schedule-grid">
     {% for day in days %}

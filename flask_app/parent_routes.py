@@ -7,6 +7,8 @@ from eleve_routes import _render_bulletin
 
 def current_parent():
     user = User.query.get(session["user_id"])
+    if not user or not user.parent_profile:
+        abort(403)
     return user.parent_profile
 
 
@@ -26,6 +28,18 @@ def parent_children():
     return render_template("parent_children.html", data=data)
 
 
+@app.route("/parent/emplois-du-temps")
+@roles_required("parent")
+def parent_schedules():
+    """Sélecteur de l'emploi complet de chaque enfant rattaché au parent."""
+    parent = current_parent()
+    return render_template("parent_schedules.html", children=sorted(
+        parent.children,
+        key=lambda child: ((child.last_name or "").casefold(),
+                           (child.first_name or "").casefold(), child.id),
+    ))
+
+
 @app.route("/parent/enfant/<int:student_id>")
 @roles_required("parent")
 def parent_child_detail(student_id):
@@ -42,6 +56,8 @@ def parent_child_detail(student_id):
 @roles_required("parent")
 def parent_child_schedule(student_id):
     student = owned_child(student_id)
+    if not student.class_id:
+        abort(403)
     entries = ScheduleEntry.query.join(Course).filter(Course.class_id == student.class_id,
                                                         ScheduleEntry.published == True).all()  # noqa: E712
     grid = {d: [] for d in DAYS}

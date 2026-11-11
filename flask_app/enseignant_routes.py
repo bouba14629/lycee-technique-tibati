@@ -92,6 +92,82 @@ def teacher_courses():
                            schedule_synced=True)
 
 
+def _teacher_scheduled_classes(teacher):
+    """Classes dans lesquelles l'enseignant intervient avec au moins un créneau.
+
+    La requête est volontairement recalculée à chaque appel : une réaffectation de
+    Course.teacher_id ou l'ajout/suppression d'un ScheduleEntry doit être visible
+    immédiatement, sans s'appuyer sur la liste des classes de l'établissement.
+    """
+    from models import ScheduleEntry
+    return (SchoolClass.query
+            .join(Course, Course.class_id == SchoolClass.id)
+            .join(ScheduleEntry, ScheduleEntry.course_id == Course.id)
+            .filter(Course.teacher_id == teacher.id)
+            .distinct()
+            .order_by(SchoolClass.name)
+            .all())
+
+
+@app.route("/enseignant/emploi-du-temps/classes")
+@roles_required("enseignant", "conseiller_orientation")
+def teacher_classes():
+    """Liste des classes programmées accessibles à l'enseignant, en consultation."""
+    from models import ScheduleEntry
+    teacher = current_teacher()
+    if not teacher:
+        abort(403)
+    classes = _teacher_scheduled_classes(teacher)
+    class_rows = []
+    for school_class in classes:
+        entries = (ScheduleEntry.query.join(Course)
+                   .filter(Course.class_id == school_class.id,
+                           Course.teacher_id == teacher.id)
+                   .all())
+        published_count = (ScheduleEntry.query.join(Course)
+                           .filter(Course.class_id == school_class.id,
+                                   ScheduleEntry.published.is_(True))
+                           .count())
+        class_rows.append({"school_class": school_class,
+                           "course_count": len({entry.course_id for entry in entries}),
+                           "published_count": published_count})
+    return render_template("teacher_classes.html", teacher=teacher, class_rows=class_rows)
+
+
+@app.route("/enseignant/emploi-du-temps/classe/<int:class_id>")
+@app.route("/enseignant/emploi-du-temps/classes/<int:class_id>")
+@roles_required("enseignant", "conseiller_orientation")
+def teacher_class_schedule(class_id):
+    """Emploi complet d'une classe où l'enseignant a un cours programmé.
+
+    L'autorisation porte sur l'association enseignant/cours/créneau, pas sur le
+    simple fait de connaître l'identifiant de la classe. L'affichage reste GET-only
+    et ne contient ni édition, ni affectation, ni publication, ni export.
+    """
+    from models import ScheduleEntry
+    teacher = current_teacher()
+    if not teacher:
+        abort(403)
+    allowed_class_ids = {school_class.id for school_class in _teacher_scheduled_classes(teacher)}
+    if class_id not in allowed_class_ids:
+        abort(403)
+    school_class = SchoolClass.query.get_or_404(class_id)
+    entries = (ScheduleEntry.query.join(Course)
+               .filter(Course.class_id == school_class.id,
+                       ScheduleEntry.published.is_(True))
+               .options(joinedload(ScheduleEntry.course).joinedload(Course.subject),
+                        joinedload(ScheduleEntry.course).joinedload(Course.teacher))
+               .order_by(ScheduleEntry.day, ScheduleEntry.start_time)
+               .all())
+    grid = {day: [] for day in DAYS}
+    for entry in entries:
+        if entry.day in grid:
+            grid[entry.day].append(entry)
+    return render_template("student_schedule.html", grid=grid, days=DAYS,
+                           student=None, schedule_class=school_class,
+                           teacher_view=True, published_only=True)
+
+
 @app.route("/enseignant/notes/<int:course_id>/continue/<int:student_id>")
 @roles_required("enseignant", "conseiller_orientation")
 def teacher_devoir_list(course_id, student_id):
