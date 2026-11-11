@@ -1,7 +1,6 @@
 import os
 import json
 import random
-import re
 import secrets
 from datetime import datetime, date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -265,9 +264,6 @@ def login():
             flash(f"Bienvenue, {user.full_name} !", "success")
             if user.must_change_password:
                 return redirect(url_for("first_password_change"))
-            qr_next = request.args.get("next", "")
-            if re.fullmatch(r"/bulletins/qr/[A-Za-z0-9_.-]+", qr_next):
-                return redirect(qr_next)
             return redirect(url_for("dashboard"))
         flash("Identifiant ou mot de passe incorrect.", "danger")
     from models import SchoolCalendarEvent
@@ -886,6 +882,3 @@ import parent_routes      # noqa: E402,F401
 import import_routes      # noqa: E402,F401
 import life_school_routes # noqa: E402,F401
 import evaluation_routes  # noqa: E402,F401
-
-from bulletin_qr import register_bulletin_qr_routes  # noqa: E402
-register_bulletin_qr_routes(app)
