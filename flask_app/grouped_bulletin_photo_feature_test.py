@@ -19,7 +19,7 @@ assert "as_attachment=not inline_preview" in (Path(__file__).parent / "eleve_rou
 assert "border-top: 0" in grouped_text and "border-top: 0" in bulletin_pdf
 assert "student_photo_path=row.photo_path" not in grouped_text
 assert 'class="title-table"' in body_text
-assert 'class="photo-box"' in body_text
+assert 'class="student-photo-placement"' in body_text
 assert '{{ logo_path or bulletin_logo_path }}' in body_text
 assert 'logo_path=(logo_path or bulletin_logo_path)' in grouped_text
 assert 'bulletin_logo_path=bulletin_logo_path' in grouped_text
@@ -28,7 +28,7 @@ assert 'student_photo_path=(item.photo_path or avatar_path)' in annual_grouped_t
 assert 'photo_source = get_student_photo_source(st)' in (Path(__file__).parent / "censeur_routes.py").read_text(encoding="utf-8")
 assert 'mimetypes.guess_type(path)' in (Path(__file__).parent / "pdf_utils.py").read_text(encoding="utf-8")
 assert "{{ student.full_name }}" in body_text
-photo_position = body_text.index('class="photo-box"')
-name_position = body_text.index("{{ student.full_name }}", photo_position)
-assert photo_position < name_position
+photo_position = body_text.index('class="student-photo-placement"')
+name_position = body_text.index("{{ student.full_name }}")
+assert name_position < photo_position
 print("GROUPED_BULLETIN_PHOTO_FEATURE_TEST_OK")

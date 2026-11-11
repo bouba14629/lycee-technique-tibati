@@ -18,6 +18,16 @@ from urllib.request import Request, urlopen
 
 from PIL import Image
 from pypdf import PdfReader
+from reportlab.pdfbase import pdfmetrics
+
+
+TEST_FULL_NAMES = [
+    "Eleve 1 Test",
+    "Eleve 2 Test",
+    "Eleve 3 Test",
+    "Eleve 4 Test",
+    "Eleve 5 Test Avec Un Nom Tres Long Qui Force Un Retour",
+]
 
 
 def free_port():
@@ -51,11 +61,188 @@ def assert_photo_dimensions(page):
     return found
 
 
+def _as_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _normalise_text(value):
+    return " ".join(str(value or "").split()).casefold()
+
+
+def _font_text_width(text, font_dict, font_size):
+    """Calcule une largeur PDF sans supposer que la police Inter est installée."""
+    if not text:
+        return 0.0
+    size = _as_float(font_size)
+    widths = font_dict.get("/Widths") if font_dict else None
+    first_char = _as_float(font_dict.get("/FirstChar")) if font_dict else 0
+    if widths:
+        measured = 0.0
+        complete = True
+        for char in text:
+            code = ord(char)
+            index = int(code - first_char)
+            if index < 0 or index >= len(widths):
+                complete = False
+                break
+            measured += _as_float(widths[index]) / 1000.0
+        if complete:
+            return measured * size
+    # For Type1 fallback fonts, use the declared BaseFont (the captions are
+    # Helvetica-Bold here).  This matters for long captions: regular Helvetica
+    # is a few points narrower and would report a false centering failure.
+    try:
+        base_font = str(font_dict.get("/BaseFont", "Helvetica")) if font_dict else "Helvetica"
+        base_font = base_font.rsplit("/", 1)[-1]
+        if base_font not in pdfmetrics.getRegisteredFontNames():
+            base_font = "Helvetica-Bold" if "Bold" in base_font else "Helvetica"
+        return pdfmetrics.stringWidth(text, base_font, size)
+    except Exception:
+        return len(text) * size * 0.5
+
+
+def _text_events(page):
+    events = []
+
+    def visitor_text(text, cm, tm, font_dict, font_size):
+        value = str(text or "")
+        stripped = value.strip()
+        if not stripped:
+            return
+        x = _as_float(tm[4]) if tm and len(tm) > 5 else 0.0
+        y = _as_float(tm[5]) if tm and len(tm) > 5 else 0.0
+        width = _font_text_width(stripped, font_dict, font_size)
+        events.append({
+            "text": stripped,
+            "x0": x,
+            "x1": x + width,
+            "y": y,
+            "font_size": _as_float(font_size),
+            "cm": tuple(_as_float(value) for value in (cm or (1, 0, 0, 1, 0, 0))),
+            "tm": tuple(_as_float(value) for value in (tm or (1, 0, 0, 1, 0, 0))),
+        })
+
+    page.extract_text(visitor_text=visitor_text)
+    return events
+
+
+def _photo_boxes(page):
+    """Retourne les matrices cm des images photo, pas celles du logo."""
+    operations = page.get_contents().operations
+    xobjects = page["/Resources"]["/XObject"]
+    boxes = []
+    for index, (operands, operator) in enumerate(operations):
+        if operator != b"Do":
+            continue
+        image = xobjects[operands[0]]
+        width = _as_float(image.get("/Width"))
+        height = _as_float(image.get("/Height"))
+        if not (100 <= width <= 320 and 100 <= height <= 400):
+            continue
+        matrix = None
+        if index and operations[index - 1][1] == b"cm":
+            matrix = operations[index - 1][0]
+        if matrix is None:
+            continue
+        anchor = None
+        for previous_operands, previous_operator in reversed(operations[:index - 1]):
+            if previous_operator != b"cm" or len(previous_operands) != 6:
+                continue
+            if (_as_float(previous_operands[0]), _as_float(previous_operands[1]),
+                    _as_float(previous_operands[2]), _as_float(previous_operands[3])) != (1.0, 0.0, 0.0, 1.0):
+                continue
+            if abs(_as_float(previous_operands[4])) > 100:
+                anchor = previous_operands
+                break
+        boxes.append({
+            "x0": _as_float(matrix[4]),
+            "y0": _as_float(matrix[5]),
+            "x1": _as_float(matrix[4]) + abs(_as_float(matrix[0])),
+            "y1": _as_float(matrix[5]) + abs(_as_float(matrix[3])),
+            "operation_index": index,
+            "anchor_x": _as_float(anchor[4]) if anchor is not None else 0.0,
+            "anchor_y": _as_float(anchor[5]) if anchor is not None else 0.0,
+        })
+    return boxes
+
+
+def _caption_lines(page, full_name, photo_box):
+    """Regroupe les fragments tiny du caption, y compris un nom revenu à la ligne."""
+    photo_cx = (photo_box["x0"] + photo_box["x1"]) / 2
+    name_tokens = _normalise_text(full_name).split()
+    events = [
+        event for event in _text_events(page)
+        if 4.0 <= event["font_size"] <= 6.25
+        and abs((event["x0"] + event["x1"]) / 2 - photo_cx) <= 70
+        # xhtml2pdf emits the caption and the photo in separate local frames;
+        # their surrounding translations identify the same title-cell block.
+        and abs(event["cm"][4] - photo_box["anchor_x"]) <= 25
+    ]
+    lines = []
+    for event in sorted(events, key=lambda item: (-item["y"], item["x0"])):
+        line = next((line for line in lines if abs(line["y"] - event["y"]) <= 1.5), None)
+        if line is None:
+            line = {"y": event["y"], "events": []}
+            lines.append(line)
+        line["events"].append(event)
+    for line in lines:
+        line["events"].sort(key=lambda item: item["x0"])
+        line["text"] = _normalise_text(" ".join(item["text"] for item in line["events"]))
+        line["x0"] = min(item["x0"] for item in line["events"])
+        line["x1"] = max(item["x1"] for item in line["events"])
+        size = max(item["font_size"] for item in line["events"])
+        line["y0"] = line["y"] - size * 0.25
+        line["y1"] = line["y"] + size * 0.8
+        line["cm"] = line["events"][0]["cm"]
+
+    # Prefer the exact caption when pypdf gives it as one visitor fragment.
+    exact = [line for line in lines if line["text"] == _normalise_text(full_name)]
+    if exact:
+        return exact
+
+    # For a wrapped caption, start at the line containing the Eleve N prefix and
+    # retain adjacent tiny lines that carry the remaining name tokens.
+    prefix = " ".join(name_tokens[:2])
+    seeds = [line for line in lines if prefix in line["text"]]
+    if not seeds:
+        seeds = [line for line in lines if any(token in line["text"] for token in name_tokens)]
+    if not seeds:
+        return []
+    seed = max(seeds, key=lambda line: sum(token in line["text"] for token in name_tokens))
+    selected = [line for line in lines if abs(line["cm"][5] - seed["cm"][5]) <= 8]
+    return sorted(selected, key=lambda line: -line["y"])
+
+
+def assert_name_photo_geometry(page, full_name):
+    boxes = _photo_boxes(page)
+    assert len(boxes) == 1, (full_name, boxes)
+    photo = boxes[0]
+    lines = _caption_lines(page, full_name, photo)
+    assert lines, (full_name, _text_events(page))
+    photo_cx = (photo["x0"] + photo["x1"]) / 2
+    caption_text = _normalise_text(" ".join(line["text"] for line in lines))
+    assert _normalise_text(full_name) in caption_text, (full_name, lines)
+    block_x0 = min(line["x0"] for line in lines)
+    block_x1 = max(line["x1"] for line in lines)
+    block_cx = (block_x0 + block_x1) / 2
+    assert abs(photo_cx - block_cx) <= 2.0, (full_name, photo, lines)
+
+    # The two templates use different local coordinate origins.  Their common
+    # invariant is the PDF matrix translation: the caption's title-cell frame
+    # is above the image frame, which verifies “nom puis photo” without relying
+    # on xhtml2pdf's varying Tj/TJ operand encoding.
+    caption_frame_y = max(line["cm"][5] for line in lines)
+    assert caption_frame_y >= photo["anchor_y"] + 2.0, (full_name, photo, lines)
+
+
 def assert_photos(pdf_bytes):
     reader = PdfReader(io.BytesIO(pdf_bytes))
-    assert len(reader.pages) == 5, len(reader.pages)
+    assert len(reader.pages) == len(TEST_FULL_NAMES), len(reader.pages)
     expected = [(220, 20, 20), (20, 20, 220), None, None, (20, 220, 20)]
-    for index, (page, color) in enumerate(zip(reader.pages, expected)):
+    for index, (page, color, full_name) in enumerate(zip(reader.pages, expected, TEST_FULL_NAMES)):
         text = page.extract_text()
         assert f"PHOTO-{index + 1}" in text, (index, text)
         images = [item for item in page.images if 100 <= item.image.width <= 320 and 100 <= item.image.height <= 400]
@@ -65,6 +252,7 @@ def assert_photos(pdf_bytes):
         else:
             assert len(images) == 1, (index, len(images))
             assert assert_photo_dimensions(page) == 1
+            assert_name_photo_geometry(page, full_name)
             image = images[0].image.convert("RGB")
             pixel = image.getpixel((image.width // 2, image.height // 2))
             assert all(abs(a - b) <= 8 for a, b in zip(pixel, color)), (index, pixel, color)
@@ -130,7 +318,8 @@ def main():
             db.session.add(ScheduleEntry(course_id=course.id, day="Lundi", start_time="08:00", end_time="09:00", published=True))
             photos = [list(payloads)[0], list(payloads)[1], None, list(payloads)[2], "https://public.example" + list(payloads)[3]]
             for index, photo in enumerate(photos):
-                student = Student(matricule=f"PHOTO-{index + 1}", first_name=f"Eleve {index + 1}", last_name="Test", class_id=school_class.id, photo=photo)
+                last_name = "Test" if index < 4 else TEST_FULL_NAMES[index].split(" ", 2)[2]
+                student = Student(matricule=f"PHOTO-{index + 1}", first_name=f"Eleve {index + 1}", last_name=last_name, class_id=school_class.id, photo=photo)
                 db.session.add(student); db.session.flush()
                 db.session.add(Grade(student_id=student.id, course_id=course.id, value=12, term="Trimestre 1"))
             db.session.commit()

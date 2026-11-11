@@ -25,14 +25,14 @@
       <div class="title">BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
-    <td style="width:23%; text-align:center; vertical-align:top;">
-      {% if not photo_in_meta %}<table class="photo-box"><tr><td>{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table>{% endif %}
+    <td style="width:23%; text-align:center; vertical-align:top; padding:0;">
+      <div style="font-size:1pt; line-height:77pt;">&#160;</div>
     </td>
   </tr>
   <tr>
     <td></td>
     <td></td>
-    <td style="text-align:center; padding-top:1pt;">
+    <td style="width:23%; text-align:center; padding:1pt 0 0;">
       <div style="font-size:5.6pt; color:#0B2545; font-weight:bold;">{{ student.full_name }}</div>
     </td>
   </tr>
@@ -40,24 +40,21 @@
 
 <table class="meta-table">
   <tr>
-    <td style="width:50%;">
+    <td width="50%" style="width:50%;">
       <strong>Noms et Prénoms :</strong> {{ student.full_name }}<br>
       <strong>Date de naissance :</strong> {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>
       <strong>Genre :</strong> {{ student.sex or '—' }}<br>
       <strong>Identifiant Unique :</strong> {{ student.matricule }}<br>
       <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
     </td>
-    <td style="width:50%; padding-left:10pt;">
-      {% if photo_in_meta %}<table style="width:100%; border-collapse:collapse;"><tr><td style="width:74%; padding:0; vertical-align:top;">
+    <td width="27%" style="width:27%; padding-left:10pt;">
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
-      </td><td style="width:26%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if photo_available and student_photo_path %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table></td></tr></table>{% else %}
-      <strong>Année Scolaire :</strong> {{ school_year }}<br>
-      <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
-      <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
-      <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}{% endif %}
+    </td>
+    <td width="23%" style="width:23%; padding:0; text-align:center; vertical-align:top;">
+      <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:6pt; color:#555;">Photo non disponible</span>{% endif %}</p>
     </td>
   </tr>
 </table>
