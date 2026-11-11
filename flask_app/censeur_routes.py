@@ -1362,7 +1362,7 @@ def censeur_bulletins_revoke_validation(class_id):
 @roles_required("censeur", "directeur")
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
-    from pdf_utils import render_pdf, get_student_photo_source, resolve_student_photo, pdf_asset, bulletin_logo_pdf_path
+    from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source, bulletin_logo_pdf_path
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1373,13 +1373,8 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Trimestre 3":
         term = "Annuel"
     approval = BulletinApproval.query.filter_by(class_id=class_id, term=term, status="Validé").first()
-    # xhtml2pdf ignore parfois les URI distantes ou data dans un PDF groupé.
-    # Un chemin local de repli garantit que le cadre et l’avatar restent visibles.
-    fallback_photo = pdf_asset(
-        ("img", "avatar_placeholder.png"),
-        "/manus-storage/avatar_placeholder_42973e92.png",
-        base_url=request.host_url,
-    )
+    # Le placeholder est du texte : aucune requête vers un avatar n'est utile.
+    fallback_photo = None
     students = sorted(cls.students, key=lambda s: (
         (s.first_name or "").strip().casefold(),
         (s.last_name or "").strip().casefold(),
@@ -1388,27 +1383,20 @@ def censeur_bulletins_class_pdf(class_id):
     if term == "Annuel":
         students_data = []
         for st in students:
-            actual_photo_path = resolve_student_photo(st, lightweight=True, base_url=request.host_url)
+            photo_source = get_student_photo_source(st)
             students_data.append({
                 "student": st,
                 "data": annual_bulletin_data(st, _cache=bulletin_cache),
                 # Embarquement base64 : le PDF ne dépend plus du chemin local
                 # ou du proxy de stockage au moment du rendu xhtml2pdf.
-                "photo_path": get_student_photo_source(st, base_url=request.host_url) or fallback_photo,
-                "photo_available": bool(actual_photo_path),
+                "photo_path": photo_source,
+                "photo_available": bool(photo_source),
             })
-        pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
+        pdf = render_grouped_bulletins_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
         if not pdf:
-            # Une image atypique ne doit jamais empêcher l’édition du relevé
-            # annuel complet. On conserve la mise en page et remplace
-            # uniquement les sources photo par le cadre de secours.
-            safe_students_data = [dict(row, photo_path=fallback_photo, photo_available=False)
-                                  for row in students_data]
-            pdf = render_pdf("pdf/class_annual_bulletins_pdf.html", students_data=safe_students_data,
-                             school_year=get_current_school_year(), approval=approval)
-        if not pdf:
-            abort(500)
+            flash("Le PDF n’a pas pu être généré. Veuillez réessayer ; aucun bulletin sans ses photos n’a été envoyé.", "warning")
+            return redirect(_bulletins_url(class_id, term))
         filename = f"Bulletins_annuels_{cls.name}.pdf".replace(" ", "_")
         inline_preview = request.args.get("preview") == "1"
         return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
@@ -1430,41 +1418,24 @@ def censeur_bulletins_class_pdf(class_id):
                 category.get("rows", []),
                 key=lambda item: (item["course"].subject.name or "").strip().casefold(),
             )
-        # Compatibilité historique : pdf_image_data_uri(student_photo_pdf_path(st.photo, lightweight=True))
-        # est volontairement conservé comme repère ; le rendu effectif utilise
-        # ici un chemin local, plus fiable avec xhtml2pdf et les PDF groupés.
-        # Choix automatique : photo réelle validée si disponible, sinon cadre
-        # vide. L’image est embarquée dans le HTML et placée dans le cadre du
-        # modèle ; une seconde incrustation PDF provoquerait un doublon et
-        # ralentirait fortement les classes volumineuses.
-        photo_path = resolve_student_photo(st, lightweight=True, base_url=request.host_url)
+        # Une unique résolution de Student.photo pour cet élève ; le serveur
+        # de stockage est sélectionné par pdf_utils, jamais par le Host Flask.
+        photo_source = get_student_photo_source(st)
         students_data.append({
             "student": st,
             "data": student_data,
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
-            # Un chemin local est plus fiable que data: URI pour xhtml2pdf dans
-            # un PDF groupé volumineux et garantit l'affichage de la zone photo.
-            # Embarquer l’image évite que xhtml2pdf perde les chemins locaux
-            # quand le PDF groupé est généré depuis le proxy de stockage.
-            # Une data URI est indépendante du répertoire de travail et reste
-            # lisible par xhtml2pdf dans chaque page d'un export groupé.
-            "photo_path": get_student_photo_source(st, base_url=request.host_url) or fallback_photo,
-            "photo_available": bool(photo_path),
+            "photo_path": photo_source,
+            "photo_available": bool(photo_source),
         })
-    pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
+    pdf = render_grouped_bulletins_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       approval=approval, school_year=get_current_school_year(),
                       logo_path=bulletin_logo_pdf_path(),
                       avatar_path=fallback_photo)
     if not pdf:
-        safe_students_data = [dict(row, photo_path=fallback_photo, photo_available=False)
-                              for row in students_data]
-        pdf = render_pdf("pdf/class_bulletins_pdf.html", students_data=safe_students_data, term=term,
-                         TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
-                         approval=approval, school_year=get_current_school_year(),
-                         logo_path=bulletin_logo_pdf_path(), avatar_path=fallback_photo)
-    if not pdf:
-        abort(500)
+        flash("Le PDF n’a pas pu être généré. Veuillez réessayer ; aucun bulletin sans ses photos n’a été envoyé.", "warning")
+        return redirect(_bulletins_url(class_id, term))
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
     inline_preview = request.args.get("preview") == "1"
     return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFlaskPort, isFlaskGatewayEnabled, shouldProxyToFlask } from "./lttFlaskProxy";
+import { getFlaskEnvironment, getFlaskPort, isFlaskGatewayEnabled, shouldProxyToFlask } from "./lttFlaskProxy";
 
 describe("routage de la passerelle Flask", () => {
   it("réserve les routes système WebDev et délègue les parcours scolaires à Flask", () => {
@@ -21,5 +21,17 @@ describe("routage de la passerelle Flask", () => {
     expect(getFlaskPort({})).toBe(5053);
     expect(getFlaskPort({ LTT_FLASK_PORT: "5051" })).toBe(5051);
     expect(getFlaskPort({ LTT_FLASK_PORT: "invalide" })).toBe(5053);
+  });
+
+  it("récupère les photos depuis Node et jamais depuis le worker Flask unique", () => {
+    const environment = getFlaskEnvironment({ PORT: "3007", LTT_FLASK_PORT: "5058", NODE_ENV: "production" });
+    expect(environment.LTT_PORT).toBe("5058");
+    expect(environment.LTT_STORAGE_BASE_URL).toBe("http://127.0.0.1:3007");
+    expect(environment.LTT_ENV).toBe("production");
+    expect(getFlaskEnvironment({}).LTT_STORAGE_BASE_URL).toBe("http://127.0.0.1:3000");
+  });
+
+  it("préserve une adresse explicite de stockage sur un autre hébergement", () => {
+    expect(getFlaskEnvironment({ LTT_STORAGE_BASE_URL: "https://storage.example", LTT_ENV: "development" }).LTT_STORAGE_BASE_URL).toBe("https://storage.example");
   });
 });

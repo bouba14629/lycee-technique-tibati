@@ -78,14 +78,22 @@ function waitForFlask(): Promise<void> {
   });
 }
 
+export function getFlaskEnvironment(environment: NodeJS.ProcessEnv = process.env) {
+  return {
+    ...environment,
+    LTT_HOST: "127.0.0.1",
+    LTT_PORT: String(getFlaskPort(environment)),
+    // /manus-storage est servi par Node, pas par le worker Flask.
+    // request.host_url pointe sur flaskPort après réécriture du Host.
+    LTT_STORAGE_BASE_URL: environment.LTT_STORAGE_BASE_URL || `http://127.0.0.1:${environment.PORT || "3000"}`,
+    LTT_ENV: environment.LTT_ENV || environment.NODE_ENV || "development",
+  };
+}
+
 export async function startFlask() {
   if (flaskProcess) return;
   const python = process.env.LTT_PYTHON_BIN || "python3";
-  const environment = {
-    ...process.env,
-    LTT_HOST: "127.0.0.1",
-    LTT_PORT: String(flaskPort),
-  };
+  const environment = getFlaskEnvironment();
   const child = spawn(python, ["-m", "gunicorn", "--workers", "1", "--timeout", "120", "--bind", `127.0.0.1:${flaskPort}`, "wsgi:app"], {
     cwd: new URL("../flask_app/", import.meta.url),
     env: environment,

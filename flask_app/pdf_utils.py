@@ -3,8 +3,10 @@ import base64
 import hashlib
 import logging
 import mimetypes
+import tempfile
 from io import BytesIO
 from urllib.request import urlopen
+from urllib.parse import urlsplit
 from flask import render_template, has_request_context, request
 from xhtml2pdf import pisa
 from PIL import Image, ImageOps
@@ -30,33 +32,63 @@ def bulletin_logo_pdf_path():
 
 
 def storage_base_url():
-    if os.getenv("LTT_ENV") == "production":
-        return f"http://127.0.0.1:{os.getenv('PORT', '3000')}"
     configured = os.getenv("LTT_STORAGE_BASE_URL", "").strip().rstrip("/")
     if configured:
         return configured
+    if os.getenv("LTT_ENV") == "production" or os.getenv("NODE_ENV") == "production":
+        return f"http://127.0.0.1:{os.getenv('PORT', '3000')}"
     if has_request_context():
+        host = urlsplit(request.host_url)
+        if host.hostname in {"127.0.0.1", "localhost"} and host.port == int(os.getenv("LTT_PORT", "5053")):
+            return f"http://127.0.0.1:{os.getenv('PORT', '3000')}"
         return request.host_url.rstrip("/")
     return ""
+
+
+def _pdf_cache_dir(*parts):
+    return os.path.join(os.getenv("LTT_PDF_CACHE_ROOT", "/tmp/ltt-pdf-assets"), *parts)
+
+
+def _download_pdf_asset(url):
+    """Cache par URL complète ; un téléchargement partiel n'est jamais publié."""
+    cache_dir = _pdf_cache_dir("downloads-v2")
+    os.makedirs(cache_dir, exist_ok=True)
+    suffix = os.path.splitext(urlsplit(url).path)[1][:12]
+    cache_path = os.path.join(cache_dir, hashlib.sha256(url.encode()).hexdigest() + suffix)
+    if os.path.isfile(cache_path) and os.path.getsize(cache_path):
+        return cache_path
+    temp_path = None
+    try:
+        with urlopen(url, timeout=10) as response:
+            raw = response.read(16 * 1024 * 1024 + 1)
+        if not raw or len(raw) > 16 * 1024 * 1024:
+            return None
+        with tempfile.NamedTemporaryFile(dir=cache_dir, delete=False) as output:
+            temp_path = output.name
+            output.write(raw)
+        os.replace(temp_path, cache_path)
+        return cache_path
+    except Exception:
+        logger.warning("PDF asset download failed host=%s", urlsplit(url).netloc, exc_info=True)
+        return None
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
 
 
 def pdf_asset(local_parts, storage_path, base_url=None):
     # Les photos élèves sont stockées sous /manus-storage/students/ et doivent
     # être récupérées même hors du mode production lors d’un aperçu PDF local.
-    should_fetch = os.getenv("LTT_ENV") == "production" or storage_path.startswith("/manus-storage/students/")
-    fetch_base = (base_url or storage_base_url()).rstrip("/")
+    local_path = asset_path(*local_parts)
+    is_student_photo = storage_path.startswith("/manus-storage/students/")
+    if not is_student_photo and os.path.isfile(local_path):
+        return local_path
+    should_fetch = os.getenv("LTT_ENV") == "production" or os.getenv("NODE_ENV") == "production" or is_student_photo
+    # L'adresse configurée de Node prime sur request.host_url (port Flask).
+    fetch_base = (storage_base_url() or base_url or "").rstrip("/")
     if should_fetch and fetch_base:
-        cache_dir = "/tmp/ltt-pdf-assets"
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, os.path.basename(storage_path))
-        if not os.path.exists(cache_path):
-            try:
-                with urlopen(f"{fetch_base}{storage_path}", timeout=15) as response:
-                    with open(cache_path, "wb") as output:
-                        output.write(response.read())
-            except Exception:
-                pass
-        if os.path.isfile(cache_path):
+        cache_path = _download_pdf_asset(f"{fetch_base}{storage_path}")
+        if cache_path:
             return cache_path
     return asset_path(*local_parts)
 
@@ -81,7 +113,7 @@ def _photo_value_to_local_path(photo, base_url=None):
     if isinstance(photo, (bytes, bytearray)):
         raw = bytes(photo)
         source_name = "binary-" + hashlib.sha256(raw).hexdigest()[:24]
-        cache_dir = "/tmp/ltt-pdf-assets/raw-students"
+        cache_dir = _pdf_cache_dir("raw-students")
         os.makedirs(cache_dir, exist_ok=True)
         path = os.path.join(cache_dir, source_name)
         if not os.path.isfile(path):
@@ -113,18 +145,10 @@ def _photo_value_to_local_path(photo, base_url=None):
             return None
         return path if path and os.path.isfile(path) else None
     if value.startswith(("http://", "https://")):
-        cache_dir = "/tmp/ltt-pdf-assets"
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, os.path.basename(value.split("?", 1)[0]))
-        if not os.path.exists(cache_path):
-            try:
-                with urlopen(value, timeout=10) as response:
-                    with open(cache_path, "wb") as output:
-                        output.write(response.read())
-            except Exception:
-                return None
-        path = cache_path if os.path.exists(cache_path) else None
-        return path if path and os.path.isfile(path) else None
+        parsed = urlsplit(value)
+        if parsed.path.startswith("/manus-storage/"):
+            return _photo_value_to_local_path(parsed.path, base_url=base_url)
+        return _download_pdf_asset(value)
     candidate = value
     if candidate.startswith("static/"):
         candidate = candidate[len("static/"):]
@@ -197,15 +221,20 @@ def student_photo_pdf_path(photo, lightweight=False, base_url=None):
 
 def _lightweight_photo_path(source_path, lightweight=True):
     """Valide et convertit une photo en JPEG RGB lisible par xhtml2pdf."""
-    cache_dir = "/tmp/ltt-pdf-assets/lightweight-students"
+    cache_dir = _pdf_cache_dir("lightweight-students-v2")
     os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(source_path))[0] + ".jpg")
+    cache_key = hashlib.sha256(f"{os.path.realpath(source_path)}:{lightweight}".encode()).hexdigest()
+    cache_path = os.path.join(cache_dir, cache_key + ".jpg")
+    temp_path = None
     try:
         source_mtime = os.path.getmtime(source_path)
         if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= source_mtime:
-            with Image.open(cache_path) as cached:
-                cached.verify()
-            return cache_path
+            try:
+                with Image.open(cache_path) as cached:
+                    cached.verify()
+                return cache_path
+            except Exception:
+                os.unlink(cache_path)
         with Image.open(source_path) as image:
             image = ImageOps.exif_transpose(image)
             image.load()
@@ -214,12 +243,18 @@ def _lightweight_photo_path(source_path, lightweight=True):
                 image.thumbnail((320, 400), Image.Resampling.LANCZOS)
             else:
                 image.thumbnail((1200, 1600), Image.Resampling.LANCZOS)
-            image.save(cache_path, format="JPEG", quality=85, optimize=True)
-        with Image.open(cache_path) as converted:
+            with tempfile.NamedTemporaryFile(dir=cache_dir, suffix=".jpg", delete=False) as output:
+                temp_path = output.name
+            image.save(temp_path, format="JPEG", quality=85, optimize=True)
+        with Image.open(temp_path) as converted:
             converted.verify()
+        os.replace(temp_path, cache_path)
         return cache_path
     except Exception:
         return None
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
 
 
 def select_student_photo_for_pdf(photo, fallback_path, base_url=None):
@@ -265,6 +300,33 @@ def render_pdf(template_name, **context):
         return buffer
     except Exception:
         logger.exception("PDF rendering failed template=%s", template_name)
+        return None
+
+
+def render_grouped_bulletins_pdf(template_name, students_data, **context):
+    """Rendu groupé, puis assemblage individuel identique si nécessaire.
+
+    Le secours conserve exactement les sources photo, données et template.
+    Aucun PDF incomplet ou sans les photos valides n'est retourné.
+    """
+    pdf = render_pdf(template_name, students_data=students_data, **context)
+    if pdf:
+        return pdf
+    try:
+        writer = PdfWriter()
+        for row in students_data:
+            individual = render_pdf(template_name, students_data=[row], **context)
+            if not individual:
+                return None
+            writer.append(PdfReader(individual))
+        if not writer.pages:
+            return None
+        output = BytesIO()
+        writer.write(output)
+        output.seek(0)
+        return output
+    except Exception:
+        logger.exception("Grouped bulletin assembly failed template=%s", template_name)
         return None
 
 

@@ -26,7 +26,7 @@
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
     <td style="width:23%; text-align:center; vertical-align:middle;">
-      {% if not photo_in_meta %}<table class="photo-box"><tr><td>{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table>{% endif %}
+      {% if not photo_in_meta %}<table class="photo-box"><tr><td>{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:46pt; height:56pt;" width="46" height="56" alt="Photo de {{ student.full_name }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table>{% endif %}
     </td>
   </tr>
   <tr>
@@ -53,7 +53,7 @@
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
-      </td><td style="width:26%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if photo_available and student_photo_path %}<img src="{{ student_photo_path }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table></td></tr></table>{% else %}
+      </td><td style="width:26%; padding:0; text-align:right; vertical-align:top;"><table class="photo-box"><tr><td>{% if photo_available and student_photo_path %}<img src="{{ student_photo_path }}" style="width:46pt; height:56pt;" width="46" height="56" alt="Photo de {{ student.full_name }}"/>{% else %}<span>Photo non disponible</span>{% endif %}</td></tr></table></td></tr></table>{% else %}
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
