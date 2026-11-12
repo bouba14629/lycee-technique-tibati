@@ -398,6 +398,7 @@ def bulletin_data(student, term=None, _cache=None):
             class_eval_a_vals.append(pa_points / pa_coef)
         if pb_coef:
             class_eval_b_vals.append(pb_points / pb_coef)
+    non_classed_count = sum(1 for _student_id, average in class_avgs if average < 3)
     class_avgs = [item for item in class_avgs if item[1] >= 3]
     class_avgs.sort(key=lambda x: -x[1])
     rank = next((i + 1 for i, (pid, _) in enumerate(class_avgs) if pid == student.id), None)
@@ -459,6 +460,7 @@ def bulletin_data(student, term=None, _cache=None):
         "overall_points": round(overall_points, 2),
         "overall_coef": overall_coef, "overall_avg": overall_avg, "rank": rank, "class_size": class_size,
         "class_avg": class_avg, "highest_avg": highest_avg, "lowest_avg": lowest_avg,
+        "non_classed_count": non_classed_count,
         "nb_above_10": nb_above_10, "success_rate": success_rate,
         "overall_eval_a_avg": overall_eval_a_avg, "overall_eval_b_avg": overall_eval_b_avg,
         "class_eval_a_avg": class_eval_a_avg, "class_eval_b_avg": class_eval_b_avg,

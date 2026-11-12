@@ -19,6 +19,8 @@ assert 'margin-top:0; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
 assert 'margin-top:0; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
+assert 'Nombre des non classés' in body
+assert 'data.non_classed_count' in body
 assert '<img src="{{ logo_path }}" width="64"/>' in body
 assert '{% include "pdf/_bulletin_body.html" %}' in individual
 assert '{% include "pdf/_bulletin_body.html" %}' in grouped
