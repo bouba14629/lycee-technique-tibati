@@ -398,6 +398,7 @@ def bulletin_data(student, term=None, _cache=None):
             class_eval_a_vals.append(pa_points / pa_coef)
         if pb_coef:
             class_eval_b_vals.append(pb_points / pb_coef)
+    class_avgs = [item for item in class_avgs if item[1] >= 3]
     class_avgs.sort(key=lambda x: -x[1])
     rank = next((i + 1 for i, (pid, _) in enumerate(class_avgs) if pid == student.id), None)
     class_size = len(class_avgs)
@@ -570,8 +571,9 @@ def annual_bulletin_data(student, _cache=None):
         return round(peer_points / peer_coefs, 2) if peer_coefs else None
 
     class_averages = [peer_annual_average(peer) for peer in student.school_class.students]
-    class_averages = [value for value in class_averages if value is not None]
-    class_rank = 1 + sum(1 for value in class_averages if overall_avg is not None and value > overall_avg)
+    class_averages = [value for value in class_averages if value is not None and value >= 3]
+    class_rank = (1 + sum(1 for value in class_averages if value > overall_avg)
+                  if overall_avg is not None and overall_avg >= 3 else None)
     # Le bulletin annuel reprend la discipline, mais les heures imprimées sont
     # des entiers par défaut (sans changer les valeurs ni la formule des notes).
     absences = Attendance.query.filter_by(student_id=student.id, type="Absence").all()
@@ -1127,7 +1129,7 @@ def council_statistics(classes, term, subject_category=None, sequence=None, cour
         pct = {sx: (round(reussite[sx] / evalues[sx] * 100, 2) if evalues[sx] else None) for sx in ("F", "G", "T")}
         all_avgs = []
         for r in group:
-            all_avgs.extend(v for v in r["_avgs_by_id"].values() if v is not None)
+            all_avgs.extend(v for v in r["_avgs_by_id"].values() if v is not None and v >= 3)
         moyenne_generale = round(sum(all_avgs) / len(all_avgs), 2) if all_avgs else None
         forte = {"F": max([r["forte_moyenne"]["F"] for r in group if r["forte_moyenne"]["F"] is not None], default=None),
                  "G": max([r["forte_moyenne"]["G"] for r in group if r["forte_moyenne"]["G"] is not None], default=None)}

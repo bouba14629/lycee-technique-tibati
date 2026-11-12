@@ -26,6 +26,30 @@ def main():
     # Le tableau d’honneur commence à 12/20, et non à 16/20.
     assert stats["th"] == {"F": 1, "G": 1, "T": 2}
     assert stats["reussite"] == {"F": 1, "G": 1, "T": 2}
+
+    original_class_statistics = utils.class_statistics
+    fake_class = SimpleNamespace(level="1A")
+    utils.class_statistics = lambda *args, **kwargs: {
+        "class": fake_class,
+        "inscrits": {"F": 2, "G": 2, "T": 4},
+        "evalues": {"F": 1, "G": 2, "T": 3},
+        "non_classes": {"F": 1, "G": 0, "T": 1},
+        "reussite": {"F": 1, "G": 1, "T": 2},
+        "th": {"F": 1, "G": 1, "T": 2},
+        "encouragement": {"F": 0, "G": 0, "T": 0},
+        "felicitations": {"F": 0, "G": 1, "T": 1},
+        "pct": {"F": 100, "G": 50, "T": 66.67},
+        "_avgs_by_id": {1: 12.0, 2: 2.9, 3: 16.0, 4: None},
+        "forte_moyenne": {"F": 12.0, "G": 16.0},
+        "faible_moyenne": {"F": 12.0, "G": 16.0},
+        "moyenne_generale": 14.0,
+        "observation": "",
+    }
+    try:
+        aggregate = utils.council_statistics([fake_class], "Trimestre 1")["total_general"]
+    finally:
+        utils.class_statistics = original_class_statistics
+    assert aggregate["moyenne_generale"] == 14.0
     print("COUNCIL_STATISTICS_GENDER_FEATURE_TEST_OK")
 
 

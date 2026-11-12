@@ -18,6 +18,7 @@ table.pv { width:100%; border-collapse:collapse; table-layout:fixed; }
 .pv .student { width:18%; text-align:left; font-weight:bold; }
 .pv .rank { width:3.2%; text-align:center; }
 .pv .general { width:5.2%; text-align:center; font-weight:bold; }
+.pv .non-classed { background:#d3d3d3; color:#555; }
 .pv .coef { width:3.7%; text-align:center; }
 .pv .subject-cell { text-align:center; }
 .pv .decision { width:10%; text-align:center; }
@@ -55,7 +56,7 @@ table.pv { width:100%; border-collapse:collapse; table-layout:fixed; }
 <tr>
   <td class="student">{{ row.student.last_name|upper }} {{ row.student.first_name|upper }}</td>
   <td class="rank">{{ row.rank or '—' }}</td>
-  <td class="general">{{ row.general_average if row.general_average is not none else '—' }}</td>
+  <td class="general{% if row.general_average is not none and row.general_average < 3 %} non-classed{% endif %}">{{ row.general_average if row.general_average is not none else '—' }}</td>
   <td class="coef">{{ row.coefficient }}</td>
   {% for group in subject_groups %}{% for subject in group.subjects %}<td class="subject-cell">{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}
   <td class="decision"></td>

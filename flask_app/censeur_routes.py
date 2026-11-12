@@ -2033,14 +2033,17 @@ def _council_minutes_dataset(school_class, term):
         average = row["general_average"]
         row["rank"] = "NC" if average is not None and average < 3 else ranks.get(row["student"].id)
 
-    general_values = [row["general_average"] for row in raw_rows if row["general_average"] is not None]
+    # Les non-classés (< 3/20) ne participent ni à la moyenne générale de la
+    # classe ni aux extrêmes affichés dans le PV.
+    general_values = [row["general_average"] for row in raw_rows
+                      if row["general_average"] is not None and row["general_average"] >= 3]
     class_general_average = round(sum(general_values) / len(general_values), 2) if general_values else None
     class_highest_average = round(max(general_values), 2) if general_values else None
     class_lowest_average = round(min(general_values), 2) if general_values else None
 
     for course_id, meta in subject_meta.items():
         numbers = [row["subjects"].get(course_id) for row in raw_rows]
-        numbers = [value for value in numbers if value is not None]
+        numbers = [value for value in numbers if value is not None and value >= 3]
         meta["average"] = round(sum(numbers) / len(numbers), 2) if numbers else None
         meta["maximum"] = round(max(numbers), 2) if numbers else None
         meta["minimum"] = round(min(numbers), 2) if numbers else None

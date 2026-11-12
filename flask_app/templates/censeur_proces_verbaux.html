@@ -9,7 +9,8 @@
 .pv-preview .pv-group { background:#0B2545; color:#fff; text-transform:uppercase; }
   .pv-preview .pv-name { text-align:left; min-width:190px; }
   .pv-preview .pv-birth { min-width:105px; }
-.pv-preview .pv-summary td { background:#f2f2f2; font-weight:700; }
+  .pv-preview .pv-non-classed { background:#d3d3d3; color:#555; font-weight:700; }
+  .pv-preview .pv-summary td { background:#f2f2f2; font-weight:700; }
 </style>
 <div class="page-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
   <div><h1>Procès-verbaux</h1><p class="text-muted mb-0">Préparez le procès-verbal, visualisez-le immédiatement, puis exportez-le exclusivement en Excel.</p></div>
@@ -34,7 +35,7 @@
         <tr>{% for group in subject_groups %}{% for subject in group.subjects %}<th>{{ subject.label }}</th>{% endfor %}{% endfor %}</tr>
       </thead>
       <tbody>
-        {% for row in students %}<tr><td class="pv-name">{{ row.student.first_name|upper }} {{ row.student.last_name|upper }}</td><td>{{ row.student.dob.strftime('%d/%m/%Y') if row.student.dob else '—' }}</td><td>{{ row.student.birth_place or '—' }}</td><td>{{ row.rank or '—' }}</td><td>{{ row.general_average if row.general_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
+        {% for row in students %}<tr><td class="pv-name">{{ row.student.first_name|upper }} {{ row.student.last_name|upper }}</td><td>{{ row.student.dob.strftime('%d/%m/%Y') if row.student.dob else '—' }}</td><td>{{ row.student.birth_place or '—' }}</td><td>{{ row.rank or '—' }}</td><td{% if row.general_average is not none and row.general_average < 3 %} class="pv-non-classed"{% endif %}>{{ row.general_average if row.general_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ row.subjects.get(subject.course_id) if row.subjects.get(subject.course_id) is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>{% endfor %}
         <tr class="pv-summary"><td class="pv-name" colspan="4">Moyenne Générale de la classe</td><td>{{ class_general_average if class_general_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['average'] if subject['average'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
         <tr class="pv-summary"><td class="pv-name" colspan="4">Plus grande moyenne de la classe</td><td>{{ class_highest_average if class_highest_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['maximum'] if subject['maximum'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>
         <tr class="pv-summary"><td class="pv-name" colspan="4">Plus petite moyenne de la classe</td><td>{{ class_lowest_average if class_lowest_average is not none else '—' }}</td>{% for group in subject_groups %}{% for subject in group.subjects %}<td>{{ subject['minimum'] if subject['minimum'] is not none else '—' }}</td>{% endfor %}{% endfor %}<td></td></tr>

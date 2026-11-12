@@ -165,6 +165,9 @@ def council_minutes_workbook(school_class, term, dataset, school_year):
             cell.border = BORDER
             cell.alignment = Alignment(horizontal="left" if col == 1 else "center", vertical="center")
             cell.font = Font(size=9, bold=(col in (1, 3)))
+        if row.get("general_average") is not None and row["general_average"] < 3:
+            ws.cell(row_index, 5).fill = PatternFill("solid", fgColor="D3D3D3")
+            ws.cell(row_index, 5).font = Font(size=9, bold=True, color="666666")
 
     summary_start = 6 + len(dataset.get("students", []))
     general_stats = (
