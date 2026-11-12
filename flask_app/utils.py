@@ -1036,17 +1036,21 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
     def mark(avg, name):
         if avg is None:
             return False
-        if name == "tableau_honneur" or name == "felicitations":
+        if name == "tableau_honneur":
+            return avg >= 12
+        if name == "felicitations":
             return avg >= 16
         if name == "encouragements":
             return avg >= 14
         return False
 
-    evalues_students = [s for s in students if avg_by_id[s.id] is not None]
-    evalues = split(evalues_students, len)
+    # Les élèves sous 3/20 sont « non classés » et ne doivent pas figurer
+    # dans le dénominateur des élèves évalués : évalués = inscrits - non classés.
     non_classes_students = [s for s in students if avg_by_id[s.id] is not None and avg_by_id[s.id] < 3]
     non_classes = split(non_classes_students, len)
-    reussite_students = [s for s in evalues_students if avg_by_id[s.id] >= 10]
+    evalues_students = [s for s in students if s not in non_classes_students]
+    evalues = split(evalues_students, len)
+    reussite_students = [s for s in evalues_students if avg_by_id[s.id] is not None and avg_by_id[s.id] >= 10]
     reussite = split(reussite_students, len)
 
     def pct_reussite(sex_students, sex_evalues):
@@ -1065,11 +1069,11 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
     enc = split(enc_students, len)
     fel = split(fel_students, len)
 
-    avgs = [avg_by_id[s.id] for s in evalues_students]
+    avgs = [avg_by_id[s.id] for s in evalues_students if avg_by_id[s.id] is not None]
     moyenne_generale = round(sum(avgs) / len(avgs), 2) if avgs else None
 
     def extreme(sex, pick_max):
-        vals = [avg_by_id[s.id] for s in evalues_students if s.sex == sex]
+        vals = [avg_by_id[s.id] for s in evalues_students if s.sex == sex and avg_by_id[s.id] is not None]
         if not vals:
             return None
         return round(max(vals) if pick_max else min(vals), 2)
