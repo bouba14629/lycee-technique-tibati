@@ -179,11 +179,14 @@ class AnnualPage:
         for i, (x0, x1) in enumerate(zip(COLUMN_EDGES, COLUMN_EDGES[1:])):
             self.box(x0, x1, top, 27, GRAY)
             if i == 1:
-                self.text('Notes', (x0+x1)/2, 257.25, size=7.043, align='center')
-                self.text('annuelles', (x0+x1)/2, 265.5, size=7.043, align='center')
+                # Deux lignes centrées dans la hauteur de la cellule.
+                first = top + 13.5 - 4.125 + 7.043 * .34
+                second = top + 13.5 + 4.125 + 7.043 * .34
+                self.text('Notes', (x0+x1)/2, first, size=7.043, align='center')
+                self.text('annuelles', (x0+x1)/2, second, size=7.043, align='center')
             else:
-                align = 'left' if i in (0, 8) else 'center'
-                self.text(labels[i], x0+3 if align=='left' else (x0+x1)/2, 261,
+                align = 'center'
+                self.text(labels[i], (x0+x1)/2, top + 13.5 + 7.043 * .34,
                           size=7.043, align=align, max_width=x1-x0-6)
         top += 27
         for category in categories:
