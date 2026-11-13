@@ -374,30 +374,36 @@ def bulletin_data(student, term=None, _cache=None):
     overall_eval_a_avg = round(eval_a_points / eval_a_coef, 2) if eval_a_coef else None
     overall_eval_b_avg = round(eval_b_points / eval_b_coef, 2) if eval_b_coef else None
 
-    # profil de la classe : moyennes de tous les élèves de la classe
-    class_avgs = []
-    class_eval_a_vals, class_eval_b_vals = [], []
-    for peer in classmates:
-        p_points, p_coef = 0.0, 0
-        pa_points, pa_coef = 0.0, 0
-        pb_points, pb_coef = 0.0, 0
-        for c in courses:
-            pavg, p_nt, p_ea, p_eb = cached_course_average(peer.id, c.id)
-            if pavg is not None:
-                p_points += pavg * c.subject.coefficient
-                p_coef += c.subject.coefficient
-            if p_ea is not None:
-                pa_points += p_ea * c.subject.coefficient
-                pa_coef += c.subject.coefficient
-            if p_eb is not None:
-                pb_points += p_eb * c.subject.coefficient
-                pb_coef += c.subject.coefficient
-        if p_coef:
-            class_avgs.append((peer.id, round(p_points / p_coef, 2)))
-        if pa_coef:
-            class_eval_a_vals.append(pa_points / pa_coef)
-        if pb_coef:
-            class_eval_b_vals.append(pb_points / pb_coef)
+    # Profil partagé entre les bulletins de la même classe : sans ce cache,
+    # chaque élève recalculait inutilement les moyennes de tous ses camarades.
+    class_profile_cache = cache.setdefault("class_profiles", {})
+    class_profile_key = (student.class_id, term)
+    if class_profile_key not in class_profile_cache:
+        raw_class_avgs = []
+        class_eval_a_vals, class_eval_b_vals = [], []
+        for peer in classmates:
+            p_points, p_coef = 0.0, 0
+            pa_points, pa_coef = 0.0, 0
+            pb_points, pb_coef = 0.0, 0
+            for c in courses:
+                pavg, p_nt, p_ea, p_eb = cached_course_average(peer.id, c.id)
+                if pavg is not None:
+                    p_points += pavg * c.subject.coefficient
+                    p_coef += c.subject.coefficient
+                if p_ea is not None:
+                    pa_points += p_ea * c.subject.coefficient
+                    pa_coef += c.subject.coefficient
+                if p_eb is not None:
+                    pb_points += p_eb * c.subject.coefficient
+                    pb_coef += c.subject.coefficient
+            if p_coef:
+                raw_class_avgs.append((peer.id, round(p_points / p_coef, 2)))
+            if pa_coef:
+                class_eval_a_vals.append(pa_points / pa_coef)
+            if pb_coef:
+                class_eval_b_vals.append(pb_points / pb_coef)
+        class_profile_cache[class_profile_key] = (raw_class_avgs, class_eval_a_vals, class_eval_b_vals)
+    class_avgs, class_eval_a_vals, class_eval_b_vals = class_profile_cache[class_profile_key]
     non_classed_count = sum(1 for _student_id, average in class_avgs if average < 3)
     class_avgs = [item for item in class_avgs if item[1] >= 3]
     class_avgs.sort(key=lambda x: -x[1])

@@ -15,9 +15,9 @@ assert 'vertical-align:bottom; padding:2pt .8pt 0; height:48pt;' in body
 assert '<div style="margin-bottom:31pt;">VISA DU PROFESSEUR PRINCIPAL</div>' in body
 assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
 assert 'VISA DU PROVISEUR<br>' not in body
-assert 'margin-top:0; line-height:7pt;' in body
+assert 'display:block; margin:0; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
-assert 'margin-top:0; line-height:7pt;' in body
+assert 'display:block; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
 assert 'Nombre des non classés' in body
 assert 'data.non_classed_count' in body
