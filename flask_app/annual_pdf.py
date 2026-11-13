@@ -276,8 +276,8 @@ class AnnualPage:
         for i,texts in enumerate(work):
             self.row(top,15,edges,texts,colors_by_column={3:RED} if i==3 and exclusion!='—' else {})
             top += 15
-        self.box(LEFT,389.25,top,49.5,GRAY)
-        self.box(389.25,RIGHT,top,49.5,GRAY)
+        self.box(LEFT,389.25,top,49.5,colors.white)
+        self.box(389.25,RIGHT,top,49.5,colors.white)
         self.text('DÉCISION DU CONSEIL DE CLASSE',17.25,top+9.75,color=BLUE)
         self.text('[ ] ADMIS(E) EN CLASSE DE : ______________________________',17.25,top+19.5)
         self.text('[ ] REDOUBLE LA CLASSE DE : ____________________________',17.25,top+32.25)
