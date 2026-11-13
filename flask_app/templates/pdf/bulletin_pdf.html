@@ -50,9 +50,11 @@
   .footer-table td { border: 0.75pt solid #000; background-color: #FFF; color: #000; padding: 1.8pt .8pt .7pt; font-size: 6.1pt; height: 70pt; vertical-align: top; }
   .digital-stamp { display: inline-block; margin-top: 3pt; padding: 2pt 4pt; border: 1pt solid #16704A; color: #16704A; font-size: 5.5pt; font-weight: bold; text-align: center; }
   .bulletin-page { page-break-inside: avoid; }
+  .bulletin-qr { position: absolute; left: 2pt; bottom: 2pt; width: 28pt; height: 28pt; }
 </style>
 </head>
 <body>
 {% include "pdf/_bulletin_body.html" %}
+{% if qr_code %}<img class="bulletin-qr" src="{{ qr_code }}" alt="QR du bulletin de {{ student.first_name }}">{% endif %}
 </body>
 </html>

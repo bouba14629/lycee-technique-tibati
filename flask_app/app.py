@@ -977,3 +977,4 @@ import parent_routes      # noqa: E402,F401
 import import_routes      # noqa: E402,F401
 import life_school_routes # noqa: E402,F401
 import evaluation_routes  # noqa: E402,F401
+import bulletin_qr        # noqa: E402,F401
