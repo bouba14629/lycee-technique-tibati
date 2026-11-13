@@ -14,7 +14,7 @@ assert 'line-height:1pt; height:1pt;' in body
 assert 'vertical-align:top; padding:2pt .8pt 0; height:70pt;' in body
 assert 'height: 70pt;' in individual and 'height: 70pt;' in grouped
 assert '<div>VISA DU PROFESSEUR PRINCIPAL</div>' in body
-assert 'position:absolute; bottom:0;' in body
+assert 'position:absolute; bottom:-1pt;' in body
 assert 'white-space:nowrap; font-size:6.6pt;' in body
 assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
 assert 'VISA DU PROVISEUR<br>' not in body
