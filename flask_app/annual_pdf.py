@@ -158,9 +158,6 @@ class AnnualPage:
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
         if image:
             self.pdf.drawImage(image, 528.75, PAGE_H-207.5, width=49.5, height=55.5, mask='auto')
-            self.pdf.setStrokeColor(BLACK)
-            self.pdf.setLineWidth(.75)
-            self.pdf.rect(528.375, PAGE_H-207.875, 50.25, 56.25, stroke=1, fill=0)
         else:
             self.text('Photo non', 553.5, 200, size=6, color=colors.HexColor('#555555'), align='center')
             self.text('disponible', 553.5, 209, size=6, color=colors.HexColor('#555555'), align='center')
@@ -175,7 +172,9 @@ class AnnualPage:
         available = 572.25-272.25
         if subject_count*row_height+len(categories)*(category_height+total_height) > available:
             row_height = max(8.25, (available-len(categories)*(category_height+total_height))/max(subject_count, 1))
-        top = 245.25
+        # Le tableau commence juste après le bloc d’identité, sans espace
+        # vertical inutile après « Redoublant ».
+        top = 232.5
         labels = ['Matières/Enseignant', 'Notes\nannuelles', 'Trim. 1', 'Trim. 2', 'Trim. 3', 'Coef.', 'N×C', 'Rang', 'Appréciations/Signatures']
         for i, (x0, x1) in enumerate(zip(COLUMN_EDGES, COLUMN_EDGES[1:])):
             self.box(x0, x1, top, 27, GRAY)

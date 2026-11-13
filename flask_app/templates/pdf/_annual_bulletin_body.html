@@ -13,7 +13,7 @@
 <table class="meta"><tr>
   <td width="50%">Noms et Prénoms : {{ student.full_name }}<br>Date de naissance : {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>Genre : {{ student.sex or '—' }}<br>Identifiant Unique : {{ student.matricule }}<br>Redoublant : {{ 'Oui' if student.is_repeater else 'Non' }}</td>
   <td width="36%" class="school-meta">Année Scolaire : {{ school_year }}<br>Classe : {{ student.school_class.name if student.school_class else '—' }}<br>Effectif : {{ data.class_size }}<br>Professeur Principal : {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}</td>
-  <td width="14%" class="photo-meta"><p class="student-photo-placement" align="right">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% else %}<span class="photo-placeholder">Photo non disponible</span>{% endif %}</p></td>
+  <td width="14%" class="photo-meta"><p class="student-photo-placement" align="right">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt; border:0;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% else %}<span class="photo-placeholder">Photo non disponible</span>{% endif %}</p></td>
 </tr></table>
 <table class="annual-grades" width="100%">
   <tr>

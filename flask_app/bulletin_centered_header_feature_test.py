@@ -12,7 +12,8 @@ assert 'BULLETIN DU {{ term_ordinal }} TRIMESTRE' in body
 assert 'SECTION {{ student.school_class.department.section.name|upper' in body
 assert 'line-height:1pt; height:1pt;' in body
 assert 'vertical-align:top; padding:2pt .8pt 0; height:90pt;' in body
-assert '<div style="margin-bottom:0;">VISA DU PROFESSEUR PRINCIPAL</div>' in body
+assert '<div>VISA DU PROFESSEUR PRINCIPAL</div>' in body
+assert 'position:absolute; bottom:0;' in body
 assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
 assert 'VISA DU PROVISEUR<br>' not in body
 assert 'display:block; margin:0; line-height:7pt;' in body

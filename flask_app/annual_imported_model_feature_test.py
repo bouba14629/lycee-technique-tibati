@@ -87,7 +87,7 @@ def main():
                               for operands, operation in page.get_contents().operations if operation == b're']
                 for x0, x1 in zip([13.5,212.25,258,293.25,328.5,363.75,392.25,427.5,457.5],
                                   [212.25,258,293.25,328.5,363.75,392.25,427.5,457.5,582]):
-                    assert (x0, round(842.88-245.25-27,3), round(x1-x0,3),27) in rectangles
+                    assert (x0, round(842.88-232.5-27,3), round(x1-x0,3),27) in rectangles
                 assert (13.5, round(842.88-137.5-2.25,3),568.5,2.25) in rectangles
                 assert (13.5, round(842.88-151.5-2.25,3),568.5,2.25) in rectangles
                 fonts = [font.get_object() for font in page['/Resources']['/Font'].values()]
