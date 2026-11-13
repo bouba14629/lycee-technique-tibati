@@ -9,11 +9,11 @@
   <div class="annual-title">BULLETIN ANNUEL</div>
   <div class="annual-section">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
 </td></tr></table>
-<table class="name-line"><tr><td width="70%"></td><td width="30%">{{ student.full_name }}</td></tr></table>
+<table class="name-line"><tr><td width="85%"></td><td width="15%">{{ student.full_name }}</td></tr></table>
 <table class="meta"><tr>
   <td width="50%">Noms et Prénoms : {{ student.full_name }}<br>Date de naissance : {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>Genre : {{ student.sex or '—' }}<br>Identifiant Unique : {{ student.matricule }}<br>Redoublant : {{ 'Oui' if student.is_repeater else 'Non' }}</td>
   <td width="36%" class="school-meta">Année Scolaire : {{ school_year }}<br>Classe : {{ student.school_class.name if student.school_class else '—' }}<br>Effectif : {{ data.class_size }}<br>Professeur Principal : {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}</td>
-  <td width="14%" class="photo-meta"><p class="student-photo-placement" align="right">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt; border:0;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% else %}<span class="photo-placeholder">Photo non disponible</span>{% endif %}</p></td>
+  <td width="14%" class="photo-meta"><p class="student-photo-placement">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt; border:0;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% else %}<span class="photo-placeholder">Photo non disponible</span>{% endif %}</p></td>
 </tr></table>
 <table class="annual-grades" width="100%">
   <tr>
@@ -40,7 +40,7 @@
   <tr><td width="25%">Total des points</td><td width="25%">{{ data.overall_points }}</td><td width="35%">Moyenne Générale de la classe</td><td width="15%">{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
   <tr><td>Coefficient</td><td>{{ data.overall_coef }}</td><td>Moyenne du premier</td><td>{{ data.class_high if data.class_high is not none else '—' }}</td></tr>
   <tr><td>Moyenne annuelle</td><td class="term-average {{ 'low-score' if avg is not none and avg < 10 }}">{{ avg if avg is not none else '—' }}</td><td>Moyennes ≥ 10</td><td>{{ data.annual_nb_above_10 }}/{{ data.class_size }}</td></tr>
-  <tr><td>Rang</td><td>{{ (data.rank|string) ~ 'e' if data.rank else '—' }}/{{ data.class_size }}</td><td>Moyennes ≥ 10</td><td>{{ data.annual_nb_above_10 }}/{{ data.class_size }} — Taux réussite {{ data.annual_success_rate if data.annual_success_rate is not none else '—' }}%</td></tr>
+  <tr><td>Rang</td><td>{{ (data.rank|string) ~ 'e' if data.rank else '—' }}/{{ data.class_size }}</td><td>Taux réussite</td><td>{{ data.annual_success_rate if data.annual_success_rate is not none else '—' }}%</td></tr>
 </table>
 <table class="term-recap" width="100%">
   <tr><th colspan="6">RAPPEL DES MOYENNES TRIMESTRIELLES</th></tr>

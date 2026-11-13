@@ -138,7 +138,7 @@ class AnnualPage:
         self.text('SECTION ' + str(section_name).upper().replace('SECTION ', ''), PAGE_W/2, 124.75,
                   size=9.9, color=BLUE, align='center', max_width=RIGHT-LEFT-20, char_space=.67)
         self.bar(137.5)
-        self.text(student.full_name, 496.25, 145.75, size=6.6, color=BLUE, align='center', max_width=165)
+        self.text(student.full_name, 539.0, 145.75, size=6.2, color=BLUE, align='center', max_width=120)
         self.bar(151.5)
         dob = student.dob.strftime('%d/%m/%Y') if student.dob else '—'
         left_meta = ['Noms et Prénoms : ' + student.full_name,
@@ -158,7 +158,7 @@ class AnnualPage:
     def photo(self, row):
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
         if image:
-            self.pdf.drawImage(image, 528.75, PAGE_H-207.5, width=49.5, height=55.5, mask='auto')
+            self.pdf.drawImage(image, 514.25, PAGE_H-211.5, width=49.5, height=55.5, mask='auto')
         else:
             self.text('Photo non', 553.5, 200, size=6, color=colors.HexColor('#555555'), align='center')
             self.text('disponible', 553.5, 209, size=6, color=colors.HexColor('#555555'), align='center')
@@ -242,7 +242,7 @@ class AnnualPage:
                 ('Coefficient',data.get('overall_coef'),'Moyenne du premier',data.get('class_high')),
                 ('Moyenne annuelle',avg,'Moyennes ≥ 10',str(data.get('annual_nb_above_10', 0))+'/'+str(data.get('class_size', 0))),
                 ('Rang',str(data['rank'])+'e/'+str(data['class_size']) if data.get('rank') else '—/'+str(data.get('class_size',0)),
-                 'Moyennes ≥ 10',str(data.get('annual_nb_above_10', 0))+'/'+str(data.get('class_size', 0))+' — Taux réussite '+_value(data.get('annual_success_rate'))+'%')]
+                 'Taux réussite',_value(data.get('annual_success_rate'))+'%')]
         for i,items in enumerate(labels):
             self.row(top,11.625,edges,[ _value(v) for v in items],
                      colors_by_column={1:_color(avg)} if i==2 else {},
