@@ -550,6 +550,46 @@ def daily_absences_workbook(rows, title="Absences quotidiennes"):
     return output
 
 
+def teacher_presence_workbook(teacher, rows, date_from="", date_to=""):
+    """Export des appels rattachés aux cours de l'enseignant et aux filtres choisis."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Présences"
+    widths = [14, 30, 22, 28, 14, 10, 10, 12, 14, 32]
+    for i, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    _header(ws, 1, len(widths), "LYCÉE TECHNIQUE DE TIBATI — PRÉSENCES DE L'ENSEIGNANT")
+    ws.cell(2, 1, f"Enseignant : {teacher.user.formal_name if teacher and teacher.user else ''}")
+    ws.cell(2, 4, f"Période : {date_from or '—'} au {date_to or '—'}")
+    headers = ["Date", "Élève", "Classe", "Matière", "Type", "Début", "Fin", "Heures", "Justifiée", "Motif"]
+    for i, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=i, value=header)
+        cell.font = Font(bold=True, color=NAVY)
+        cell.fill = PatternFill("solid", fgColor=CREAM)
+        cell.border = BORDER
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    for row_index, row in enumerate(rows, start=5):
+        attendance = row["attendance"]
+        student = attendance.student
+        course = attendance.course
+        values = [attendance.date.strftime("%d/%m/%Y") if attendance.date else "",
+                  student.full_name,
+                  (course.school_class.code or course.school_class.name) if course and course.school_class else "—",
+                  course.subject.name if course and course.subject else "—",
+                  attendance.type or "", attendance.start_time or "", attendance.end_time or "",
+                  round(row["hours"], 2), "Oui" if attendance.justified else "Non", attendance.reason or ""]
+        for col, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_index, column=col, value=value)
+            cell.border = BORDER
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+    ws.freeze_panes = "A5"
+    ws.auto_filter.ref = f"A4:J{max(4, ws.max_row)}"
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
 def students_workbook(students, title):
     wb = Workbook()
     ws = wb.active

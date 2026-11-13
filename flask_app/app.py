@@ -6,6 +6,7 @@ from datetime import datetime, date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, abort, jsonify, send_file
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import joinedload
 
 from models import (
     db, User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
@@ -422,6 +423,56 @@ def dashboard_demographics_export():
     return send_file(demographics_workbook(demographics), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name="Effectifs_par_genre.xlsx")
 
 
+@app.route("/enseignant/presences/export.xlsx")
+@roles_required("enseignant", "conseiller_orientation")
+def teacher_presence_export():
+    """Export Excel du même périmètre de présences que le tableau enseignant."""
+    teacher = User.query.get(session["user_id"]).teacher_profile
+    if not teacher:
+        abort(403)
+    class_id = request.args.get("presence_class_id", type=int)
+    date_from_raw = (request.args.get("presence_date_from") or "").strip()
+    date_to_raw = (request.args.get("presence_date_to") or "").strip()
+    try:
+        date_from = date.fromisoformat(date_from_raw) if date_from_raw else None
+    except ValueError:
+        date_from, date_from_raw = None, ""
+    try:
+        date_to = date.fromisoformat(date_to_raw) if date_to_raw else None
+    except ValueError:
+        date_to, date_to_raw = None, ""
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
+        date_from_raw, date_to_raw = date_to_raw, date_from_raw
+    from excel_utils import teacher_presence_workbook
+    allowed_class_ids = {course.class_id for course in teacher.courses if course.class_id}
+    if class_id and class_id not in allowed_class_ids:
+        abort(403)
+    query = (Attendance.query.join(Course).join(Student)
+             .filter(Course.teacher_id == teacher.id))
+    if class_id:
+        query = query.filter(Student.class_id == class_id)
+    if date_from:
+        query = query.filter(Attendance.date >= date_from)
+    if date_to:
+        query = query.filter(Attendance.date <= date_to)
+    query = query.options(joinedload(Attendance.student).joinedload(Student.school_class),
+                          joinedload(Attendance.course).joinedload(Course.subject))
+    rows = []
+    for attendance in query.order_by(Attendance.date.desc(), Attendance.id.desc()).all():
+        try:
+            start_h, start_m = map(int, (attendance.start_time or "0:0").split(":"))
+            end_h, end_m = map(int, (attendance.end_time or "0:0").split(":"))
+            minutes = max(0, (end_h * 60 + end_m) - (start_h * 60 + start_m))
+        except (TypeError, ValueError):
+            minutes = 0
+        rows.append({"attendance": attendance, "minutes": minutes, "hours": minutes / 60})
+    filename = f"Presences_{teacher.user.full_name}.xlsx".replace(" ", "_")
+    return send_file(teacher_presence_workbook(teacher, rows, date_from_raw, date_to_raw),
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name=filename)
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -630,6 +681,23 @@ def dashboard():
             courses = []
         teacher_class_ids = sorted({course.class_id for course in courses if course.class_id})
         teacher_subject_ids = sorted({course.subject_id for course in courses if course.subject_id})
+        selected_presence_class_id = request.args.get("presence_class_id", type=int)
+        presence_date_from_raw = (request.args.get("presence_date_from") or "").strip()
+        presence_date_to_raw = (request.args.get("presence_date_to") or "").strip()
+        try:
+            presence_date_from = date.fromisoformat(presence_date_from_raw) if presence_date_from_raw else None
+        except ValueError:
+            presence_date_from = None
+            presence_date_from_raw = ""
+        try:
+            presence_date_to = date.fromisoformat(presence_date_to_raw) if presence_date_to_raw else None
+        except ValueError:
+            presence_date_to = None
+            presence_date_to_raw = ""
+        if presence_date_from and presence_date_to and presence_date_from > presence_date_to:
+            presence_date_from, presence_date_to = presence_date_to, presence_date_from
+            presence_date_from_raw, presence_date_to_raw = presence_date_to_raw, presence_date_from_raw
+        teacher_presence_rows = []
         teacher_absence_hours = 0
         teacher_absent_students = []
         if teacher:
@@ -638,6 +706,27 @@ def dashboard():
             own_attendances = (Attendance.query.join(Course)
                                .filter(Course.teacher_id == teacher.id,
                                        Attendance.type == "Absence").all())
+            presence_query = (Attendance.query.join(Course).join(Student)
+                              .filter(Course.teacher_id == teacher.id))
+            if selected_presence_class_id in teacher_class_ids:
+                presence_query = presence_query.filter(Student.class_id == selected_presence_class_id)
+            elif selected_presence_class_id:
+                selected_presence_class_id = None
+            if presence_date_from:
+                presence_query = presence_query.filter(Attendance.date >= presence_date_from)
+            if presence_date_to:
+                presence_query = presence_query.filter(Attendance.date <= presence_date_to)
+            presence_query = presence_query.options(joinedload(Attendance.student).joinedload(Student.school_class),
+                                                     joinedload(Attendance.course).joinedload(Course.subject))
+            for attendance in presence_query.order_by(Attendance.date.desc(), Attendance.id.desc()).all():
+                try:
+                    start_h, start_m = map(int, (attendance.start_time or "0:0").split(":"))
+                    end_h, end_m = map(int, (attendance.end_time or "0:0").split(":"))
+                    minutes = max(0, (end_h * 60 + end_m) - (start_h * 60 + start_m))
+                except (TypeError, ValueError):
+                    minutes = 0
+                teacher_presence_rows.append({"attendance": attendance, "minutes": minutes,
+                                              "hours": minutes / 60})
             total_minutes = 0
             absence_by_student = {}
             for attendance in own_attendances:
@@ -660,6 +749,12 @@ def dashboard():
                                 schedule=my_schedule,
                                 teacher_absence_hours=teacher_absence_hours,
                                 teacher_absent_students=teacher_absent_students,
+                                teacher_presence_rows=teacher_presence_rows,
+                                teacher_presence_classes=sorted({course.school_class for course in courses if course.school_class},
+                                                                key=lambda item: (item.name or "").casefold()),
+                                selected_presence_class_id=selected_presence_class_id,
+                                presence_date_from=presence_date_from_raw,
+                                presence_date_to=presence_date_to_raw,
                                 rates=dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"], teacher.id) if teacher else {
                                     "success_rate": 0, "absence_rate": 0, "attendance_rate": 100,
                                     "retard_rate": 0, "active_rate": 0,

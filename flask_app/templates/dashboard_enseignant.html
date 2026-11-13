@@ -24,12 +24,17 @@
   {% else %}<tr><td colspan="4" class="text-muted text-center py-4">Aucun cours affecté pour le moment.</td></tr>{% endfor %}
   </tbody></table></div>
 </div>
-{% if teacher_absent_students %}
 <div class="card-ltt dashboard-table-card">
-  <div class="chart-title-row"><div><span class="chart-kicker">Présences</span><h2>Élèves absents de mes appels</h2></div><span class="text-muted small">Tri par prénom A à Z</span></div>
-  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Prénom</th><th>Nom</th><th>Classe</th><th class="text-end">Heures d’absence</th></tr></thead><tbody>
-  {% for item in teacher_absent_students %}<tr><td><strong>{{ item.student.first_name }}</strong></td><td>{{ item.student.last_name }}</td><td>{{ item.student.school_class.code or item.student.school_class.name }}</td><td class="text-end">{{ item.hours }}</td></tr>{% endfor %}
+  <div class="chart-title-row"><div><span class="chart-kicker">Présences</span><h2>Appels effectués</h2></div><span class="text-muted small">Filtrage automatique par classe et période</span></div>
+  <form method="GET" class="d-flex gap-2 mb-3 flex-wrap align-items-end">
+    <div><label class="d-block small text-muted">Classe</label><select name="presence_class_id" class="form-select" onchange="this.form.submit()"><option value="">Toutes mes classes</option>{% for school_class in teacher_presence_classes %}<option value="{{ school_class.id }}" {{ 'selected' if selected_presence_class_id == school_class.id }}>{{ school_class.code or school_class.name }}</option>{% endfor %}</select></div>
+    <div><label class="d-block small text-muted">Du</label><input type="date" name="presence_date_from" value="{{ presence_date_from }}" class="form-control" onchange="this.form.submit()"></div>
+    <div><label class="d-block small text-muted">Au</label><input type="date" name="presence_date_to" value="{{ presence_date_to }}" class="form-control" onchange="this.form.submit()"></div>
+    <button class="btn-ltt-outline" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+    <a class="btn-ltt-gold" href="{{ url_for('teacher_presence_export', presence_class_id=selected_presence_class_id, presence_date_from=presence_date_from, presence_date_to=presence_date_to) }}"><i class="bi bi-file-earmark-excel-fill"></i> Exporter Excel</a>
+  </form>
+  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Date</th><th>Élève</th><th>Classe</th><th>Matière</th><th>Type</th><th>Créneau</th><th class="text-end">Heures</th></tr></thead><tbody>
+  {% for row in teacher_presence_rows %}{% set attendance = row.attendance %}<tr><td>{{ attendance.date.strftime('%d/%m/%Y') if attendance.date else '—' }}</td><td><strong>{{ attendance.student.full_name }}</strong></td><td>{{ attendance.course.school_class.code or attendance.course.school_class.name }}</td><td>{{ attendance.course.subject.name }}</td><td>{{ attendance.type }}</td><td>{{ attendance.start_time or '—' }} – {{ attendance.end_time or '—' }}</td><td class="text-end">{{ '%.2f'|format(row.hours) }}</td></tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucun appel ne correspond aux filtres sélectionnés.</td></tr>{% endfor %}
   </tbody></table></div>
 </div>
-{% endif %}
 {% endblock %}
