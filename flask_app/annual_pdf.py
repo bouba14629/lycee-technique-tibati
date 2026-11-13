@@ -109,9 +109,10 @@ class AnnualPage:
         self.pdf.setFillColor(BLACK)
         self.pdf.rect(LEFT, PAGE_H - top - 2.25, RIGHT - LEFT, 2.25, fill=1, stroke=0)
 
-    def row(self, top, height, edges, texts, fill=None, center_columns=(), colors_by_column=None, size=6.9):
+    def row(self, top, height, edges, texts, fill=None, center_columns=(), colors_by_column=None,
+            fills_by_column=None, size=6.9):
         for i, (x0, x1) in enumerate(zip(edges, edges[1:])):
-            self.box(x0, x1, top, height, fill)
+            self.box(x0, x1, top, height, (fills_by_column or {}).get(i, fill))
             text = texts[i] if i < len(texts) else ''
             center = i in center_columns
             color = (colors_by_column or {}).get(i, BLACK)
@@ -239,13 +240,13 @@ class AnnualPage:
         top += 13.5
         labels=[('Total des points',data.get('overall_points'),'Moyenne Générale de la classe',data.get('class_avg')),
                 ('Coefficient',data.get('overall_coef'),'Moyenne du premier',data.get('class_high')),
-                ('Moyenne annuelle',avg,'Moyenne du dernier',data.get('class_low')),
-                ('Rang',str(data['rank'])+'e/'+str(data['class_size']) if data.get('rank') else '—/'+str(data.get('class_size',0)),'','')]
+                ('Moyenne annuelle',avg,'Moyennes ≥ 10',str(data.get('annual_nb_above_10', 0))+'/'+str(data.get('class_size', 0))),
+                ('Rang',str(data['rank'])+'e/'+str(data['class_size']) if data.get('rank') else '—/'+str(data.get('class_size',0)),
+                 'Moyennes ≥ 10',str(data.get('annual_nb_above_10', 0))+'/'+str(data.get('class_size', 0))+' — Taux réussite '+_value(data.get('annual_success_rate'))+'%')]
         for i,items in enumerate(labels):
-            if i == 3:
-                self.row(top,11.625,[LEFT,156,298.5,RIGHT],[ _value(v) for v in items[:2]]+[''])
-            else:
-                self.row(top,11.625,edges,[ _value(v) for v in items],colors_by_column={3:_color(data.get('class_low'))} if i==2 else {})
+            self.row(top,11.625,edges,[ _value(v) for v in items],
+                     colors_by_column={1:_color(avg)} if i==2 else {},
+                     fills_by_column={1:GRAY} if i==2 else {})
             top += 11.625
         self.row(top,13.5,[LEFT,RIGHT],['RAPPEL DES MOYENNES TRIMESTRIELLES'],fill=GRAY,colors_by_column={0:BLUE},size=7.35)
         top += 13.5

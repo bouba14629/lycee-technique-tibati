@@ -580,6 +580,8 @@ def annual_bulletin_data(student, _cache=None):
 
     class_averages = [peer_annual_average(peer) for peer in student.school_class.students]
     class_averages = [value for value in class_averages if value is not None and value >= 3]
+    annual_nb_above_10 = sum(1 for value in class_averages if value >= 10)
+    annual_success_rate = round(annual_nb_above_10 / len(class_averages) * 100, 1) if class_averages else None
     class_rank = (1 + sum(1 for value in class_averages if value > overall_avg)
                   if overall_avg is not None and overall_avg >= 3 else None)
     # Le bulletin annuel reprend la discipline, mais les heures imprimées sont
@@ -629,6 +631,8 @@ def annual_bulletin_data(student, _cache=None):
             "class_avg": round(sum(class_averages) / len(class_averages), 2) if class_averages else None,
             "class_high": max(class_averages) if class_averages else None,
             "class_low": min(class_averages) if class_averages else None,
+            "annual_nb_above_10": annual_nb_above_10,
+            "annual_success_rate": annual_success_rate,
             "rank": class_rank if overall_avg is not None else None,
             "work_marks": competency_marks(overall_avg),
             "official_work_appreciation": appreciation_code(overall_avg),

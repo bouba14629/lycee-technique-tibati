@@ -39,8 +39,8 @@
   <tr><th colspan="2" width="50%">TRAVAIL DE L'ÉLÈVE</th><th colspan="2" width="50%">PROFIL DE LA CLASSE</th></tr>
   <tr><td width="25%">Total des points</td><td width="25%">{{ data.overall_points }}</td><td width="35%">Moyenne Générale de la classe</td><td width="15%">{{ data.class_avg if data.class_avg is not none else '—' }}</td></tr>
   <tr><td>Coefficient</td><td>{{ data.overall_coef }}</td><td>Moyenne du premier</td><td>{{ data.class_high if data.class_high is not none else '—' }}</td></tr>
-  <tr><td>Moyenne annuelle</td><td>{{ avg if avg is not none else '—' }}</td><td>Moyenne du dernier</td><td class="{{ 'low-score' if data.class_low is not none and data.class_low < 10 }}">{{ data.class_low if data.class_low is not none else '—' }}</td></tr>
-  <tr><td>Rang</td><td>{{ (data.rank|string) ~ 'e' if data.rank else '—' }}/{{ data.class_size }}</td><td></td><td></td></tr>
+  <tr><td>Moyenne annuelle</td><td class="term-average {{ 'low-score' if avg is not none and avg < 10 }}">{{ avg if avg is not none else '—' }}</td><td>Moyennes ≥ 10</td><td>{{ data.annual_nb_above_10 }}/{{ data.class_size }}</td></tr>
+  <tr><td>Rang</td><td>{{ (data.rank|string) ~ 'e' if data.rank else '—' }}/{{ data.class_size }}</td><td>Moyennes ≥ 10</td><td>{{ data.annual_nb_above_10 }}/{{ data.class_size }} — Taux réussite {{ data.annual_success_rate if data.annual_success_rate is not none else '—' }}%</td></tr>
 </table>
 <table class="term-recap" width="100%">
   <tr><th colspan="6">RAPPEL DES MOYENNES TRIMESTRIELLES</th></tr>
