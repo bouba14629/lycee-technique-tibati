@@ -6,8 +6,8 @@ individual = (ROOT / "templates" / "pdf" / "bulletin_pdf.html").read_text(encodi
 grouped = (ROOT / "templates" / "pdf" / "class_bulletins_pdf.html").read_text(encoding="utf-8")
 pdf_utils = (ROOT / "pdf_utils.py").read_text(encoding="utf-8")
 
-assert 'width:54%; text-align:center; vertical-align:middle;' in body
-assert 'width:23%; text-align:center; vertical-align:middle;' in body
+assert 'width:57%; text-align:center; vertical-align:middle;' in body
+assert 'width:20%; text-align:center; vertical-align:middle;' in body
 assert 'BULLETIN DU {{ term_ordinal }} TRIMESTRE' in body
 assert 'SECTION {{ student.school_class.department.section.name|upper' in body
 assert 'line-height:1pt; height:1pt;' in body
@@ -15,6 +15,7 @@ assert 'vertical-align:top; padding:2pt .8pt 0; height:70pt;' in body
 assert 'height: 70pt;' in individual and 'height: 70pt;' in grouped
 assert '<div>VISA DU PROFESSEUR PRINCIPAL</div>' in body
 assert 'position:absolute; bottom:0;' in body
+assert 'white-space:nowrap; font-size:6.6pt;' in body
 assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
 assert 'VISA DU PROVISEUR<br>' not in body
 assert 'display:block; margin:0; line-height:7pt;' in body

@@ -20,19 +20,19 @@
 
 <table class="title-table">
   <tr>
-    <td style="width:23%; text-align:center; vertical-align:middle;"></td>
-    <td style="width:54%; text-align:center; vertical-align:middle;">
+    <td style="width:20%; text-align:center; vertical-align:middle;"></td>
+    <td style="width:57%; text-align:center; vertical-align:middle;">
       <div class="title">BULLETIN DU {{ term_ordinal }} TRIMESTRE</div>
       <div style="font-size:9.2pt; font-weight:bold; color:#0B2545; letter-spacing:.4pt; margin-top:2pt;">SECTION {{ student.school_class.department.section.name|upper|replace('SECTION ', '') if student.school_class else '' }}</div>
     </td>
-    <td style="width:23%; text-align:center; vertical-align:top; padding:0;">
+    <td style="width:23%; text-align:center; vertical-align:top; padding:0 0 0 4pt;">
       <div style="font-size:1pt; line-height:1pt; height:1pt;">&#160;</div>
     </td>
   </tr>
   <tr>
     <td></td>
     <td></td>
-    <td style="width:23%; text-align:center; padding:1pt 0 0;">
+    <td style="width:23%; text-align:center; padding:1pt 0 0 4pt;">
       <div style="font-size:5.6pt; color:#0B2545; font-weight:bold;">{{ student.full_name }}</div>
     </td>
   </tr>
@@ -47,13 +47,13 @@
       <strong>Identifiant Unique :</strong> {{ student.matricule }}<br>
       <strong>Redoublant :</strong> {{ 'Oui' if student.is_repeater else 'Non' }}
     </td>
-    <td width="29%" style="width:29%; padding-left:0;">
+    <td width="32%" style="width:32%; padding-left:0; white-space:nowrap; font-size:6.6pt;">
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
     </td>
-    <td width="23%" style="width:23%; padding:0; text-align:center; vertical-align:top;">
+    <td width="20%" style="width:20%; padding:0 0 0 5pt; text-align:center; vertical-align:top;">
       <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt; border:1pt solid #000;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:6pt; color:#555;">Photo non disponible</span>{% endif %}</p>
     </td>
   </tr>
