@@ -119,7 +119,7 @@
 
 <table class="footer-table">
   <tr>
-    <td style="width:28%; vertical-align:top;">
+    <td style="width:28%; vertical-align:top; height:90pt;">
       <strong style="color:#0B2545;">APPRÉCIATION DU TRAVAIL DE L'ÉLÈVE</strong><br>
       <span style="font-style:italic;">
       {% if data.work_appreciation %}
@@ -127,11 +127,11 @@
       {% endif %}
       </span>
     </td>
-    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;">VISA DU PARENT<div style="height:28pt;"></div></td>
-    <td style="width:24%; text-align:center; vertical-align:bottom; padding:2pt .8pt 0; height:48pt;">
+    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:90pt;">VISA DU PARENT<div style="height:70pt;"></div></td>
+    <td style="width:24%; text-align:center; vertical-align:bottom; padding:2pt .8pt 0; height:90pt;">
       <div style="margin-bottom:31pt;">VISA DU PROFESSEUR PRINCIPAL</div>
       <span style="display:block; font-size:7.5pt; line-height:8pt; font-weight:bold; color:#0B2545;">{{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '' }}</span>
       </td>
-    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:42pt;"><span style="font-size:7pt; line-height:7pt; color:#6b7688;">TIBATI, le ______</span><span style="display:block; margin:0; line-height:7pt;">LE PROVISEUR</span>{% if approval %}<span style="display:block; line-height:7pt;" class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:18pt;"></div></td>
+    <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:90pt;"><span style="font-size:7pt; line-height:7pt; color:#6b7688;">TIBATI, le ______</span><span style="display:block; margin:0; line-height:7pt;">LE PROVISEUR</span>{% if approval %}<span style="display:block; line-height:7pt;" class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:60pt;"></div></td>
   </tr>
 </table>
