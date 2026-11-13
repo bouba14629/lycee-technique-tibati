@@ -157,10 +157,10 @@ class AnnualPage:
     def photo(self, row):
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
         if image:
-            self.pdf.drawImage(image, 528.75, PAGE_H-232.5, width=49.5, height=55.5, mask='auto')
+            self.pdf.drawImage(image, 528.75, PAGE_H-207.5, width=49.5, height=55.5, mask='auto')
             self.pdf.setStrokeColor(BLACK)
             self.pdf.setLineWidth(.75)
-            self.pdf.rect(528.375, PAGE_H-232.875, 50.25, 56.25, stroke=1, fill=0)
+            self.pdf.rect(528.375, PAGE_H-207.875, 50.25, 56.25, stroke=1, fill=0)
         else:
             self.text('Photo non', 553.5, 200, size=6, color=colors.HexColor('#555555'), align='center')
             self.text('disponible', 553.5, 209, size=6, color=colors.HexColor('#555555'), align='center')
@@ -265,11 +265,11 @@ class AnnualPage:
         if not exclusion:
             # Un nombre de sanctions n'est pas un nombre de jours d'exclusion.
             exclusion='—'
-        work=[(check(marks.get('tableau_honneur'))+"Tableau d'Honneur",check(marks.get('travail_insuffisant'))+'Travail insuffisant',"Absences Nombre d'heures",_value(hours)),
-              (check(marks.get('encouragements'))+'Encouragements',check(marks.get('bon_travail'))+'Travail médiocre','Absences Nombre de jours',str(days)),
-              (check(marks.get('felicitations'))+'Félicitations',check(avg is not None and 12<=avg<14)+'Travail passable',"Exclusions Nombre d'heures",'—'),
-              ('[ ] Avert. Travail',check(avg is not None and 14<=avg<16)+'Assez bon travail','Exclusions Nombre de jours',exclusion),
-              ('[ ] Blâme Travail',check(marks.get('assez_bon_travail'))+'Bon travail',check(data.get('avert_conduite'))+'Avert. Conduite',check(data.get('blame_conduite'))+'Blâme Conduite')]
+        work=[(check(marks.get('tableau_honneur'))+"Tableau d'Honneur",check(marks.get('travail_insuffisant'))+'Compétences non acquises',"Absences Nombre d'heures",_value(hours)),
+              (check(marks.get('encouragements'))+'Encouragements',check(marks.get('bon_travail'))+'Compétences moyennement acquises','Absences Nombre de jours',str(days)),
+              (check(marks.get('felicitations'))+'Félicitations',check(avg is not None and 12<=avg<14)+'Compétences bien acquises',"Exclusions Nombre d'heures",'—'),
+              ('',check(avg is not None and 14<=avg<16)+'Compétences très bien acquises','Exclusions Nombre de jours',exclusion),
+              ('','',check(data.get('avert_conduite'))+'Avert. Conduite',check(data.get('blame_conduite'))+'Blâme Conduite')]
         for i,texts in enumerate(work):
             self.row(top,15,edges,texts,colors_by_column={3:RED} if i==3 and exclusion!='—' else {})
             top += 15
@@ -278,7 +278,7 @@ class AnnualPage:
         self.text('DÉCISION DU CONSEIL DE CLASSE',17.25,top+9.75,color=BLUE)
         self.text('[ ] ADMIS(E) EN CLASSE DE : ______________________________',17.25,top+19.5)
         self.text('[ ] REDOUBLE LA CLASSE DE : ____________________________',17.25,top+32.25)
-        self.text('[ ] Exclu(e)  [ ] Travail insuffisant  [ ] Conduite  [ ] Ne peut tripler  [ ] Démissionnaire  [ ] Insolvabilité',
+        self.text('[ ] Exclu(e)  [ ] Compétences non acquises  [ ] Conduite  [ ] Ne peut tripler  [ ] Démissionnaire  [ ] Insolvabilité',
                   17.25,top+45,max_width=369)
         self.text('TIBATI, le ______________',485.1,top+9.75,color=colors.HexColor('#6b7385'),align='center')
         self.text('LE PROVISEUR',485.1,top+24.75,color=BLUE,align='center')

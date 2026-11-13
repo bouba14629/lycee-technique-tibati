@@ -59,7 +59,7 @@ def assert_photo_dimensions(page, annual=False):
         assert abs(float(matrix[3]) - (55.5 if annual else 54.75)) < 0.01, matrix
         if annual:
             assert abs(float(matrix[4]) - 528.75) < .01, matrix
-            assert abs(float(matrix[5]) - (float(page.mediabox.height) - 232.5)) < .01, matrix
+            assert abs(float(matrix[5]) - (float(page.mediabox.height) - 207.5)) < .01, matrix
         found += 1
     return found
 
