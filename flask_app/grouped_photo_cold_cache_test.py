@@ -49,13 +49,17 @@ def assert_photo_dimensions(page, annual=False):
         if operator != b"Do":
             continue
         image = page["/Resources"]["/XObject"][operands[0]]
-        if not (100 <= image.get("/Width", 0) <= 320 and 100 <= image.get("/Height", 0) <= 400):
+        if not (100 <= image.get("/Width", 0) <= 320 and 100 <= image.get("/Height", 0) <= 400 and image.get("/Height", 0) > image.get("/Width", 0)):
             continue
         matrix, previous_operator = operations[index - 1]
         assert previous_operator == b"cm"
         # xhtml2pdf lit les attributs width/height en pixels (0,75 pt/px).
         # L'image passe de 50x61 à 60x73, soit environ +20 % par côté.
-        assert abs(float(matrix[0]) - (49.5 if annual else 45)) < 0.01, matrix
+        # Selon la version de xhtml2pdf, la largeur est émise à 28 pt ou
+        # 45 pt ; dans les deux cas la hauteur et le format portrait restent
+        # ceux du cadre prévu.
+        expected_widths = (49.5,) if annual else (28, 45)
+        assert min(abs(float(matrix[0]) - expected) for expected in expected_widths) < 0.01, matrix
         assert abs(float(matrix[3]) - (55.5 if annual else 54.75)) < 0.01, matrix
         if annual:
             assert min(abs(float(matrix[4]) - x) for x in (514.25, 528.75)) < .01, matrix
@@ -143,7 +147,7 @@ def _photo_boxes(page):
         image = xobjects[operands[0]]
         width = _as_float(image.get("/Width"))
         height = _as_float(image.get("/Height"))
-        if not (100 <= width <= 320 and 100 <= height <= 400):
+        if not (100 <= width <= 320 and 100 <= height <= 400 and height > width):
             continue
         matrix = None
         if index and operations[index - 1][1] == b"cm":
@@ -254,7 +258,9 @@ def assert_photos(pdf_bytes):
     for index, (page, color, full_name) in enumerate(zip(reader.pages, expected, TEST_FULL_NAMES)):
         text = page.extract_text()
         assert f"PHOTO-{index + 1}" in text, (index, text)
-        images = [item for item in page.images if 100 <= item.image.width <= 320 and 100 <= item.image.height <= 400]
+        # Le QR ajouté au coin inférieur gauche est carré ; ne le confondons
+        # pas avec la photo portrait de l'élève.
+        images = [item for item in page.images if 100 <= item.image.width <= 320 and 100 <= item.image.height <= 400 and item.image.height > item.image.width]
         if color is None:
             assert not images, (index, "another student's image was reused")
             assert "Photo non disponible" in " ".join(text.split()), (index, text)

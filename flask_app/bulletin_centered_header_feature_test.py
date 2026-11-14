@@ -11,9 +11,9 @@ assert 'width:20%; text-align:center; vertical-align:middle;' in body
 assert 'BULLETIN DU {{ term_ordinal }} TRIMESTRE' in body
 assert 'SECTION {{ student.school_class.department.section.name|upper' in body
 assert 'line-height:1pt; height:1pt;' in body
-assert 'vertical-align:top; padding:2pt .8pt 0; height:70pt;' in body
-assert 'height: 70pt;' in individual and 'height: 70pt;' in grouped
-assert '<div>VISA DU PROFESSEUR PRINCIPAL</div>' in body
+assert 'vertical-align:top; padding:2pt .8pt 0; height:78pt;' in body
+assert 'height: 78pt;' in individual and 'height: 78pt;' in grouped
+assert 'height:8pt; line-height:8pt;">VISA DU PROFESSEUR PRINCIPAL</div>' in body
 assert 'position:absolute; bottom:-1pt;' in body
 assert 'white-space:nowrap; font-size:6.6pt;' in body
 assert 'TIBATI, le ______' in body and 'LE PROVISEUR' in body
@@ -22,6 +22,7 @@ assert 'display:block; margin:0; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
 assert 'display:block; line-height:7pt;' in body
 assert 'border:1pt solid #000;' in body
+assert 'height:8pt; line-height:8pt;' in body
 assert 'Nombre des non classés' in body
 assert 'data.non_classed_count' in body
 assert '<img src="{{ logo_path }}" width="64"/>' in body
