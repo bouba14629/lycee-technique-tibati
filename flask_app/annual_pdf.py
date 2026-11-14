@@ -292,8 +292,7 @@ def render_annual_bulletins_pdf(**context):
     rows=context.get('students_data')
     if rows is None:
         rows=[{'student':context['student'],'data':context['data'],
-               'photo_path':context.get('student_photo_path'),'photo_available':context.get('photo_available',False),
-               'qr_code': context.get('qr_code')}]
+               'photo_path':context.get('student_photo_path'),'photo_available':context.get('photo_available',False)}]
     output=BytesIO()
     pdf=canvas.Canvas(output,pagesize=(PAGE_W,PAGE_H),pageCompression=1)
     pdf.setTitle('Bulletins annuels – Lycée Technique de Tibati')
@@ -307,11 +306,6 @@ def render_annual_bulletins_pdf(**context):
         bottom=page.footer(row['data'],page.grades(row['data']))
         if bottom>PAGE_H-13.5:
             raise ValueError('Annual imported model does not fit on one page')
-        qr = _image(row.get('qr_code'))
-        if qr:
-            # Zone libre du coin inférieur gauche, sans recouvrir la décision.
-            pdf.drawImage(qr, 16, 8, width=28, height=28, preserveAspectRatio=True,
-                          anchor='sw', mask='auto')
         pdf.showPage()
     pdf.save()
     output.seek(0)

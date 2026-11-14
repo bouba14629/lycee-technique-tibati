@@ -50,7 +50,6 @@
   .footer-table td { border: 0.75pt solid #000; background-color: #FFF; color: #000; padding: 1.8pt .8pt .7pt; font-size: 6.1pt; height: 78pt; vertical-align: top; }
   .digital-stamp { display: inline-block; margin-top: 3pt; padding: 2pt 4pt; border: 1pt solid #16704A; color: #16704A; font-size: 5.5pt; font-weight: bold; text-align: center; }
   .bulletin-page { page-break-inside: avoid; }
-  .bulletin-qr { position: absolute; left: 2pt; bottom: 2pt; width: 28pt; height: 28pt; }
 </style>
 </head>
 <body>
@@ -58,7 +57,6 @@
 <div class="bulletin-page" style="{{ 'page-break-after: always;' if not loop.last }}">
  {% with student=row.student, data=row.data, avatar_path=avatar_path, student_photo_path=(row.photo_path or avatar_path), photo_available=(row.photo_available|default(false)), photo_in_meta=False, bulletin_ref=row.bulletin_ref, term_ordinal=term_ordinal, TERM_SEQ_A=TERM_SEQ_A, TERM_SEQ_B=TERM_SEQ_B, logo_path=(logo_path or bulletin_logo_path), bulletin_logo_path=bulletin_logo_path %}
  {% include "pdf/_bulletin_body.html" %}
- {% if row.qr_code %}<img class="bulletin-qr" src="{{ row.qr_code }}" alt="QR du bulletin de {{ student.first_name }}">{% endif %}
  {% endwith %}
 </div>
 {% endfor %}

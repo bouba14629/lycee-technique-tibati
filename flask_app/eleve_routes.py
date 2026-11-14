@@ -74,7 +74,6 @@ def student_bulletin_xlsx_staff(student_id):
 
 def _bulletin_pdf_response(student, term=None):
     from pdf_utils import render_pdf, get_student_photo_source
-    from bulletin_qr import bulletin_qr_data_uri
     from utils import TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     term = term or request.args.get("term", T[0])
     data = bulletin_data(student, term=term)
@@ -86,7 +85,7 @@ def _bulletin_pdf_response(student, term=None):
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
                       bulletin_ref=bulletin_ref, approval=approval, school_year=get_current_school_year(),
                       student_photo_path=photo_path, photo_available=bool(photo_path),
-                      qr_code=bulletin_qr_data_uri(student, term))
+                      )
     if not pdf:
         abort(500)
     filename = f"Bulletin_{student.last_name}_{student.first_name}_{term}.pdf".replace(" ", "_")
