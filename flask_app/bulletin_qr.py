@@ -1,4 +1,5 @@
 import base64
+import os
 from io import BytesIO
 
 import qrcode
@@ -19,7 +20,13 @@ def bulletin_qr_token(student, term):
 
 
 def bulletin_qr_url(student, term):
-    return url_for("bulletin_qr_view", token=bulletin_qr_token(student, term), _external=True)
+    # Ne jamais encoder request.host dans le QR : pendant un export via le
+    # worker Flask, ce host peut être localhost ou un port interne invisible
+    # depuis le téléphone. Le domaine public peut être remplacé par
+    # LTT_PUBLIC_URL lors d’un hébergement personnalisé.
+    public_base = os.getenv("LTT_PUBLIC_URL", "https://lyceetech-njuwbcl2.manus.space").rstrip("/")
+    path = url_for("bulletin_qr_view", token=bulletin_qr_token(student, term))
+    return public_base + path
 
 
 def bulletin_qr_data_uri(student, term):
