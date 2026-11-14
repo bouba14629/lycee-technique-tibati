@@ -18,13 +18,6 @@
   <div class="kpi-card"><div class="kpi-icon"><i class="bi bi-clock-history"></i></div><div class="kpi-value">{{ teacher_absence_hours|default(0) }}</div><div class="kpi-label">Heures d’absence de mes appels</div></div>
 </div>
 <div class="card-ltt dashboard-table-card">
-  <div class="chart-title-row"><div><span class="chart-kicker">Mes enseignements</span><h2>Classes et actions pédagogiques</h2></div><a class="chart-pill" href="{{ url_for('teacher_courses') }}">Tout voir <i class="bi bi-arrow-right"></i></a></div>
-  <div class="table-responsive"><table class="table-ltt"><thead><tr><th>Matière</th><th>Classe</th><th>Effectif</th><th class="text-end">Actions</th></tr></thead><tbody>
-  {% for c in courses %}<tr><td><strong>{{ c.subject.name }}</strong></td><td><span class="badge-ltt badge-navy">{{ c.school_class.name }}</span></td><td>{{ c.school_class.students|length }}</td><td class="text-end">{% if current_user.role != 'conseiller_orientation' %}<a href="{{ url_for('teacher_grades', course_id=c.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-pencil-square"></i> Notes</a>{% endif %} <a href="{{ url_for('teacher_attendance', course_id=c.id) }}" class="btn-ltt-outline py-1 px-2" style="font-size:12px;"><i class="bi bi-clipboard2-check"></i> Appel</a></td></tr>
-  {% else %}<tr><td colspan="4" class="text-muted text-center py-4">Aucun cours affecté pour le moment.</td></tr>{% endfor %}
-  </tbody></table></div>
-</div>
-<div class="card-ltt dashboard-table-card">
   <div class="chart-title-row"><div><span class="chart-kicker">Présences</span><h2>Appels effectués</h2></div><span class="text-muted small">Filtrage automatique par classe et période</span></div>
   <form method="GET" class="d-flex gap-2 mb-3 flex-wrap align-items-end">
     <div><label class="d-block small text-muted">Classe</label><select name="presence_class_id" class="form-select" onchange="this.form.submit()"><option value="">Toutes mes classes</option>{% for school_class in teacher_presence_classes %}<option value="{{ school_class.id }}" {{ 'selected' if selected_presence_class_id == school_class.id }}>{{ school_class.code or school_class.name }}</option>{% endfor %}</select></div>
