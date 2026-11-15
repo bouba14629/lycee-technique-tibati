@@ -20,6 +20,40 @@ def _header(ws, row, cols, title):
     ws.row_dimensions[row].height = 22
 
 
+def equipment_inventory_workbook(rows):
+    """Construit l'export Excel de l'inventaire agrégé par désignation."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Équipements"
+    headers = ["Désignation de l'équipement", "Nombre opérationnel", "Nombre en panne", "Nombre en maintenance"]
+    widths = [38, 22, 18, 24]
+    for index, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(index)].width = width
+    _header(ws, 1, len(headers), "INVENTAIRE DES ÉQUIPEMENTS")
+    for column, label in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=column, value=label)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor=NAVY)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = BORDER
+    for row_index, row in enumerate(rows, start=4):
+        values = [row["designation"], row["operationnel"], row["panne"], row["maintenance"]]
+        for column, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_index, column=column, value=value)
+            cell.border = BORDER
+            cell.alignment = Alignment(horizontal="left" if column == 1 else "center", vertical="center")
+    if not rows:
+        ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=len(headers))
+        empty = ws.cell(row=4, column=1, value="Aucun équipement ne correspond aux filtres sélectionnés.")
+        empty.alignment = Alignment(horizontal="center")
+        empty.font = Font(italic=True, color="666666")
+    ws.freeze_panes = "A4"
+    wb_io = BytesIO()
+    wb.save(wb_io)
+    wb_io.seek(0)
+    return wb_io
+
+
 def bulletin_workbook(student, data, term):
     wb = Workbook()
     ws = wb.active

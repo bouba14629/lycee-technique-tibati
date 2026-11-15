@@ -473,6 +473,56 @@ def teacher_presence_export():
                      as_attachment=True, download_name=filename)
 
 
+def _equipment_inventory_rows(user, name_filter="", room_type=""):
+    """Retourne l'inventaire agrégé dans le périmètre du Chef des Travaux."""
+    from utils import user_scoped_department_ids
+
+    query = Equipment.query.join(Room)
+    if user.role == "chef_crm":
+        query = query.filter(Room.department_id.is_(None))
+    elif user.role == "chef_travaux":
+        scoped_ids = user_scoped_department_ids(user)
+        if scoped_ids is not None:
+            query = query.filter(Room.department_id.in_(scoped_ids)) if scoped_ids else query.filter(db.false())
+    name_filter = (name_filter or "").strip().casefold()
+    if name_filter:
+        query = query.filter(db.func.lower(Equipment.name).contains(name_filter))
+    if room_type:
+        query = query.filter(Room.type == room_type)
+
+    grouped = {}
+    for equipment in query.options(joinedload(Equipment.room)).all():
+        key = (equipment.name or "").strip().casefold()
+        row = grouped.setdefault(key, {
+            "designation": (equipment.name or "").strip(),
+            "operationnel": 0,
+            "panne": 0,
+            "maintenance": 0,
+        })
+        quantity = max(int(equipment.quantity or 1), 0)
+        if equipment.status == "En panne":
+            row["panne"] += quantity
+        elif equipment.status == "En maintenance":
+            row["maintenance"] += quantity
+        else:
+            row["operationnel"] += quantity
+    return sorted(grouped.values(), key=lambda row: row["designation"].casefold())
+
+
+@app.route("/dashboard/chef-travaux/equipements/export")
+@roles_required("chef_travaux", "chef_crm")
+def chef_travaux_equipment_export():
+    user = User.query.get(session["user_id"])
+    rows = _equipment_inventory_rows(user, request.args.get("equipment_name"), request.args.get("equipment_room_type"))
+    from excel_utils import equipment_inventory_workbook
+    return send_file(
+        equipment_inventory_workbook(rows),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="Inventaire_des_equipements.xlsx",
+    )
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -657,7 +707,12 @@ def dashboard():
                                .order_by(MaintenanceRequest.date.desc()).limit(8).all()) if room_ids else []
         from utils import equipment_rates
         rates = equipment_rates(room_ids)
-        return render_template("dashboard_chef_travaux.html", stats=stats, recent_maintenance=recent_maintenance, rates=rates)
+        equipment_name = request.args.get("equipment_name", "").strip()
+        equipment_room_type = request.args.get("equipment_room_type", "").strip()
+        equipment_rows = _equipment_inventory_rows(user, equipment_name, equipment_room_type)
+        return render_template("dashboard_chef_travaux.html", stats=stats, recent_maintenance=recent_maintenance,
+                               rates=rates, equipment_rows=equipment_rows,
+                               equipment_name=equipment_name, equipment_room_type=equipment_room_type)
 
     if role in ("enseignant", "conseiller_orientation"):
         teacher = user.teacher_profile

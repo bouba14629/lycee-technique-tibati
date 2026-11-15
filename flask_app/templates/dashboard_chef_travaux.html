@@ -15,6 +15,52 @@
 </div>
 
 <div class="card-ltt">
+  <div class="section-title">
+    <h2><i class="bi bi-clipboard-data me-1" style="color:var(--gold-500);"></i> Inventaire des équipements</h2>
+    <a class="btn-ltt-outline" href="{{ url_for('chef_travaux_equipment_export', equipment_name=equipment_name, equipment_room_type=equipment_room_type) }}">
+      <i class="bi bi-file-earmark-excel"></i> Exporter en Excel
+    </a>
+  </div>
+  <form method="get" action="{{ url_for('dashboard') }}" class="row g-2 align-items-end mb-3">
+    <div class="col-md-5">
+      <label class="form-label" for="equipment_name">Nom ou désignation</label>
+      <input id="equipment_name" name="equipment_name" class="form-control" value="{{ equipment_name }}" placeholder="Rechercher un équipement">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="equipment_room_type">Atelier ou salle</label>
+      <select id="equipment_room_type" name="equipment_room_type" class="form-select">
+        <option value="" {% if not equipment_room_type %}selected{% endif %}>Tous les espaces</option>
+        <option value="Atelier" {% if equipment_room_type == 'Atelier' %}selected{% endif %}>Ateliers</option>
+        <option value="Salle" {% if equipment_room_type == 'Salle' %}selected{% endif %}>Salles</option>
+        <option value="Laboratoire" {% if equipment_room_type == 'Laboratoire' %}selected{% endif %}>Laboratoires</option>
+        <option value="CRM" {% if equipment_room_type == 'CRM' %}selected{% endif %}>CRM</option>
+      </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn-ltt-navy flex-grow-1" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+      <a class="btn-ltt-outline" href="{{ url_for('dashboard') }}" title="Réinitialiser"><i class="bi bi-arrow-counterclockwise"></i></a>
+    </div>
+  </form>
+  <div class="table-responsive">
+    <table class="table-ltt">
+      <thead><tr><th>Désignation de l'équipement</th><th>Nombre opérationnel</th><th>Nombre en panne</th><th>Nombre en maintenance</th></tr></thead>
+      <tbody>
+      {% for row in equipment_rows %}
+        <tr>
+          <td><strong>{{ row.designation }}</strong></td>
+          <td><span class="badge-ltt badge-success">{{ row.operationnel }}</span></td>
+          <td><span class="badge-ltt badge-danger">{{ row.panne }}</span></td>
+          <td><span class="badge-ltt badge-warning">{{ row.maintenance }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-muted text-center py-3">Aucun équipement ne correspond aux filtres sélectionnés.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-ltt">
   <div class="section-title"><h2><i class="bi bi-tools me-1" style="color:var(--gold-500);"></i> Demandes de maintenance récentes</h2><a class="muted" href="{{ url_for('rooms_list') }}">Gérer <i class="bi bi-arrow-right"></i></a></div>
   <table class="table-ltt">
     <thead><tr><th>Salle / Atelier</th><th>Description</th><th>Statut</th><th>Date</th></tr></thead>
