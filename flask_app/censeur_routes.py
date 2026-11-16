@@ -1597,8 +1597,8 @@ def _gender_course_metrics_bulk(courses, term):
 
 
 def _compute_indicators(user, term, department_id=None, class_ids=None, subject_ids=None, course_id=None, date_from=None, date_to=None):
-    from models import TeacherIndicator, Teacher, Course, CustomIndicatorType, CustomIndicatorValue
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    from models import TeacherIndicator, Teacher, Course, Subject, CustomIndicatorType, CustomIndicatorValue
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     teachers_q = Teacher.query
     if user.role == "conseiller_orientation" and getattr(user, "teacher_profile", None):
         teachers_q = teachers_q.filter(Teacher.id == user.teacher_profile.id)
@@ -1613,6 +1613,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if teacher_ids:
         courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids))
+        if user.role == "chef_travaux":
+            courses_q = courses_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
         # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
         # y compris lorsqu'aucun créneau du conseiller n'y est encore programmé.
         if not orientation_mode:
@@ -1739,6 +1741,8 @@ def censeur_indicators():
         subjects_q = subjects_q.filter(Subject.department_id.in_(scoped_dept_ids))
     if department_id:
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
+    if user.role == "chef_travaux":
+        subjects_q = subjects_q.filter(Subject.category == "Enseignements Professionnels Pratiques")
     available_subjects = subjects_q.all()
     orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if orientation_mode:
@@ -1748,6 +1752,8 @@ def censeur_indicators():
     if any(item_id not in {item.id for item in available_subjects} for item_id in subject_ids):
         abort(403)
     courses_q = Course.query.join(SchoolClass)
+    if user.role == "chef_travaux":
+        courses_q = courses_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         courses_q = courses_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1768,6 +1774,8 @@ def censeur_indicators():
         date_from=date_from, date_to=date_to
     )
     assessments_q = PlannedAssessment.query.join(Course).join(SchoolClass).filter(PlannedAssessment.term == term)
+    if user.role == "chef_travaux":
+        assessments_q = assessments_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         assessments_q = assessments_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1812,6 +1820,8 @@ def censeur_indicators():
     evaluation_totals["average"] = round(sum(averages) / len(averages), 1) if averages else None
     evaluation_totals["submission_rate"] = round(evaluation_totals["submitted"] / evaluation_totals["expected"] * 100) if evaluation_totals["expected"] else 0
     available_assessments_q = PlannedAssessment.query.join(Course).join(SchoolClass).filter(PlannedAssessment.term == term)
+    if user.role == "chef_travaux":
+        available_assessments_q = available_assessments_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         available_assessments_q = available_assessments_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1904,6 +1914,8 @@ def censeur_indicator_edit(course_id):
     user = User.query.get(session["user_id"])
     course = Course.query.get_or_404(course_id)
     teacher = course.teacher
+    if user.role == "chef_travaux" and (course.subject.category or "") != "Enseignements Professionnels Pratiques":
+        abort(403)
     if user.role in ("conseiller_orientation", "chef_orientation") and (course.subject.name or "").strip().casefold() != "orientation scolaire":
         abort(403)
     if user.role == "conseiller_orientation" and course.teacher_id != getattr(user.teacher_profile, "id", None):
