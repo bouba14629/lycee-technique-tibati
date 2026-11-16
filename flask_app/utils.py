@@ -942,9 +942,14 @@ def recent_activity_feed(class_ids=None, department_ids=None, limit=6):
     return events[:limit]
 
 
-def equipment_rates(room_ids):
-    """Taux liés au parc d'équipements/salles (Chef des Travaux / Chef de Centre CRM)."""
-    from models import Room, Equipment, MaintenanceRequest
+def equipment_rates(room_ids, department_ids=None):
+    """Taux du parc et des TP pour le tableau de bord Chef des Travaux.
+
+    Les taux TP sont calculés à partir des indicateurs réellement enregistrés
+    par les enseignants dans TeacherIndicator, sur le même périmètre de
+    départements que le compte Chef des Travaux.
+    """
+    from models import Room, Equipment, MaintenanceRequest, TeacherIndicator, Course, SchoolClass
     rooms = Room.query.filter(Room.id.in_(room_ids)).all() if room_ids else []
     equipments = Equipment.query.filter(Equipment.room_id.in_(room_ids)).all() if room_ids else []
     total_eq = len(equipments) or 1
@@ -952,9 +957,25 @@ def equipment_rates(room_ids):
     maint = MaintenanceRequest.query.filter(MaintenanceRequest.room_id.in_(room_ids)).all() if room_ids else []
     resolved = sum(1 for m in maint if m.status == "Résolue")
     total_maint = len(maint) or 1
+    indicator_q = (TeacherIndicator.query
+                   .join(Course, TeacherIndicator.course_id == Course.id)
+                   .join(SchoolClass, Course.class_id == SchoolClass.id))
+    if department_ids is not None:
+        indicator_q = indicator_q.filter(SchoolClass.department_id.in_(department_ids)) if department_ids else indicator_q.filter(db.false())
+    indicators = indicator_q.all()
+    tp_planned = sum(int(getattr(indicator, "tp_planned", 0) or 0) for indicator in indicators)
+    tp_done = sum(int(getattr(indicator, "tp_done", 0) or 0) for indicator in indicators)
+    digital_tp_planned = sum(int(getattr(indicator, "digital_tp_planned", 0) or 0) for indicator in indicators)
+    digital_tp_done = sum(int(getattr(indicator, "digital_tp_done", 0) or 0) for indicator in indicators)
+
+    def completion_rate(done, planned):
+        return round(done / planned * 100) if planned else 0
+
     return {
         "success_rate": round(operational / total_eq * 100),
         "absence_rate": round((total_eq - operational) / total_eq * 100),
+        "attendance_rate": completion_rate(tp_done, tp_planned),
+        "digital_tp_rate": completion_rate(digital_tp_done, digital_tp_planned),
         "retard_rate": round(resolved / total_maint * 100),
         "active_rate": round(len(rooms) and 100 or 0),
     }

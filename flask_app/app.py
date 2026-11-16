@@ -706,7 +706,7 @@ def dashboard():
         recent_maintenance = (MaintenanceRequest.query.filter(MaintenanceRequest.room_id.in_(room_ids))
                                .order_by(MaintenanceRequest.date.desc()).limit(8).all()) if room_ids else []
         from utils import equipment_rates
-        rates = equipment_rates(room_ids)
+        rates = equipment_rates(room_ids, scoped_ids if role == "chef_travaux" else None)
         equipment_name = request.args.get("equipment_name", "").strip()
         equipment_room_type = request.args.get("equipment_room_type", "").strip()
         equipment_rows = _equipment_inventory_rows(user, equipment_name, equipment_room_type)
