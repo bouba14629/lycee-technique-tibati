@@ -1693,7 +1693,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 
 
 @app.route("/censeur/indicateurs")
-@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators():
     user = User.query.get(session["user_id"])
     term = request.args.get("term", TERMS[0])
@@ -1719,7 +1719,7 @@ def censeur_indicators():
     if sequence not in valid_sequences:
         sequence = None
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     departments_q = Department.query.order_by(Department.name)
     if scoped_dept_ids is not None:
         departments_q = departments_q.filter(Department.id.in_(scoped_dept_ids))
@@ -1860,7 +1860,7 @@ def censeur_indicators():
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
-@roles_required("censeur", "chef_orientation", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators_export():
     from flask import send_file
     from excel_utils import indicators_workbook
@@ -1881,7 +1881,7 @@ def censeur_indicators_export():
         class_ids.append(class_id)
     subject_ids = list(dict.fromkeys(request.args.getlist("subject_ids", type=int)))
     course_id = request.args.get("course_id", type=int)
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     if department_id:
         department = Department.query.get_or_404(department_id)
         if scoped_dept_ids is not None and department.id not in scoped_dept_ids:
@@ -1898,7 +1898,7 @@ def censeur_indicators_export():
 
 
 @app.route("/censeur/indicateurs/<int:course_id>/modifier", methods=["POST"])
-@roles_required("censeur", "chef_orientation", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "chef_travaux", "conseiller_orientation", "directeur")
 def censeur_indicator_edit(course_id):
     from models import TeacherIndicator, Course
     user = User.query.get(session["user_id"])
@@ -1910,7 +1910,7 @@ def censeur_indicator_edit(course_id):
         abort(403)
     if user.role in ("directeur", "censeur", "censeur_crm") and course.teacher.user.role == "conseiller_orientation":
         abort(403)
-    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     if scoped_dept_ids is not None and teacher.department_id not in scoped_dept_ids:
         abort(403)
     term = request.form.get("term", TERMS[0])

@@ -17,7 +17,7 @@
 <div class="card-ltt">
   <div class="section-title">
     <h2><i class="bi bi-clipboard-data me-1" style="color:var(--gold-500);"></i> Inventaire des équipements</h2>
-    <a class="btn-ltt-outline" href="{{ url_for('chef_travaux_equipment_export', equipment_name=equipment_name, equipment_room_type=equipment_room_type) }}">
+    <a class="btn-ltt-outline" href="{{ url_for('chef_travaux_equipment_export', equipment_name=equipment_name, equipment_room_type=equipment_room_type, department_id=equipment_department_id) }}">
       <i class="bi bi-file-earmark-excel"></i> Exporter en Excel
     </a>
   </div>
@@ -36,6 +36,15 @@
         <option value="CRM" {% if equipment_room_type == 'CRM' %}selected{% endif %}>CRM</option>
       </select>
     </div>
+    <div class="col-md-3">
+      <label class="form-label" for="equipment_department_id">Département</label>
+      <select id="equipment_department_id" name="equipment_department_id" class="form-select">
+        <option value="" {% if not equipment_department_id %}selected{% endif %}>Tous les départements</option>
+        {% for department in equipment_departments %}
+        <option value="{{ department.id }}" {% if equipment_department_id == department.id %}selected{% endif %}>{{ department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="col-md-3 d-flex gap-2">
       <button class="btn-ltt-navy flex-grow-1" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
       <a class="btn-ltt-outline" href="{{ url_for('dashboard') }}" title="Réinitialiser"><i class="bi bi-arrow-counterclockwise"></i></a>
@@ -43,17 +52,18 @@
   </form>
   <div class="table-responsive">
     <table class="table-ltt">
-      <thead><tr><th>Désignation de l'équipement</th><th>Nombre opérationnel</th><th>Nombre en panne</th><th>Nombre en maintenance</th></tr></thead>
+      <thead><tr><th>Département</th><th>Désignation de l'équipement</th><th>Nombre opérationnel</th><th>Nombre en panne</th><th>Nombre en maintenance</th></tr></thead>
       <tbody>
       {% for row in equipment_rows %}
         <tr>
+          <td>{{ row.departement }}</td>
           <td><strong>{{ row.designation }}</strong></td>
           <td><span class="badge-ltt badge-success">{{ row.operationnel }}</span></td>
           <td><span class="badge-ltt badge-danger">{{ row.panne }}</span></td>
           <td><span class="badge-ltt badge-warning">{{ row.maintenance }}</span></td>
         </tr>
       {% else %}
-        <tr><td colspan="4" class="text-muted text-center py-3">Aucun équipement ne correspond aux filtres sélectionnés.</td></tr>
+        <tr><td colspan="5" class="text-muted text-center py-3">Aucun équipement ne correspond aux filtres sélectionnés.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -473,7 +473,7 @@ def teacher_presence_export():
                      as_attachment=True, download_name=filename)
 
 
-def _equipment_inventory_rows(user, name_filter="", room_type=""):
+def _equipment_inventory_rows(user, name_filter="", room_type="", department_id=None):
     """Retourne l'inventaire agrégé dans le périmètre du Chef des Travaux."""
     from utils import user_scoped_department_ids
 
@@ -489,16 +489,21 @@ def _equipment_inventory_rows(user, name_filter="", room_type=""):
         query = query.filter(db.func.lower(Equipment.name).contains(name_filter))
     if room_type:
         query = query.filter(Room.type == room_type)
+    if department_id:
+        query = query.filter(Room.department_id == department_id)
 
     grouped = {}
     for equipment in query.options(joinedload(Equipment.room)).all():
         key = (equipment.name or "").strip().casefold()
         row = grouped.setdefault(key, {
             "designation": (equipment.name or "").strip(),
+            "departments": set(),
             "operationnel": 0,
             "panne": 0,
             "maintenance": 0,
         })
+        if equipment.room and equipment.room.department:
+            row["departments"].add(equipment.room.department.name)
         quantity = max(int(equipment.quantity or 1), 0)
         if equipment.status == "En panne":
             row["panne"] += quantity
@@ -506,6 +511,8 @@ def _equipment_inventory_rows(user, name_filter="", room_type=""):
             row["maintenance"] += quantity
         else:
             row["operationnel"] += quantity
+    for row in grouped.values():
+        row["departement"] = ", ".join(sorted(row.pop("departments"), key=str.casefold)) or "Commun"
     return sorted(grouped.values(), key=lambda row: row["designation"].casefold())
 
 
@@ -513,7 +520,7 @@ def _equipment_inventory_rows(user, name_filter="", room_type=""):
 @roles_required("chef_travaux", "chef_crm")
 def chef_travaux_equipment_export():
     user = User.query.get(session["user_id"])
-    rows = _equipment_inventory_rows(user, request.args.get("equipment_name"), request.args.get("equipment_room_type"))
+    rows = _equipment_inventory_rows(user, request.args.get("equipment_name"), request.args.get("equipment_room_type"), request.args.get("department_id", type=int))
     from excel_utils import equipment_inventory_workbook
     return send_file(
         equipment_inventory_workbook(rows),
@@ -709,10 +716,18 @@ def dashboard():
         rates = equipment_rates(room_ids, scoped_ids if role == "chef_travaux" else None)
         equipment_name = request.args.get("equipment_name", "").strip()
         equipment_room_type = request.args.get("equipment_room_type", "").strip()
-        equipment_rows = _equipment_inventory_rows(user, equipment_name, equipment_room_type)
+        equipment_department_id = request.args.get("equipment_department_id", type=int)
+        department_query = Department.query.order_by(Department.name)
+        if scoped_ids is not None:
+            department_query = department_query.filter(Department.id.in_(scoped_ids))
+        equipment_departments = department_query.all()
+        if equipment_department_id and equipment_department_id not in {item.id for item in equipment_departments}:
+            abort(403)
+        equipment_rows = _equipment_inventory_rows(user, equipment_name, equipment_room_type, equipment_department_id)
         return render_template("dashboard_chef_travaux.html", stats=stats, recent_maintenance=recent_maintenance,
                                rates=rates, equipment_rows=equipment_rows,
-                               equipment_name=equipment_name, equipment_room_type=equipment_room_type)
+                               equipment_name=equipment_name, equipment_room_type=equipment_room_type,
+                               equipment_department_id=equipment_department_id, equipment_departments=equipment_departments)
 
     if role in ("enseignant", "conseiller_orientation"):
         teacher = user.teacher_profile

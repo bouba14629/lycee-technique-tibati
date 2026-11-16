@@ -136,6 +136,9 @@
       {% if current_user and current_user.role in ['chef_travaux','chef_crm'] %}
       <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers & équipements' }}</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles, ateliers &amp; labos</a>
+      {% if current_user.role == 'chef_travaux' %}
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
+      {% endif %}
       {% endif %}
 
       {% if current_user and current_user.role in ['enseignant','conseiller_orientation'] %}

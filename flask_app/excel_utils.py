@@ -25,8 +25,8 @@ def equipment_inventory_workbook(rows):
     wb = Workbook()
     ws = wb.active
     ws.title = "Équipements"
-    headers = ["Désignation de l'équipement", "Nombre opérationnel", "Nombre en panne", "Nombre en maintenance"]
-    widths = [38, 22, 18, 24]
+    headers = ["Département", "Désignation de l'équipement", "Nombre opérationnel", "Nombre en panne", "Nombre en maintenance"]
+    widths = [28, 38, 22, 18, 24]
     for index, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(index)].width = width
     _header(ws, 1, len(headers), "INVENTAIRE DES ÉQUIPEMENTS")
@@ -37,11 +37,11 @@ def equipment_inventory_workbook(rows):
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = BORDER
     for row_index, row in enumerate(rows, start=4):
-        values = [row["designation"], row["operationnel"], row["panne"], row["maintenance"]]
+        values = [row.get("departement", "Commun"), row["designation"], row["operationnel"], row["panne"], row["maintenance"]]
         for column, value in enumerate(values, start=1):
             cell = ws.cell(row=row_index, column=column, value=value)
             cell.border = BORDER
-            cell.alignment = Alignment(horizontal="left" if column == 1 else "center", vertical="center")
+            cell.alignment = Alignment(horizontal="left" if column in (1, 2) else "center", vertical="center")
     if not rows:
         ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=len(headers))
         empty = ws.cell(row=4, column=1, value="Aucun équipement ne correspond aux filtres sélectionnés.")
