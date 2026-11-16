@@ -54,7 +54,7 @@
       <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
     </td>
     <td width="20%" style="width:20%; padding:0 0 0 5pt; text-align:center; vertical-align:top;">
-      <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt; border:1pt solid #000;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% else %}<span style="font-size:6pt; color:#555;">Photo non disponible</span>{% endif %}</p>
+      <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt; border:1pt solid #000;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% endif %}</p>
     </td>
   </tr>
 </table>

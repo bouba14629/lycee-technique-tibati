@@ -159,9 +159,6 @@ class AnnualPage:
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
         if image:
             self.pdf.drawImage(image, 514.25, PAGE_H-211.5, width=49.5, height=55.5, mask='auto')
-        else:
-            self.text('Photo non', 553.5, 200, size=6, color=colors.HexColor('#555555'), align='center')
-            self.text('disponible', 553.5, 209, size=6, color=colors.HexColor('#555555'), align='center')
 
     def grades(self, data):
         # 18 matières / quatre catégories dans la référence. Les autres classes

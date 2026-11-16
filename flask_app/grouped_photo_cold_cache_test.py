@@ -263,7 +263,7 @@ def assert_photos(pdf_bytes):
         images = [item for item in page.images if 100 <= item.image.width <= 320 and 100 <= item.image.height <= 400 and item.image.height > item.image.width]
         if color is None:
             assert not images, (index, "another student's image was reused")
-            assert "Photo non disponible" in " ".join(text.split()), (index, text)
+            assert "Photo non disponible" not in " ".join(text.split()), (index, text)
         else:
             assert len(images) == 1, (index, len(images))
             annual = 'BULLETIN ANNUEL' in text
