@@ -1615,6 +1615,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids))
         if user.role == "chef_travaux":
             courses_q = courses_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
+            if scoped_dept_ids is not None:
+                courses_q = courses_q.filter(SchoolClass.department_id.in_(scoped_dept_ids))
         # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
         # y compris lorsqu'aucun créneau du conseiller n'y est encore programmé.
         if not orientation_mode:
@@ -1720,7 +1722,7 @@ def censeur_indicators():
     valid_sequences = TERM_SEQUENCES.get(term, ())
     if sequence not in valid_sequences:
         sequence = None
-    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     scoped_dept_ids = user_scoped_department_ids(user) if user.role in ("censeur", "chef_orientation", "chef_travaux") else None
     departments_q = Department.query.order_by(Department.name)
     if scoped_dept_ids is not None:
