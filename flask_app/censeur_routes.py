@@ -872,6 +872,66 @@ def class_schedule_official_xlsx(class_id):
                       as_attachment=True, download_name=filename)
 
 
+def _chef_travaux_practical_classes(user):
+    """Classes accessibles au Chef des Travaux, uniquement avec des cours pratiques."""
+    scoped_class_ids = user_scoped_class_ids(user)
+    scoped_dept_ids = user_scoped_department_ids(user)
+    query = (SchoolClass.query
+             .join(Course, Course.class_id == SchoolClass.id)
+             .join(Subject, Course.subject_id == Subject.id)
+             .join(ScheduleEntry, ScheduleEntry.course_id == Course.id)
+             .filter(Subject.category == "Enseignements Professionnels Pratiques",
+                     ScheduleEntry.published.is_(True)))
+    if scoped_class_ids is not None:
+        query = query.filter(SchoolClass.id.in_(scoped_class_ids))
+    if scoped_dept_ids is not None:
+        query = query.filter(SchoolClass.department_id.in_(scoped_dept_ids))
+    return query.order_by(SchoolClass.name).distinct().all()
+
+
+@app.route("/chef-travaux/emplois-du-temps/classes")
+@roles_required("chef_travaux")
+def chef_travaux_classes_schedule():
+    """Liste des classes pratiques du Chef des Travaux, sans aucune édition."""
+    user = User.query.get(session["user_id"])
+    classes = _chef_travaux_practical_classes(user)
+    rows = []
+    for school_class in classes:
+        published_count = (ScheduleEntry.query.join(Course)
+                           .join(Subject, Course.subject_id == Subject.id)
+                           .filter(Course.class_id == school_class.id,
+                                   Subject.category == "Enseignements Professionnels Pratiques",
+                                   ScheduleEntry.published.is_(True)).count())
+        rows.append({"school_class": school_class, "published_count": published_count})
+    return render_template("chef_travaux_classes.html", class_rows=rows)
+
+
+@app.route("/chef-travaux/emplois-du-temps/classe/<int:class_id>")
+@roles_required("chef_travaux")
+def chef_travaux_class_schedule(class_id):
+    """Grille publiée d’une classe pratique, strictement en lecture seule."""
+    user = User.query.get(session["user_id"])
+    allowed_ids = {school_class.id for school_class in _chef_travaux_practical_classes(user)}
+    if class_id not in allowed_ids:
+        abort(403)
+    school_class = SchoolClass.query.get_or_404(class_id)
+    entries = (ScheduleEntry.query.join(Course)
+               .join(Subject, Course.subject_id == Subject.id)
+               .filter(Course.class_id == class_id,
+                       Subject.category == "Enseignements Professionnels Pratiques",
+                       ScheduleEntry.published.is_(True))
+               .options(joinedload(ScheduleEntry.course).joinedload(Course.subject),
+                        joinedload(ScheduleEntry.course).joinedload(Course.teacher))
+               .order_by(ScheduleEntry.day, ScheduleEntry.start_time).all())
+    grid = {day: [] for day in DAYS}
+    for entry in entries:
+        if entry.day in grid:
+            grid[entry.day].append(entry)
+    return render_template("student_schedule.html", grid=grid, days=DAYS,
+                           student=None, schedule_class=school_class,
+                           chef_travaux_view=True, published_only=True)
+
+
 @app.route("/censeur/bulletins")
 @roles_required("censeur", "directeur")
 def censeur_bulletins():
