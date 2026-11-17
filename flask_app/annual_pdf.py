@@ -29,7 +29,7 @@ def _fonts(context):
     result = {}
     for kind, key, fallback in [('normal', 'annual_sans_regular', 'Helvetica'),
                                 ('bold', 'annual_sans_bold', 'Helvetica-Bold'),
-                                ('italic', 'annual_sans_bold_italic', 'Helvetica-BoldOblique')]:
+                                ('italic', 'annual_sans_italic', 'Helvetica-Oblique')]:
         path = context.get(key)
         name = 'AnnualImported-' + kind
         if path and Path(path).is_file():
@@ -196,7 +196,7 @@ class AnnualPage:
                 baseline = top+row_height/2+6.9*.34
                 subject = row['course'].subject.name or '—'
                 teacher = row.get('teacher')
-                teacher_name = teacher.user.full_name if teacher and teacher.user else '—'
+                teacher_name = teacher.user.formal_name if teacher and teacher.user else '—'
                 caption = '(' + teacher_name + ')'
                 size, teacher_size = 6.9, 6.45
                 full_width = pdfmetrics.stringWidth(subject+' ', self.fonts['bold'], size)+pdfmetrics.stringWidth(caption,self.fonts['italic'],teacher_size)
@@ -207,7 +207,7 @@ class AnnualPage:
                     size *= ratio; teacher_size *= ratio
                 self.text(subject, 17.25, baseline, size=size)
                 x = 17.25+pdfmetrics.stringWidth(subject+' ', self.fonts['bold'],size)
-                self.text(caption, x, baseline, size=teacher_size, kind='italic', color=colors.HexColor('#9b9b9b'))
+                self.text(caption, x, baseline, size=teacher_size, kind='italic', color=BLACK)
                 annual = row.get('annual')
                 values = [annual]+list(row.get('terms', [None]*3))+[row.get('coef'),row.get('points'),
                           str(row['rank'])+'e' if row.get('rank') else '—']
@@ -215,7 +215,7 @@ class AnnualPage:
                     self.text(_value(value),(COLUMN_EDGES[index]+COLUMN_EDGES[index+1])/2,baseline,
                               color=_color(value) if index in (1,2,3,4) else BLACK,align='center')
                 self.text(row.get('appreciation', 'Notes en attente'), 461.19, baseline,
-                          color=colors.HexColor('#5a5a5a'), max_width=RIGHT-461.19-3)
+                          kind='normal', color=BLACK, max_width=RIGHT-461.19-3)
                 top += row_height
             self.box(LEFT,363.75,top,total_height,GRAY)
             self.box(363.75,392.25,top,total_height,GRAY)
