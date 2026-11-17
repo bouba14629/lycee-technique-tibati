@@ -22,7 +22,7 @@
   {% for category in data.categories %}
   <tr class="category"><td colspan="9">{{ category.name }}</td></tr>
   {% for row in category.rows %}
-  {% set teacher_name = row.teacher.user.full_name if row.teacher and row.teacher.user else '—' %}
+  {% set teacher_name = row.teacher.user.formal_name if row.teacher and row.teacher.user else '—' %}
   {% set compact_subject = (row.course.subject.name|length + teacher_name|length) > 55 %}
   <tr>
     <td class="subject"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>{{ row.course.subject.name }} <span class="teacher"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>({{ teacher_name }})</span></td>
