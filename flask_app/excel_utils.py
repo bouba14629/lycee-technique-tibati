@@ -628,12 +628,13 @@ def students_workbook(students, title):
     wb = Workbook()
     ws = wb.active
     ws.title = "Élèves"
-    widths = [14, 24, 8, 14, 16, 18, 30, 24]
+    widths = [14, 24, 8, 16, 22, 24, 16, 18, 30, 24]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     _header(ws, 1, len(widths), title)
     r = 3
-    headers = ["Matricule", "Nom complet", "Sexe", "Date naissance", "Classe", "Statut", "Adresse", "Parent(s)"]
+    headers = ["Matricule", "Nom complet", "Sexe", "Date naissance", "Lieu de naissance",
+               "Date et Lieu de naissance", "Classe", "Statut", "Adresse", "Parent(s)"]
     for i, h in enumerate(headers, start=1):
         c = ws.cell(row=r, column=i, value=h)
         c.font = Font(bold=True, size=9.5, color=NAVY)
@@ -641,7 +642,10 @@ def students_workbook(students, title):
         c.border = BORDER
     r += 1
     for s in students:
-        vals = [s.matricule, s.full_name, s.sex or "", s.dob.strftime("%d/%m/%Y") if s.dob else "",
+        birth_date = s.dob.strftime("%d/%m/%Y") if s.dob else ""
+        birth_place = s.birth_place or ""
+        date_and_place = " — ".join(part for part in (birth_date, birth_place) if part)
+        vals = [s.matricule, s.full_name, s.sex or "", birth_date, birth_place, date_and_place,
                 s.school_class.name if s.school_class else "", s.status, s.address or "",
                 ", ".join(p.user.full_name for p in s.parents)]
         for i, v in enumerate(vals, start=1):
