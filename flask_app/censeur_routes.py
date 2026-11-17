@@ -1901,7 +1901,8 @@ def censeur_indicators_export():
         date_from=date_from, date_to=date_to
     )
     wb_io = indicators_workbook(rows, totals, term, custom_types,
-                                include_gender=user.role != "chef_orientation")
+                                include_gender=user.role not in ("chef_orientation", "chef_travaux"),
+                                practical_only=user.role == "chef_travaux")
     filename = f"LTT_indicateurs_{term}.xlsx".replace(" ", "_")
     return send_file(wb_io, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                       as_attachment=True, download_name=filename)
@@ -1932,6 +1933,9 @@ def censeur_indicator_edit(course_id):
         db.session.add(ind)
     planned_fields = ["hours_due", "lessons_planned", "digital_lessons_planned", "tp_planned", "digital_tp_planned"]
     done_fields = ["hours_done", "lessons_done", "digital_lessons_done", "tp_done", "digital_tp_done"]
+    if user.role == "chef_travaux":
+        planned_fields = ["tp_planned", "digital_tp_planned"]
+        done_fields = ["tp_done", "digital_tp_done"]
     if user.role in ("conseiller_orientation", "chef_orientation"):
         planned_fields = ["hours_due", "lessons_planned", "tp_planned"]
         done_fields = ["hours_done", "lessons_done", "tp_done"]
