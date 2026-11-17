@@ -1604,7 +1604,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         teachers_q = teachers_q.filter(Teacher.id == user.teacher_profile.id)
     if scoped_dept_ids is not None:
         teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
-    teachers = teachers_q.all()
+    teachers = teachers_q.options(joinedload(Teacher.user)).all()
     if user.role == "chef_orientation":
         # Les saisies des conseillers sont centralisées exclusivement ici.
         counselor_teachers = Teacher.query.join(User).filter(User.role == "conseiller_orientation").all()
@@ -1614,7 +1614,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     if teacher_ids:
         courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids))
         if user.role == "chef_travaux":
-            courses_q = courses_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
+            courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
             if scoped_dept_ids is not None:
                 courses_q = courses_q.filter(SchoolClass.department_id.in_(scoped_dept_ids))
         # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
@@ -1631,7 +1631,11 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
         courses_q = courses_q.filter(Course.subject_id.in_(subject_ids))
     if courses_q is not None and course_id:
         courses_q = courses_q.filter(Course.id == course_id)
-    courses = courses_q.all() if courses_q is not None else []
+    courses = (courses_q.options(
+        joinedload(Course.teacher).joinedload(Teacher.user),
+        joinedload(Course.subject),
+        joinedload(Course.school_class).joinedload(SchoolClass.department),
+    ).all() if courses_q is not None else [])
     if user.role == "censeur" and user.section_id is None:
         # Censeur Enseignements Généraux : uniquement ses propres matières, quelle que soit la section
         courses = [c for c in courses if c.subject.category == "Enseignements Généraux"]
@@ -1640,7 +1644,9 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     elif user.role in ("directeur", "censeur", "censeur_crm"):
         # Les saisies du conseiller sont réservées au Chef de Service Orientation.
         courses = [c for c in courses if c.teacher.user.role != "conseiller_orientation"]
-    indicators_q = TeacherIndicator.query.filter(TeacherIndicator.teacher_id.in_(teacher_ids), TeacherIndicator.term == term) if teacher_ids else None
+    course_ids = [course.id for course in courses]
+    indicators_q = (TeacherIndicator.query.filter(TeacherIndicator.course_id.in_(course_ids), TeacherIndicator.term == term)
+                    if course_ids else None)
     if indicators_q is not None and date_from:
         indicators_q = indicators_q.filter(TeacherIndicator.updated_at >= datetime.combine(date_from, datetime.min.time()))
     if indicators_q is not None and date_to:
@@ -1663,7 +1669,9 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 
     rows = []
     missing = []
-    gender_metrics = _gender_course_metrics_bulk(courses, term)
+    # Les métriques par genre ne sont pas affichées ni exportées pour ce rôle.
+    # Ne pas charger élèves et notes supplémentaires à l’ouverture de la page.
+    gender_metrics = {} if user.role == "chef_travaux" else _gender_course_metrics_bulk(courses, term)
     for c in courses:
         ind = inds.get(c.id)
         if not ind:
@@ -1755,7 +1763,7 @@ def censeur_indicators():
         abort(403)
     courses_q = Course.query.join(SchoolClass)
     if user.role == "chef_travaux":
-        courses_q = courses_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
+        courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         courses_q = courses_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1777,7 +1785,9 @@ def censeur_indicators():
     )
     assessments_q = PlannedAssessment.query.join(Course).join(SchoolClass).filter(PlannedAssessment.term == term)
     if user.role == "chef_travaux":
-        assessments_q = assessments_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
+        # Le bloc des évaluations n’est pas présenté à ce rôle : éviter toute lecture de données.
+        assessments_q = assessments_q.filter(db.false())
+        assessments_q = assessments_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         assessments_q = assessments_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1823,7 +1833,8 @@ def censeur_indicators():
     evaluation_totals["submission_rate"] = round(evaluation_totals["submitted"] / evaluation_totals["expected"] * 100) if evaluation_totals["expected"] else 0
     available_assessments_q = PlannedAssessment.query.join(Course).join(SchoolClass).filter(PlannedAssessment.term == term)
     if user.role == "chef_travaux":
-        available_assessments_q = available_assessments_q.join(Subject).filter(Subject.category == "Enseignements Professionnels Pratiques")
+        available_assessments_q = available_assessments_q.filter(db.false())
+        available_assessments_q = available_assessments_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
     if scoped_class_ids is not None:
         available_assessments_q = available_assessments_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
