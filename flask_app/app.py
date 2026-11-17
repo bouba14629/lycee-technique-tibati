@@ -513,6 +513,7 @@ def _equipment_inventory_rows(user, name_filter="", room_type="", department_id=
             row["operationnel"] += quantity
     for row in grouped.values():
         row["departement"] = ", ".join(sorted(row.pop("departments"), key=str.casefold)) or "Commun"
+        row["total"] = row["operationnel"] + row["panne"] + row["maintenance"]
     return sorted(grouped.values(), key=lambda row: row["designation"].casefold())
 
 

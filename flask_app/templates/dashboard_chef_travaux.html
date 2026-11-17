@@ -52,7 +52,7 @@
   </form>
   <div class="table-responsive">
     <table class="table-ltt">
-      <thead><tr><th>Département</th><th>Désignation de l'équipement</th><th>Nombre opérationnel</th><th>Nombre en panne</th><th>Nombre en maintenance</th></tr></thead>
+      <thead><tr><th>Département</th><th>Désignation de l'équipement</th><th>Nombre opérationnel</th><th>Nombre en panne</th><th>Nombre en maintenance</th><th>Total</th></tr></thead>
       <tbody>
       {% for row in equipment_rows %}
         <tr>
@@ -61,9 +61,10 @@
           <td><span class="badge-ltt badge-success">{{ row.operationnel }}</span></td>
           <td><span class="badge-ltt badge-danger">{{ row.panne }}</span></td>
           <td><span class="badge-ltt badge-warning">{{ row.maintenance }}</span></td>
+          <td><strong>{{ row.total }}</strong></td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="text-muted text-center py-3">Aucun équipement ne correspond aux filtres sélectionnés.</td></tr>
+        <tr><td colspan="6" class="text-muted text-center py-3">Aucun équipement ne correspond aux filtres sélectionnés.</td></tr>
       {% endfor %}
       </tbody>
     </table>

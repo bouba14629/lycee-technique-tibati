@@ -25,8 +25,8 @@ def equipment_inventory_workbook(rows):
     wb = Workbook()
     ws = wb.active
     ws.title = "Équipements"
-    headers = ["Département", "Désignation de l'équipement", "Nombre opérationnel", "Nombre en panne", "Nombre en maintenance"]
-    widths = [28, 38, 22, 18, 24]
+    headers = ["Département", "Désignation de l'équipement", "Nombre opérationnel", "Nombre en panne", "Nombre en maintenance", "Total"]
+    widths = [28, 38, 22, 18, 24, 12]
     for index, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(index)].width = width
     _header(ws, 1, len(headers), "INVENTAIRE DES ÉQUIPEMENTS")
@@ -37,7 +37,7 @@ def equipment_inventory_workbook(rows):
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = BORDER
     for row_index, row in enumerate(rows, start=4):
-        values = [row.get("departement", "Commun"), row["designation"], row["operationnel"], row["panne"], row["maintenance"]]
+        values = [row.get("departement", "Commun"), row["designation"], row["operationnel"], row["panne"], row["maintenance"], row.get("total", row["operationnel"] + row["panne"] + row["maintenance"])]
         for column, value in enumerate(values, start=1):
             cell = ws.cell(row=row_index, column=column, value=value)
             cell.border = BORDER
