@@ -648,8 +648,10 @@ def dashboard():
                                 calendar_events=calendar_events, dashboard_filters=dashboard_filters)
 
     if role == "censeur_crm":
-        general_courses = Course.query.join(Subject).filter(Subject.category == "Enseignements Généraux").all()
-        stats = dict(students=Student.query.count(), teachers=len(set(c.teacher_id for c in general_courses)),
+        teacher_count = (Course.query.join(Subject)
+                         .filter(Subject.category == "Enseignements Généraux")
+                         .with_entities(Course.teacher_id).distinct().count())
+        stats = dict(students=Student.query.count(), teachers=teacher_count,
                      rooms=Room.query.count(), demographics=student_demographics(dashboard_filters["class_ids"]))
         from utils import dashboard_rates, department_success_rates, evolution_series, dashboard_alerts, recent_activity_feed
         rates = dashboard_rates(dashboard_filters["class_ids"], dashboard_filters["subject_ids"])
@@ -701,12 +703,13 @@ def dashboard():
             rooms_q = Room.query.filter(Room.department_id.in_(scoped_ids))
         else:
             rooms_q = Room.query
-        room_ids = [r.id for r in rooms_q.all()]
+        rooms = rooms_q.all()
+        room_ids = [room.id for room in rooms]
         stats = dict(
             rooms=len(room_ids),
-            ateliers=rooms_q.filter_by(type="Atelier").count(),
-            laboratoires=rooms_q.filter_by(type="Laboratoire").count(),
-            salles=rooms_q.filter_by(type="Salle").count(),
+            ateliers=sum(1 for room in rooms if room.type == "Atelier"),
+            laboratoires=sum(1 for room in rooms if room.type == "Laboratoire"),
+            salles=sum(1 for room in rooms if room.type == "Salle"),
             equipments=Equipment.query.filter(Equipment.room_id.in_(room_ids)).count() if room_ids else 0,
             maintenance_open=MaintenanceRequest.query.filter(
                 MaintenanceRequest.status != "Résolue", MaintenanceRequest.room_id.in_(room_ids)).count() if room_ids else 0,

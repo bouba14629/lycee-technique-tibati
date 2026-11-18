@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from sqlalchemy import and_, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Section, Subject, Teacher, User,
@@ -820,8 +820,15 @@ def censeur_global_schedule_preview():
             context = _teacher_schedule_context(teacher)
             schedules.append({"kind": "individuel", "teacher": teacher, **context})
     else:
+        entries_q = (ScheduleEntry.query.join(Course)
+                     .filter(Course.class_id.in_([school_class.id for school_class in classes]))
+                     .options(joinedload(ScheduleEntry.course).joinedload(Course.subject),
+                              joinedload(ScheduleEntry.course).joinedload(Course.teacher).joinedload(Teacher.user))) if classes else None
+        entries_by_class = {}
+        for entry in (entries_q.all() if entries_q is not None else []):
+            entries_by_class.setdefault(entry.course.class_id, []).append(entry)
         for school_class in classes:
-            entries = ScheduleEntry.query.join(Course).filter(Course.class_id == school_class.id).all()
+            entries = entries_by_class.get(school_class.id, [])
             schedules.append({"kind": "classe", "school_class": school_class, "grid": build_official_grid(entries),
                               "entries": entries, "censeur_label": school_class.department.section.code if school_class.department and school_class.department.section else ""})
     return render_template("censeur_global_schedule_preview.html", mode=mode, schedules=schedules,
@@ -846,7 +853,9 @@ def role_schedule_validate():
     if section_id:
         departments_q = departments_q.filter(Department.section_id == section_id)
     departments = departments_q.order_by(db.func.lower(Department.name)).all()
-    classes_q = SchoolClass.query.join(Department)
+    classes_q = (SchoolClass.query.join(Department)
+                 .options(joinedload(SchoolClass.department).joinedload(Department.section),
+                          selectinload(SchoolClass.courses).selectinload(Course.schedule_entries)))
     if section_id:
         classes_q = classes_q.filter(Department.section_id == section_id)
     if department_id:
@@ -1758,6 +1767,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     inds = {i.course_id: i for i in indicators_q.all()} if indicators_q is not None else {}
 
     custom_types_q = CustomIndicatorType.query
+    if user.role in ("censeur_crm", "chef_crm"):
+        custom_types_q = custom_types_q.filter(db.false())
     if user.role in ("censeur", "chef_orientation") and user.section_id:
         custom_types_q = custom_types_q.filter(db.or_(CustomIndicatorType.section_id == user.section_id,
                                                         CustomIndicatorType.section_id.is_(None)))
@@ -1775,7 +1786,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     missing = []
     # Les métriques par genre ne sont pas affichées ni exportées pour ce rôle.
     # Ne pas charger élèves et notes supplémentaires à l’ouverture de la page.
-    gender_metrics = {} if user.role == "chef_travaux" else _gender_course_metrics_bulk(courses, term)
+    gender_metrics = {} if user.role in ("chef_travaux", "censeur_crm", "chef_crm") else _gender_course_metrics_bulk(courses, term)
     for c in courses:
         ind = inds.get(c.id)
         if not ind:
