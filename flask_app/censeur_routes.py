@@ -32,6 +32,13 @@ def _subject_compatible_with_class(subject, school_class):
     return subject.department_id is None or subject.department_id == school_class.department_id
 
 
+def _crm_subject_filter(query):
+    """Matières numériques suivies par le Centre de Ressources Multimédia."""
+    return query.filter(or_(Subject.name.ilike("%informatique%"),
+                           Subject.name.ilike("%bureautique%"),
+                           Subject.name.ilike("%cgao%")))
+
+
 def _move_course_indicators(old_course_id, new_course_id, teacher_id):
     """Conserve les indicateurs quand un créneau change d'enseignant.
 
@@ -118,7 +125,7 @@ def censeur_schedule():
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
     # Le directeur et tous les censeurs construisent ; le conseiller d’orientation reste en consultation seule.
-    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "censeur_crm", "conseiller_orientation"}
+    can_build_schedule = user.role == "directeur" or user.role in {"censeur", "conseiller_orientation"}
     is_readonly = not can_build_schedule
     classes_q = SchoolClass.query.join(Department).order_by(Department.name, SchoolClass.level)
     if scoped_class_ids is not None:
@@ -1677,6 +1684,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
             courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
             if scoped_dept_ids is not None:
                 courses_q = courses_q.filter(SchoolClass.department_id.in_(scoped_dept_ids))
+        elif user.role == "censeur_crm":
+            courses_q = _crm_subject_filter(courses_q.join(Subject, Course.subject_id == Subject.id))
         # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
         # y compris lorsqu'aucun créneau du conseiller n'y est encore programmé.
         if not orientation_mode:
@@ -1768,6 +1777,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 @roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "conseiller_orientation", "directeur")
 def censeur_indicators():
     user = User.query.get(session["user_id"])
+    crm_mode = user.role == "censeur_crm"
     term = request.args.get("term", TERMS[0])
     view = request.args.get("view", "cours")
     sequence = request.args.get("sequence", type=int)
@@ -1814,6 +1824,10 @@ def censeur_indicators():
     if user.role == "chef_travaux":
         subjects_q = subjects_q.filter(Subject.category == "Enseignements Professionnels Pratiques")
     available_subjects = subjects_q.all()
+    if crm_mode:
+        available_subjects = [item for item in available_subjects if any(
+            token in (item.name or "").casefold() for token in ("informatique", "bureautique", "cgao")
+        )]
     orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if orientation_mode:
         available_subjects = [item for item in available_subjects if (item.name or "").strip().casefold() == "orientation scolaire"]
@@ -1824,6 +1838,8 @@ def censeur_indicators():
     courses_q = Course.query.join(SchoolClass)
     if user.role == "chef_travaux":
         courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
+    elif crm_mode:
+        courses_q = _crm_subject_filter(courses_q.join(Subject, Course.subject_id == Subject.id))
     if scoped_class_ids is not None:
         courses_q = courses_q.filter(Course.class_id.in_(scoped_class_ids))
     if department_id:
@@ -1939,7 +1955,7 @@ def censeur_indicators():
                             subject_ids=subject_ids, available_assessments=available_assessments,
                             evaluation_rows=evaluation_rows, evaluation_totals=evaluation_totals,
                             department_id=department_id, available_departments=available_departments, orientation_mode=orientation_mode,
-                            date_from=date_from, date_to=date_to)
+                            date_from=date_from, date_to=date_to, crm_mode=crm_mode)
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
@@ -1948,6 +1964,7 @@ def censeur_indicators_export():
     from flask import send_file
     from excel_utils import indicators_workbook
     user = User.query.get(session["user_id"])
+    crm_mode = user.role == "censeur_crm"
     term = request.args.get("term", TERMS[0])
     def _export_date(name):
         raw = request.args.get(name, "").strip()
@@ -1974,8 +1991,9 @@ def censeur_indicators_export():
         date_from=date_from, date_to=date_to
     )
     wb_io = indicators_workbook(rows, totals, term, custom_types,
-                                include_gender=user.role not in ("chef_orientation", "chef_travaux"),
-                                practical_only=user.role == "chef_travaux")
+                                include_gender=user.role not in ("chef_orientation", "chef_travaux", "censeur_crm"),
+                                practical_only=user.role == "chef_travaux",
+                                digital_lessons_only=crm_mode)
     filename = f"LTT_indicateurs_{term}.xlsx".replace(" ", "_")
     return send_file(wb_io, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                       as_attachment=True, download_name=filename)

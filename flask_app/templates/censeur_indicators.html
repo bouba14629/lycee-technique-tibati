@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Synthèse des indicateurs pédagogiques{% endblock %}
-{% block page_title %}Synthèse — {{ "Indicateurs pédagogiques — Orientation Scolaire" if orientation_mode else "Indicateurs pédagogiques" }}{% endblock %}
-{% block page_subtitle %}{{ "Sessions de formation, consultations par genre et heures" if orientation_mode else "Couverture des heures, des programmes et des travaux pratiques" }} — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
+{% block page_title %}Synthèse — {{ "Indicateurs pédagogiques — Orientation Scolaire" if orientation_mode else ("Indicateurs CRM — leçons digitalisées" if crm_mode else "Indicateurs pédagogiques") }}{% endblock %}
+{% block page_subtitle %}{{ "Sessions de formation, consultations par genre et heures" if orientation_mode else ("Informatique, Bureautique et CGAO — leçons digitalisées" if crm_mode else "Couverture des heures, des programmes et des travaux pratiques") }} — {{ current_user.scope_label if current_user.role != 'directeur' else 'Établissement' }}{% endblock %}
 {% block content %}
 <div class="mb-3 no-print d-flex justify-content-end gap-2">
   {% if current_user.role in ['censeur', 'chef_orientation', 'conseiller_orientation'] %}
@@ -126,7 +126,19 @@ function populateGenericIndicator(select) {
     {% endif %}
   </form>
 
-  {% if view == 'departement' %}
+  {% if crm_mode %}
+  <div class="alert alert-info py-2" style="font-size:12px;">Le Chef CRM consulte les leçons digitalisées des matières Informatique, Bureautique et CGAO. Les autres matières et indicateurs sont exclus de cette vue.</div>
+  <div style="overflow-x:auto;"><table class="table-ltt" style="font-size:11.5px; white-space:nowrap;">
+    <thead><tr><th>Enseignant</th><th>Code / Classe</th><th>Matière</th><th>Date</th><th>Leçons prévues</th><th>Leçons faites</th><th>%</th></tr></thead>
+    <tbody>
+    {% for row in rows %}<tr>
+      <td>{{ row.teacher.user.full_name }}</td><td>{{ row.course.school_class.code or 'Sans code' }}</td><td>{{ row.course.subject.name }}</td>
+      <td>{{ row.ind.updated_at.strftime("%d/%m/%Y") if row.ind.updated_at else "—" }}</td><td>{{ row.ind.digital_lessons_planned }}</td><td>{{ row.ind.digital_lessons_done }}</td><td>{{ row.pct_digital_lessons if row.pct_digital_lessons is not none else '—' }}%</td>
+    </tr>{% else %}<tr><td colspan="7" class="text-muted text-center py-4">Aucun indicateur CRM renseigné.</td></tr>{% endfor %}
+    </tbody>
+    {% if rows %}<tfoot><tr class="fw-bold" style="background:var(--cream);"><td colspan="4">TOTAL</td><td>{{ totals.digital_lessons_planned }}</td><td>{{ totals.digital_lessons_done }}</td><td>{{ totals.pct_digital_lessons if totals.pct_digital_lessons is not none else '—' }}%</td></tr></tfoot>{% endif %}
+  </table></div>
+  {% elif view == 'departement' %}
   <div style="overflow-x:auto;">
   <table class="table-ltt" style="font-size:11.5px; white-space:nowrap;">
     <thead>

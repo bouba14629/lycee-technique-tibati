@@ -134,8 +134,12 @@
       
 
       {% if current_user and current_user.role in ['chef_travaux','chef_crm'] %}
-      <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers & équipements' }}</div>
+      <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers &amp; équipements' }}</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles, ateliers &amp; labos</a>
+      {% if current_user.role == 'chef_crm' %}
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_global_schedule_preview' }}" href="{{ url_for('censeur_global_schedule_preview', mode='classe') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques CRM</a>
+      {% endif %}
       {% if current_user.role == 'chef_travaux' %}
       <a class="sidebar-link {{ 'active' if request.endpoint in ['chef_travaux_classes_schedule','chef_travaux_class_schedule'] }}" href="{{ url_for('chef_travaux_classes_schedule') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>

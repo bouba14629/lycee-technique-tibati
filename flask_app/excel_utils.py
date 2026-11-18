@@ -353,7 +353,7 @@ def council_stats_workbook(stats, term):
     return wb_io
 
 
-def indicators_workbook(rows, totals, term, custom_types=None, include_gender=True, practical_only=False):
+def indicators_workbook(rows, totals, term, custom_types=None, include_gender=True, practical_only=False, digital_lessons_only=False):
     """Reproduit fidèlement le modèle 'SYNTHÈSE - INDICATEURS PÉDAGOGIQUES' fourni par l'établissement :
     couverture des heures, des programmes (dont digital) et des travaux pratiques (dont digitalisés) —
     plus, le cas échéant, les indicateurs personnalisés créés par le Censeur, en colonnes supplémentaires."""
@@ -362,7 +362,10 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
     ws = wb.active
     ws.title = "Indicateurs"
     widths = [24, 14, 20, 12]
-    widths += [8, 9, 7, 9, 9, 7] if practical_only else [8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7]
+    if digital_lessons_only:
+        widths += [10, 10, 8]
+    else:
+        widths += [8, 9, 7, 9, 9, 7] if practical_only else [8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7]
     if include_gender:
         widths += [8, 8, 8, 10, 10, 10, 10, 10, 10]
     widths += [9, 9, 7] * len(custom_types) + [32]
@@ -378,7 +381,10 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         ("MATIÈRE", 3, 3),
         ("DATE", 4, 4),
     ]
-    if practical_only:
+    if digital_lessons_only:
+        groups += [("LEÇONS DIGITALISÉES", 5, 7)]
+        col = 8
+    elif practical_only:
         groups += [("TRAVAUX PRATIQUES", 5, 7), ("TP DIGITALISÉS", 8, 10)]
         col = 11
     else:
@@ -404,9 +410,9 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         cell.alignment = Alignment(horizontal="center")
     r += 1
     headers = ["Enseignant", "Code / Classe", "Matière", "Date"]
-    headers += (["Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"] if practical_only else
+    headers += (["Prévues", "Faites", "%"] if digital_lessons_only else (["Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"] if practical_only else
                  ["Dues", "Faites", "%", "Prévues", "Faites", "%", "Prévues", "Faites", "%",
-                  "Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"])
+                  "Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"]))
     if include_gender:
         headers += ["Filles", "Garçons", "Total",
                     "Filles", "Garçons", "Total",
@@ -426,11 +432,12 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         updated_at = getattr(ind, "updated_at", None)
         vals = [row['teacher'].user.full_name, row['course'].school_class.code or "", row['course'].subject.name,
                 updated_at.strftime("%d/%m/%Y") if updated_at else ""]
-        vals += ([ind.tp_planned, ind.tp_done, row["pct_tp"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]]
+        vals += ([ind.lessons_planned, ind.lessons_done, row["pct_lessons"]] if digital_lessons_only else
+                 ([ind.tp_planned, ind.tp_done, row["pct_tp"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]]
                  if practical_only else
                  [ind.hours_due, ind.hours_done, row["pct_hours"], ind.lessons_planned, ind.lessons_done, row["pct_lessons"],
                   ind.digital_lessons_planned, ind.digital_lessons_done, row["pct_digital_lessons"], ind.tp_planned, ind.tp_done,
-                  row["pct_tp"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]])
+                  row["pct_tp"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]]))
         if include_gender:
             vals += [row.get("gender_metrics", {}).get("successful", {}).get("Filles"),
                      row.get("gender_metrics", {}).get("successful", {}).get("Garçons"),
@@ -452,11 +459,12 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         r += 1
     # ligne total
     total_vals = ["TOTAL", "", "", ""]
-    total_vals += ([totals["tp_planned"], totals["tp_done"], totals["pct_tp"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]]
+    total_vals += ([totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"]] if digital_lessons_only else
+                   ([totals["tp_planned"], totals["tp_done"], totals["pct_tp"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]]
                    if practical_only else
                    [totals["hours_due"], totals["hours_done"], totals["pct_hours"], totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"],
                     totals["digital_lessons_planned"], totals["digital_lessons_done"], totals["pct_digital_lessons"], totals["tp_planned"], totals["tp_done"],
-                    totals["pct_tp"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]])
+                    totals["pct_tp"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]]))
     if include_gender:
         total_vals += ["—", "—", "—", "—", "—", "—", "—", "—", "—"]
     total_vals += ["", "", ""] * len(custom_types)
