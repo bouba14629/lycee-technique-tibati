@@ -102,8 +102,7 @@
 
       {% if current_user and current_user.role == 'chef_orientation' %}
       <div class="sidebar-section-title">Orientation scolaire</div>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_schedule' }}" href="{{ url_for('censeur_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emplois du temps</a>
-      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_global_schedule_preview' }}" href="{{ url_for('censeur_global_schedule_preview', mode='classe') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['role_schedule_validate','censeur_global_schedule_preview'] }}" href="{{ url_for('role_schedule_validate') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels des conseillers</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='parent_new' }}" href="{{ url_for('parent_new') }}"><i class="bi bi-person-plus-fill"></i> Parents</a>
@@ -138,7 +137,7 @@
       <div class="sidebar-section-title">{{ 'Centre de Ressources Multimédia' if current_user.role == 'chef_crm' else 'Ateliers &amp; équipements' }}</div>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles, ateliers &amp; labos</a>
       {% if current_user.role == 'chef_crm' %}
-      <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_global_schedule_preview' }}" href="{{ url_for('censeur_global_schedule_preview', mode='classe') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint in ['role_schedule_validate','censeur_global_schedule_preview'] }}" href="{{ url_for('role_schedule_validate') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques CRM</a>
       {% endif %}
       {% if current_user.role == 'chef_travaux' %}

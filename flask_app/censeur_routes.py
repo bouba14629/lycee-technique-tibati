@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 from app import app, db
 from models import (
-    SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Subject, Teacher, User,
+    SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Section, Subject, Teacher, User,
     Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
     TeacherIndicator, CustomIndicatorValue,
 )
@@ -827,6 +827,41 @@ def censeur_global_schedule_preview():
     return render_template("censeur_global_schedule_preview.html", mode=mode, schedules=schedules,
                            periods=OFFICIAL_PERIODS, days=DAYS[:5], day_en=DAY_EN,
                            school_year=get_current_school_year())
+
+
+@app.route("/censeur/emplois-du-temps/consultation")
+@roles_required("chef_orientation", "chef_crm")
+def role_schedule_validate():
+    """Vue de consultation des classes, avec exactement le modèle du Proviseur."""
+    schedule_view = request.args.get("view", "classe")
+    if schedule_view not in {"classe", "individuel"}:
+        schedule_view = "classe"
+    section_id = request.args.get("section_id", type=int)
+    department_id = request.args.get("department_id", type=int)
+    class_id = request.args.get("class_id", type=int)
+    user = User.query.get(session["user_id"])
+    scoped_class_ids = user_scoped_class_ids(user) if user.role == "chef_orientation" else None
+    sections = Section.query.order_by(db.func.lower(Section.name)).all()
+    departments_q = Department.query
+    if section_id:
+        departments_q = departments_q.filter(Department.section_id == section_id)
+    departments = departments_q.order_by(db.func.lower(Department.name)).all()
+    classes_q = SchoolClass.query.join(Department)
+    if section_id:
+        classes_q = classes_q.filter(Department.section_id == section_id)
+    if department_id:
+        classes_q = classes_q.filter(SchoolClass.department_id == department_id)
+    if scoped_class_ids is not None:
+        classes_q = classes_q.filter(SchoolClass.id.in_(scoped_class_ids))
+    available_classes = classes_q.order_by(db.func.lower(SchoolClass.name)).all()
+    if class_id and class_id not in {item.id for item in available_classes}:
+        abort(403)
+    classes = [item for item in available_classes if item.id == class_id] if class_id else available_classes
+    return render_template("dir_schedule_validate.html", schedule_view="classe", classes=classes,
+                           teachers=[], sections=sections, departments=departments,
+                           available_classes=available_classes, section_id=section_id,
+                           department_id=department_id, class_id=class_id,
+                           teacher_query="", teacher_schedule_slots={})
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel")
