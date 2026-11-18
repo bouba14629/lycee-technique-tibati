@@ -798,7 +798,7 @@ def censeur_conseil():
 
 
 @app.route("/censeur/emplois-du-temps/apercu-global")
-@roles_required("censeur", "censeur_crm")
+@roles_required("censeur", "censeur_crm", "chef_orientation")
 def censeur_global_schedule_preview():
     """Aperçu imprimable unique de tous les emplois accessibles au censeur."""
     from models import ScheduleEntry, Course
@@ -830,7 +830,7 @@ def censeur_global_schedule_preview():
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official(class_id):
     from models import ScheduleEntry, Course
     from enseignant_routes import DAY_EN
@@ -844,7 +844,7 @@ def class_schedule_official(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.pdf")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official_pdf(class_id):
     from flask import send_file, abort
     from models import ScheduleEntry, Course
@@ -862,7 +862,7 @@ def class_schedule_official_pdf(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.xlsx")
-@roles_required("censeur", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official_xlsx(class_id):
     from flask import send_file
     from models import ScheduleEntry, Course
