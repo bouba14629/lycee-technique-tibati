@@ -363,7 +363,7 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
     ws.title = "Indicateurs"
     widths = [24, 14, 20, 12]
     if digital_lessons_only:
-        widths += [10, 10, 8]
+        widths += [8, 8, 7] * 4
     else:
         widths += [8, 9, 7, 9, 9, 7] if practical_only else [8, 8, 7, 9, 8, 7, 9, 8, 7, 8, 9, 7, 9, 9, 7]
     if include_gender:
@@ -382,8 +382,11 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         ("DATE", 4, 4),
     ]
     if digital_lessons_only:
-        groups += [("LEÇONS DIGITALISÉES", 5, 7)]
-        col = 8
+        groups += [("COUVERTURE DES HEURES", 5, 7),
+                   ("COUVERTURE DES PROGRAMMES", 8, 10),
+                   ("LEÇONS DIGITALISÉES", 11, 13),
+                   ("TP DIGITALISÉS", 14, 16)]
+        col = 17
     elif practical_only:
         groups += [("TRAVAUX PRATIQUES", 5, 7), ("TP DIGITALISÉS", 8, 10)]
         col = 11
@@ -410,7 +413,7 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         cell.alignment = Alignment(horizontal="center")
     r += 1
     headers = ["Enseignant", "Code / Classe", "Matière", "Date"]
-    headers += (["Prévues", "Faites", "%"] if digital_lessons_only else (["Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"] if practical_only else
+    headers += (["Dues", "Faites", "%", "Prévues", "Faites", "%", "Prévues", "Faites", "%", "Prévus", "Réalisés", "%"] if digital_lessons_only else (["Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"] if practical_only else
                  ["Dues", "Faites", "%", "Prévues", "Faites", "%", "Prévues", "Faites", "%",
                   "Prévus", "Réalisés", "%", "Prévus", "Réalisés", "%"]))
     if include_gender:
@@ -432,7 +435,7 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         updated_at = getattr(ind, "updated_at", None)
         vals = [row['teacher'].user.full_name, row['course'].school_class.code or "", row['course'].subject.name,
                 updated_at.strftime("%d/%m/%Y") if updated_at else ""]
-        vals += ([ind.lessons_planned, ind.lessons_done, row["pct_lessons"]] if digital_lessons_only else
+        vals += ([ind.hours_due, ind.hours_done, row["pct_hours"], ind.lessons_planned, ind.lessons_done, row["pct_lessons"], ind.digital_lessons_planned, ind.digital_lessons_done, row["pct_digital_lessons"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]] if digital_lessons_only else
                  ([ind.tp_planned, ind.tp_done, row["pct_tp"], ind.digital_tp_planned, ind.digital_tp_done, row["pct_digital_tp"]]
                  if practical_only else
                  [ind.hours_due, ind.hours_done, row["pct_hours"], ind.lessons_planned, ind.lessons_done, row["pct_lessons"],
@@ -459,7 +462,7 @@ def indicators_workbook(rows, totals, term, custom_types=None, include_gender=Tr
         r += 1
     # ligne total
     total_vals = ["TOTAL", "", "", ""]
-    total_vals += ([totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"]] if digital_lessons_only else
+    total_vals += ([totals["hours_due"], totals["hours_done"], totals["pct_hours"], totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"], totals["digital_lessons_planned"], totals["digital_lessons_done"], totals["pct_digital_lessons"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]] if digital_lessons_only else
                    ([totals["tp_planned"], totals["tp_done"], totals["pct_tp"], totals["digital_tp_planned"], totals["digital_tp_done"], totals["pct_digital_tp"]]
                    if practical_only else
                    [totals["hours_due"], totals["hours_done"], totals["pct_hours"], totals["lessons_planned"], totals["lessons_done"], totals["pct_lessons"],
