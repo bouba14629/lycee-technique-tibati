@@ -798,7 +798,7 @@ def censeur_conseil():
 
 
 @app.route("/censeur/emplois-du-temps/apercu-global")
-@roles_required("censeur", "censeur_crm", "chef_orientation")
+@roles_required("censeur", "censeur_crm", "chef_crm", "chef_orientation")
 def censeur_global_schedule_preview():
     """Aperçu imprimable unique de tous les emplois accessibles au censeur."""
     from models import ScheduleEntry, Course
@@ -830,7 +830,7 @@ def censeur_global_schedule_preview():
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel")
-@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official(class_id):
     from models import ScheduleEntry, Course
     from enseignant_routes import DAY_EN
@@ -844,7 +844,7 @@ def class_schedule_official(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.pdf")
-@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official_pdf(class_id):
     from flask import send_file, abort
     from models import ScheduleEntry, Course
@@ -862,7 +862,7 @@ def class_schedule_official_pdf(class_id):
 
 
 @app.route("/censeur/emplois-du-temps/<int:class_id>/officiel.xlsx")
-@roles_required("censeur", "censeur_crm", "chef_orientation", "conseiller_orientation", "directeur")
+@roles_required("censeur", "censeur_crm", "chef_crm", "chef_orientation", "conseiller_orientation", "directeur")
 def class_schedule_official_xlsx(class_id):
     from flask import send_file
     from models import ScheduleEntry, Course
@@ -1684,7 +1684,7 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
             courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
             if scoped_dept_ids is not None:
                 courses_q = courses_q.filter(SchoolClass.department_id.in_(scoped_dept_ids))
-        elif user.role == "censeur_crm":
+        elif user.role in ("censeur_crm", "chef_crm"):
             courses_q = _crm_subject_filter(courses_q.join(Subject, Course.subject_id == Subject.id))
         # Les indicateurs d'orientation peuvent être renseignés pour toute classe,
         # y compris lorsqu'aucun créneau du conseiller n'y est encore programmé.
@@ -1774,10 +1774,10 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
 
 
 @app.route("/censeur/indicateurs")
-@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "chef_crm", "conseiller_orientation", "directeur")
 def censeur_indicators():
     user = User.query.get(session["user_id"])
-    crm_mode = user.role == "censeur_crm"
+    crm_mode = user.role in ("censeur_crm", "chef_crm")
     term = request.args.get("term", TERMS[0])
     view = request.args.get("view", "cours")
     sequence = request.args.get("sequence", type=int)
@@ -1959,12 +1959,12 @@ def censeur_indicators():
 
 
 @app.route("/censeur/indicateurs/export.xlsx")
-@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "conseiller_orientation", "directeur")
+@roles_required("censeur", "chef_orientation", "chef_travaux", "censeur_crm", "chef_crm", "conseiller_orientation", "directeur")
 def censeur_indicators_export():
     from flask import send_file
     from excel_utils import indicators_workbook
     user = User.query.get(session["user_id"])
-    crm_mode = user.role == "censeur_crm"
+    crm_mode = user.role in ("censeur_crm", "chef_crm")
     term = request.args.get("term", TERMS[0])
     def _export_date(name):
         raw = request.args.get(name, "").strip()
@@ -1991,7 +1991,7 @@ def censeur_indicators_export():
         date_from=date_from, date_to=date_to
     )
     wb_io = indicators_workbook(rows, totals, term, custom_types,
-                                include_gender=user.role not in ("chef_orientation", "chef_travaux", "censeur_crm"),
+                                include_gender=user.role not in ("chef_orientation", "chef_travaux", "censeur_crm", "chef_crm"),
                                 practical_only=user.role == "chef_travaux",
                                 digital_lessons_only=crm_mode)
     filename = f"LTT_indicateurs_{term}.xlsx".replace(" ", "_")
