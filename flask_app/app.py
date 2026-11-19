@@ -697,6 +697,22 @@ def dashboard():
                                 recent_absences=recent_absences, recent_sanctions=recent_sanctions,
                                 life_alerts=dashboard_alerts(class_ids=scoped_ids), dashboard_filters=dashboard_filters)
 
+    if role == "intendant":
+        total_students = Student.query.count()
+        paid_students_count = Student.query.filter(Student.school_fees_paid == True).count()  # noqa: E712
+        unpaid_students_count = total_students - paid_students_count
+        paid_students = (Student.query.filter(Student.school_fees_paid == True)  # noqa: E712
+                         .order_by(db.func.lower(Student.first_name), db.func.lower(Student.last_name), Student.id)
+                         .limit(12).all())
+        tuition_stats = {
+            "total": total_students,
+            "paid": paid_students_count,
+            "unpaid": unpaid_students_count,
+            "paid_rate": round(100 * paid_students_count / total_students, 1) if total_students else 0,
+        }
+        return render_template("dashboard_intendant.html", tuition_stats=tuition_stats,
+                               paid_students=paid_students)
+
     if role in ("chef_travaux", "chef_crm"):
         from utils import user_scoped_department_ids
         scoped_ids = user_scoped_department_ids(user) if role == "chef_travaux" else None

@@ -188,40 +188,87 @@ def dir_user_new():
     return render_template("dir_user_new.html", departments=departments, sections=sections)
 
 
-@app.route("/intendant/frais-scolarite", methods=["GET", "POST"])
-@roles_required("intendant")
-def intendant_tuition():
-    """Suivi simple et rapide du règlement des frais de scolarité."""
-    class_id = request.values.get("class_id", type=int)
-    search = request.values.get("q", "").strip()
-    if request.method == "POST":
-        paid_ids = {student_id for student_id in request.form.getlist("paid_student_ids", type=int)}
-        students_q = Student.query
-        if class_id:
-            students_q = students_q.filter(Student.class_id == class_id)
-        if search:
-            like = f"%{search}%"
-            students_q = students_q.filter(db.or_(Student.first_name.ilike(like),
-                                                  Student.last_name.ilike(like),
-                                                  Student.matricule.ilike(like)))
-        for student in students_q.all():
-            student.school_fees_paid = student.id in paid_ids
-        db.session.commit()
-        flash("Le règlement des frais de scolarité a été mis à jour.", "success")
-        return redirect(url_for("intendant_tuition", class_id=class_id, q=search))
-    classes = SchoolClass.query.order_by(SchoolClass.name).all()
+def _intendant_filter_context(values):
+    """Construit le périmètre Section → Département → Classe de l'Intendant."""
+    section_id = values.get("section_id", type=int)
+    department_id = values.get("department_id", type=int)
+    class_id = values.get("class_id", type=int)
+    search = values.get("q", "").strip()
+
+    sections = Section.query.order_by(Section.name).all()
+    section_ids = {section.id for section in sections}
+    if section_id not in section_ids:
+        section_id = None
+    departments_q = Department.query
+    if section_id:
+        departments_q = departments_q.filter(Department.section_id == section_id)
+    departments = departments_q.order_by(Department.name).all()
+    department_ids = {department.id for department in departments}
+    if department_id not in department_ids:
+        department_id = None
+    classes_q = SchoolClass.query.join(Department)
+    if section_id:
+        classes_q = classes_q.filter(Department.section_id == section_id)
+    if department_id:
+        classes_q = classes_q.filter(SchoolClass.department_id == department_id)
+    classes = classes_q.order_by(SchoolClass.name).all()
+    class_ids = {school_class.id for school_class in classes}
+    if class_id not in class_ids:
+        class_id = None
+
     students_q = Student.query
     if class_id:
         students_q = students_q.filter(Student.class_id == class_id)
+    elif class_ids:
+        students_q = students_q.filter(Student.class_id.in_(class_ids))
+    else:
+        students_q = students_q.filter(db.false())
     if search:
         like = f"%{search}%"
         students_q = students_q.filter(db.or_(Student.first_name.ilike(like),
                                               Student.last_name.ilike(like),
                                               Student.matricule.ilike(like)))
-    students = students_q.order_by(db.func.lower(Student.first_name),
-                                   db.func.lower(Student.last_name), Student.id).all()
-    return render_template("intendant_tuition.html", students=students, classes=classes,
-                           class_id=class_id, search=search)
+    students_q = students_q.order_by(db.func.lower(Student.first_name),
+                                     db.func.lower(Student.last_name), Student.id)
+    return {"sections": sections, "departments": departments, "classes": classes,
+            "students_q": students_q, "section_id": section_id,
+            "department_id": department_id, "class_id": class_id, "search": search}
+
+
+@app.route("/intendant/frais-scolarite", methods=["GET", "POST"])
+@roles_required("intendant")
+def intendant_tuition():
+    """Suivi Section → Département → Classe du règlement des frais."""
+    context = _intendant_filter_context(request.values)
+    if request.method == "POST":
+        paid_ids = {student_id for student_id in request.form.getlist("paid_student_ids", type=int)}
+        for student in context["students_q"].all():
+            student.school_fees_paid = student.id in paid_ids
+        db.session.commit()
+        flash("Le règlement des frais de scolarité a été mis à jour.", "success")
+        return redirect(url_for("intendant_tuition", section_id=context["section_id"],
+                                department_id=context["department_id"], class_id=context["class_id"],
+                                q=context["search"]))
+    students = context["students_q"].all()
+    context["students"] = students
+    context["paid_students"] = [student for student in students if student.school_fees_paid]
+    context.pop("students_q")
+    return render_template("intendant_tuition.html", **context)
+
+
+@app.route("/intendant/frais-scolarite/export.xlsx")
+@roles_required("intendant")
+def intendant_tuition_export():
+    from flask import send_file
+    from excel_utils import tuition_students_workbook
+    context = _intendant_filter_context(request.args)
+    students = context["students_q"].filter(Student.school_fees_paid == True).all()  # noqa: E712
+    filters = {"section": next((item.name for item in context["sections"] if item.id == context["section_id"]), "Toutes"),
+               "department": next((item.name for item in context["departments"] if item.id == context["department_id"]), "Tous"),
+               "class": next((item.name for item in context["classes"] if item.id == context["class_id"]), "Toutes")}
+    return send_file(tuition_students_workbook(students, filters),
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name="Eleves_frais_scolarite_payes.xlsx")
 
 
 @app.route("/directeur/utilisateurs/import", methods=["POST"])

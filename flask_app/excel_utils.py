@@ -825,3 +825,48 @@ def demographics_workbook(demographics, title="Effectifs par genre"):
     wb.save(output)
     output.seek(0)
     return output
+
+
+def tuition_students_workbook(students, filters=None):
+    """Export Excel des élèves ayant payé les frais avec leur périmètre scolaire."""
+    filters = filters or {}
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Frais de scolarité"
+    headers = ["Prénom", "Nom", "Matricule", "Section", "Département", "Classe", "Statut"]
+    widths = [22, 22, 18, 28, 30, 24, 18]
+    for index, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(index)].width = width
+    _header(ws, 1, len(headers), "ÉLÈVES AYANT PAYÉ LES FRAIS DE SCOLARITÉ")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+    ws.cell(row=2, column=1, value=(f"Section : {filters.get('section', 'Toutes')} — "
+                                    f"Département : {filters.get('department', 'Tous')} — "
+                                    f"Classe : {filters.get('class', 'Toutes')}"))
+    ws.cell(row=2, column=1).font = Font(italic=True, color="666666")
+    for column, label in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=column, value=label)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor=NAVY)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = BORDER
+    for row_index, student in enumerate(students, start=5):
+        department = student.school_class.department if student.school_class else None
+        section = department.section if department else None
+        values = [student.first_name or "", student.last_name or "", student.matricule or "",
+                  section.name if section else "—", department.name if department else "—",
+                  student.school_class.name if student.school_class else "—", "Payé"]
+        for column, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_index, column=column, value=value)
+            cell.border = BORDER
+            cell.alignment = Alignment(horizontal="left" if column in (1, 2, 4, 5, 6) else "center", vertical="center")
+    if not students:
+        ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=len(headers))
+        empty = ws.cell(row=5, column=1, value="Aucun élève payé ne correspond aux filtres sélectionnés.")
+        empty.font = Font(italic=True, color="666666")
+        empty.alignment = Alignment(horizontal="center")
+    ws.freeze_panes = "A5"
+    ws.auto_filter.ref = f"A4:{get_column_letter(len(headers))}{max(4, 4 + len(students))}"
+    wb_io = BytesIO()
+    wb.save(wb_io)
+    wb_io.seek(0)
+    return wb_io

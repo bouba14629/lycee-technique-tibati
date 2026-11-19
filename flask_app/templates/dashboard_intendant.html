@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord Intendant{% endblock %}
+{% block page_title %}Tableau de bord — Intendant{% endblock %}
+{% block page_subtitle %}Suivi des frais de scolarité{% endblock %}
+{% block content %}
+<div class="kpi-grid">
+  <a href="{{ url_for('intendant_tuition') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-people-fill"></i></div><div class="kpi-value">{{ tuition_stats.total }}</div><div class="kpi-label">Élèves inscrits</div></a>
+  <a href="{{ url_for('intendant_tuition') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div><div class="kpi-value">{{ tuition_stats.paid }}</div><div class="kpi-label">Frais payés</div></a>
+  <a href="{{ url_for('intendant_tuition') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div><div class="kpi-value">{{ tuition_stats.unpaid }}</div><div class="kpi-label">Frais non payés</div></a>
+  <a href="{{ url_for('intendant_tuition') }}" class="kpi-card"><div class="kpi-icon"><i class="bi bi-percent"></i></div><div class="kpi-value">{{ tuition_stats.paid_rate }}%</div><div class="kpi-label">Taux de paiement</div></a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card-ltt"><div class="section-title"><h2><i class="bi bi-pie-chart-fill me-1" style="color:var(--gold-500);"></i> Statistique des frais</h2></div><canvas id="tuitionChart" height="230"></canvas></div></div>
+  <div class="col-lg-7"><div class="card-ltt"><div class="section-title d-flex justify-content-between align-items-center"><h2><i class="bi bi-check2-square me-1" style="color:var(--gold-500);"></i> Derniers élèves ayant payé</h2><a href="{{ url_for('intendant_tuition') }}" class="btn-ltt-outline btn-sm">Voir la liste complète</a></div><div class="table-responsive"><table class="table-ltt"><thead><tr><th>Prénom</th><th>Nom</th><th>Matricule</th><th>Classe</th></tr></thead><tbody>
+  {% for student in paid_students %}<tr><td>{{ student.first_name }}</td><td>{{ student.last_name or '—' }}</td><td>{{ student.matricule }}</td><td>{{ student.school_class.name if student.school_class else '—' }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted py-3">Aucun paiement enregistré.</td></tr>{% endfor %}
+  </tbody></table></div></div></div>
+</div>
+<div class="card-ltt"><div class="section-title"><h2><i class="bi bi-lightning-charge-fill me-1" style="color:var(--gold-500);"></i> Actions rapides</h2></div><a href="{{ url_for('intendant_tuition') }}" class="btn-ltt-navy"><i class="bi bi-cash-coin"></i> Ouvrir le suivi des frais de scolarité</a></div>
+{% endblock %}
+{% block extra_js %}<script>
+new Chart(document.getElementById('tuitionChart'), { type: 'doughnut', data: { labels: ['Payés', 'Non payés'], datasets: [{ data: [{{ tuition_stats.paid }}, {{ tuition_stats.unpaid }}], backgroundColor: ['#2f7d5a', '#c94a4a'], borderColor: '#fff', borderWidth: 3 }] }, options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' } });
+</script>{% endblock %}
