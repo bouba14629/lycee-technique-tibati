@@ -281,7 +281,7 @@ class AnnualPage:
         self.box(389.25,RIGHT,top,49.5,colors.white)
         self.text('DÉCISION DU CONSEIL DE CLASSE',17.25,top+9.75,color=BLUE)
         decisions = data.get('decision_marks', {})
-        admitted_class = data.get('next_class_name') or '______________________________'
+        admitted_class = data.get('next_class_name') if decisions.get('admitted') else '______________________________'
         self.text(('[X] ' if decisions.get('admitted') else '[ ] ') + 'ADMIS(E) EN CLASSE DE : ' + admitted_class,
                   17.25,top+19.5, max_width=369)
         repeat_prefix = ('[X] ' if decisions.get('repeat_if_failure') else '[ ] ') + 'REDOUBLE LA CLASSE DE : '

@@ -646,6 +646,7 @@ def annual_bulletin_data(student, _cache=None):
         or discipline_definitive
         or (overall_avg is not None and overall_avg < 6)
     )
+    repeat_if_failure = special_repeat_level and not bool(student.is_repeater) and not excluded
     next_class_name = None
     current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
     if current_level_index >= 0 and current_level_index + 1 < len(LEVEL_ORDER):
@@ -663,7 +664,7 @@ def annual_bulletin_data(student, _cache=None):
         "cannot_triplicate": bool(student.is_repeater),
         "resigning": rank_is_nc,
         "insolvency": not bool(student.school_fees_paid),
-        "repeat_if_failure": special_repeat_level and not bool(student.is_repeater),
+        "repeat_if_failure": repeat_if_failure,
     }
 
     return {"terms": terms, "categories": categories, "overall_points": round(points_total, 2),
@@ -678,7 +679,7 @@ def annual_bulletin_data(student, _cache=None):
             "rank": class_rank if overall_avg is not None else None,
             "rank_label": "NC" if rank_is_nc else (f"{class_rank}e" if class_rank else None),
             "decision_marks": decision_marks, "next_class_name": next_class_name,
-            "repeat_class_name": student.school_class.name if special_repeat_level else None,
+            "repeat_class_name": student.school_class.name if repeat_if_failure else None,
             "work_marks": competency_marks(overall_avg),
             "official_work_appreciation": appreciation_code(overall_avg),
             "absences_justified_hours": floor_hours(just_hours), "absences_justified_days": just_days,
