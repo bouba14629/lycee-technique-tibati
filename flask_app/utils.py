@@ -21,7 +21,7 @@ def floor_hours(value):
 ROLE_PASSWORD_CODES = {
     "directeur": "DIR", "censeur": "CEN", "censeur_crm": "CRM",
     "surveillant_general": "SVG", "conseiller_orientation": "COP",
-    "chef_travaux": "CDT", "chef_crm": "CCR", "enseignant": "ENS",
+    "chef_travaux": "CDT", "chef_crm": "CCR", "intendant": "INT", "enseignant": "ENS",
     "parent": "PAR", "eleve": "ELV",
 }
 

@@ -181,8 +181,11 @@ with app.app_context():
         if "observations" not in {col["name"] for col in inspect(db.engine).get_columns("teacher_indicator")}:
             with db.engine.begin() as connection:
                 connection.execute(text("ALTER TABLE teacher_indicator ADD COLUMN observations TEXT NULL" if db.engine.dialect.name == "mysql" else "ALTER TABLE teacher_indicator ADD COLUMN observations TEXT DEFAULT ''"))
+        if "school_fees_paid" not in {col["name"] for col in inspect(db.engine).get_columns("student")}:
+            with db.engine.begin() as connection:
+                connection.execute(text("ALTER TABLE student ADD COLUMN school_fees_paid BOOLEAN NOT NULL DEFAULT FALSE" if db.engine.dialect.name == "mysql" else "ALTER TABLE student ADD COLUMN school_fees_paid BOOLEAN NOT NULL DEFAULT 0"))
     except Exception:
-        app.logger.exception("Impossible d'ajouter la colonne observations")
+        app.logger.exception("Impossible d'appliquer les migrations additives")
     if os.getenv("LTT_BOOTSTRAP_MODE", "founder") == "demo":
         seed_module.seed()
     else:

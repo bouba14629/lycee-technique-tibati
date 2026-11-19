@@ -97,7 +97,7 @@ def save_student_photo(file_storage, matricule):
 @roles_required("directeur", "censeur", "chef_orientation", "conseiller_orientation")
 def dir_users():
     from models import STAFF_GRADES
-    role_filter = request.args.get("role", "")
+    role_filter = request.args.get("role", "enseignant")
     search = request.args.get("q", "").strip()
     q = User.query
     if role_filter:
@@ -110,8 +110,10 @@ def dir_users():
     sort_col = {"full_name": User.full_name, "username": User.username, "role": User.role}.get(sort, User.full_name)
     sort_col = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
     users = q.order_by(sort_col).all()
-    sections = Section.query.order_by(Section.name).all()
-    available_students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    is_director = session.get("role") == "directeur"
+    sections = Section.query.order_by(Section.name).all() if is_director else []
+    available_students = (Student.query.order_by(Student.last_name, Student.first_name).all()
+                          if is_director and role_filter in ("", "parent") else [])
     return render_template("dir_users.html", users=users, role_filter=role_filter, search=search,
                             sort=sort, sort_dir=sort_dir,
                             sections=sections, staff_grades=STAFF_GRADES,
@@ -154,7 +156,7 @@ def dir_user_new():
         section_id = request.form.get("section_id", type=int)
         grade = request.form.get("grade", "").strip()
         valid_roles = ("directeur", "censeur", "censeur_crm", "surveillant_general", "conseiller_orientation",
-                        "chef_orientation", "chef_travaux", "chef_crm", "enseignant")
+                       "chef_orientation", "chef_travaux", "chef_crm", "intendant", "enseignant")
         if not full_name or role not in valid_roles:
             flash("Nom complet et rôle valides requis (les élèves/parents sont créés via Inscription).", "warning")
             return redirect(url_for("dir_user_new"))
@@ -184,6 +186,42 @@ def dir_user_new():
         flash(f"Compte créé — identifiant : {uname} — mot de passe : {temp_pw}", "success")
         return redirect(url_for("dir_users"))
     return render_template("dir_user_new.html", departments=departments, sections=sections)
+
+
+@app.route("/intendant/frais-scolarite", methods=["GET", "POST"])
+@roles_required("intendant")
+def intendant_tuition():
+    """Suivi simple et rapide du règlement des frais de scolarité."""
+    class_id = request.values.get("class_id", type=int)
+    search = request.values.get("q", "").strip()
+    if request.method == "POST":
+        paid_ids = {student_id for student_id in request.form.getlist("paid_student_ids", type=int)}
+        students_q = Student.query
+        if class_id:
+            students_q = students_q.filter(Student.class_id == class_id)
+        if search:
+            like = f"%{search}%"
+            students_q = students_q.filter(db.or_(Student.first_name.ilike(like),
+                                                  Student.last_name.ilike(like),
+                                                  Student.matricule.ilike(like)))
+        for student in students_q.all():
+            student.school_fees_paid = student.id in paid_ids
+        db.session.commit()
+        flash("Le règlement des frais de scolarité a été mis à jour.", "success")
+        return redirect(url_for("intendant_tuition", class_id=class_id, q=search))
+    classes = SchoolClass.query.order_by(SchoolClass.name).all()
+    students_q = Student.query
+    if class_id:
+        students_q = students_q.filter(Student.class_id == class_id)
+    if search:
+        like = f"%{search}%"
+        students_q = students_q.filter(db.or_(Student.first_name.ilike(like),
+                                              Student.last_name.ilike(like),
+                                              Student.matricule.ilike(like)))
+    students = students_q.order_by(db.func.lower(Student.first_name),
+                                   db.func.lower(Student.last_name), Student.id).all()
+    return render_template("intendant_tuition.html", students=students, classes=classes,
+                           class_id=class_id, search=search)
 
 
 @app.route("/directeur/utilisateurs/import", methods=["POST"])

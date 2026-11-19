@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Frais de scolarité{% endblock %}
+{% block page_title %}Frais de scolarité{% endblock %}
+{% block page_subtitle %}Cochez les élèves ayant réglé leurs frais de scolarité{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <form method="GET" class="row g-2 align-items-end mb-3">
+    <div class="col-md-4">
+      <label class="form-label">Classe</label>
+      <select name="class_id" class="form-select">
+        <option value="">Toutes les classes</option>
+        {% for school_class in classes %}
+        <option value="{{ school_class.id }}" {{ 'selected' if class_id == school_class.id }}>{{ school_class.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label">Rechercher</label>
+      <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Prénom, nom ou matricule">
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn-ltt-navy flex-grow-1"><i class="bi bi-search"></i> Filtrer</button>
+      <a class="btn-ltt-outline" href="{{ url_for('intendant_tuition') }}">Réinitialiser</a>
+    </div>
+  </form>
+
+  <form method="POST">
+    <input type="hidden" name="class_id" value="{{ class_id or '' }}">
+    <input type="hidden" name="q" value="{{ search }}">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="text-muted">{{ students|length }} élève(s) affiché(s)</span>
+      <button class="btn-ltt-gold"><i class="bi bi-check2-circle"></i> Enregistrer les règlements</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table-ltt">
+        <thead><tr><th>Prénom</th><th>Nom</th><th>Matricule</th><th>Classe</th><th class="text-center">Frais réglés</th></tr></thead>
+        <tbody>
+        {% for student in students %}
+          <tr>
+            <td>{{ student.first_name }}</td>
+            <td>{{ student.last_name or '—' }}</td>
+            <td><code>{{ student.matricule }}</code></td>
+            <td>{{ student.school_class.name if student.school_class else '—' }}</td>
+            <td class="text-center"><input class="form-check-input" type="checkbox" name="paid_student_ids" value="{{ student.id }}" {{ 'checked' if student.school_fees_paid }} aria-label="Frais réglés pour {{ student.full_name }}"></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Aucun élève ne correspond aux filtres.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+{% endblock %}
