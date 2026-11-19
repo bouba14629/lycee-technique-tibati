@@ -224,8 +224,11 @@ class AnnualPage:
             self.text('Total Points : '+format(category['total_points'],'.1f'),360.21,baseline,size=7.043,align='right')
             self.text(category['total_coef'],377.78,baseline,size=7.043,align='center')
             average=category.get('average')
-            self.text('Moyenne/20 : '+_value(average)+' — '+str(category.get('pending_count',0))+' en attente',
-                      395.34,baseline,size=7.043,color=_color(average),max_width=RIGHT-398.34)
+            pending_count = category.get('pending_count', 0) or 0
+            summary = 'Moyenne/20 : '+_value(average)
+            if pending_count > 0:
+                summary += ' — '+str(pending_count)+' en attente'
+            self.text(summary, 395.34,baseline,size=7.043,color=_color(average),max_width=RIGHT-398.34)
             top += total_height
         return top
 

@@ -32,7 +32,7 @@
     <td class="appreciation"{% if (row.appreciation|default('Notes en attente'))|length > 38 %} style="font-size:6.225pt;"{% endif %}>{{ row.appreciation|default('Notes en attente') }}</td>
   </tr>
   {% endfor %}
-  <tr class="total"><td colspan="5" class="right">Total Points : {{ '%.1f'|format(category.total_points) }}</td><td class="center">{{ category.total_coef }}</td><td colspan="3" class="{{ 'low-score' if category.average is not none and category.average < 10 }}">Moyenne/20 : {{ category.average if category.average is not none else '—' }} — {{ category.pending_count|default(0) }} en attente</td></tr>
+  <tr class="total"><td colspan="5" class="right">Total Points : {{ '%.1f'|format(category.total_points) }}</td><td class="center">{{ category.total_coef }}</td><td colspan="3" class="{{ 'low-score' if category.average is not none and category.average < 10 }}">Moyenne/20 : {{ category.average if category.average is not none else '—' }}{% if category.pending_count|default(0) > 0 %} — {{ category.pending_count }} en attente{% endif %}</td></tr>
   {% endfor %}
 </table>
 <table class="annual-summary" width="100%">

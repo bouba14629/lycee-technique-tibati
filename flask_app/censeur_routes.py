@@ -39,6 +39,11 @@ def _crm_subject_filter(query):
                            Subject.name.ilike("%cgao%")))
 
 
+def _stt_cross_section_subject_filter(query):
+    """Matières générales dont les indicateurs sont aussi visibles par le Censeur STT."""
+    return query.filter(or_(Subject.name.ilike("%gso%"), Subject.name.ilike("%marketing%")))
+
+
 def _move_course_indicators(old_course_id, new_course_id, teacher_id):
     """Conserve les indicateurs quand un créneau change d'enseignant.
 
@@ -1714,7 +1719,20 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     if user.role == "conseiller_orientation" and getattr(user, "teacher_profile", None):
         teachers_q = teachers_q.filter(Teacher.id == user.teacher_profile.id)
     if scoped_dept_ids is not None:
-        teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
+        if user.role == "censeur" and user.section_id:
+            cross_section_teacher_ids = {
+                teacher_id for (teacher_id,) in (
+                    Course.query.join(SchoolClass, Course.class_id == SchoolClass.id)
+                    .join(Subject, Course.subject_id == Subject.id)
+                    .filter(SchoolClass.department_id.in_(scoped_dept_ids))
+                    .filter(or_(Subject.name.ilike("%gso%"), Subject.name.ilike("%marketing%")))
+                    .with_entities(Course.teacher_id).distinct().all()
+                )
+            }
+            teachers_q = teachers_q.filter(or_(Teacher.department_id.in_(scoped_dept_ids),
+                                               Teacher.id.in_(cross_section_teacher_ids or [-1])))
+        else:
+            teachers_q = teachers_q.filter(Teacher.department_id.in_(scoped_dept_ids))
     teachers = teachers_q.options(joinedload(Teacher.user)).all()
     if user.role == "chef_orientation":
         # Les saisies des conseillers sont centralisées exclusivement ici.
@@ -1724,6 +1742,8 @@ def _compute_indicators(user, term, department_id=None, class_ids=None, subject_
     orientation_mode = user.role in ("conseiller_orientation", "chef_orientation")
     if teacher_ids:
         courses_q = Course.query.join(SchoolClass).filter(Course.teacher_id.in_(teacher_ids))
+        if user.role == "censeur" and scoped_dept_ids is not None:
+            courses_q = courses_q.filter(SchoolClass.department_id.in_(scoped_dept_ids))
         if user.role == "chef_travaux":
             courses_q = courses_q.join(Subject, Course.subject_id == Subject.id).filter(Subject.category == "Enseignements Professionnels Pratiques")
             if scoped_dept_ids is not None:
@@ -1864,7 +1884,12 @@ def censeur_indicators():
         abort(403)
     subjects_q = Subject.query.order_by(Subject.name)
     if scoped_dept_ids is not None:
-        subjects_q = subjects_q.filter(Subject.department_id.in_(scoped_dept_ids))
+        if user.role == "censeur" and user.section_id:
+            subjects_q = subjects_q.filter(or_(Subject.department_id.in_(scoped_dept_ids),
+                                               Subject.name.ilike("%gso%"),
+                                               Subject.name.ilike("%marketing%")))
+        else:
+            subjects_q = subjects_q.filter(Subject.department_id.in_(scoped_dept_ids))
     if department_id:
         subjects_q = subjects_q.filter(Subject.department_id == department_id)
     if user.role == "chef_travaux":

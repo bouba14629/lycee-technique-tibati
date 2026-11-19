@@ -78,7 +78,7 @@
   <tr class="total-row">
     <td colspan="4" style="text-align:right;">Total Points : {{ cat.total_points }}</td>
     <td>{{ cat.total_coef }}</td>
-    <td colspan="3" class="{% if cat.moyenne is not none and cat.moyenne < 10 %}low-score{% endif %}">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count %} — {{ cat.pending_count }} en attente{% endif %}</td>
+    <td colspan="3" class="{% if cat.moyenne is not none and cat.moyenne < 10 %}low-score{% endif %}">Moyenne/20 : {{ cat.moyenne if cat.moyenne is not none else '—' }}{% if cat.pending_count|default(0) > 0 %} — {{ cat.pending_count }} en attente{% endif %}</td>
   </tr>
   {% endfor %}
 </table>
