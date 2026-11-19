@@ -634,6 +634,11 @@ def annual_bulletin_data(student, _cache=None):
         marker in sanction_text for marker in ("exclusion définitive", "exclusion definitive", "exclu définitivement", "exclu definitivement")
     )
     rank_is_nc = overall_avg is not None and overall_avg < 3
+    class_name_upper = (student.school_class.name or "").strip().upper()
+    special_repeat_level = (
+        student.school_class.level in ("4A", "P", "Tle")
+        or class_name_upper.startswith(("QUATRIEME ANNEE", "PREMIERE ", "PREMIÈRE ", "TERMINALE "))
+    )
     excluded = (
         not bool(student.school_fees_paid)
         or rank_is_nc
@@ -658,6 +663,7 @@ def annual_bulletin_data(student, _cache=None):
         "cannot_triplicate": bool(student.is_repeater),
         "resigning": rank_is_nc,
         "insolvency": not bool(student.school_fees_paid),
+        "repeat_if_failure": special_repeat_level and not bool(student.is_repeater),
     }
 
     return {"terms": terms, "categories": categories, "overall_points": round(points_total, 2),
@@ -672,6 +678,7 @@ def annual_bulletin_data(student, _cache=None):
             "rank": class_rank if overall_avg is not None else None,
             "rank_label": "NC" if rank_is_nc else (f"{class_rank}e" if class_rank else None),
             "decision_marks": decision_marks, "next_class_name": next_class_name,
+            "repeat_class_name": student.school_class.name if special_repeat_level else None,
             "work_marks": competency_marks(overall_avg),
             "official_work_appreciation": appreciation_code(overall_avg),
             "absences_justified_hours": floor_hours(just_hours), "absences_justified_days": just_days,

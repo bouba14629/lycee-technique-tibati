@@ -29,7 +29,8 @@ def _fonts(context):
     result = {}
     for kind, key, fallback in [('normal', 'annual_sans_regular', 'Helvetica'),
                                 ('bold', 'annual_sans_bold', 'Helvetica-Bold'),
-                                ('italic', 'annual_sans_italic', 'Helvetica-Oblique')]:
+                                ('italic', 'annual_sans_italic', 'Helvetica-Oblique'),
+                                ('bold_italic', 'annual_sans_bold_italic', 'Helvetica-BoldOblique')]:
         path = context.get(key)
         name = 'AnnualImported-' + kind
         if path and Path(path).is_file():
@@ -283,7 +284,14 @@ class AnnualPage:
         admitted_class = data.get('next_class_name') or '______________________________'
         self.text(('[X] ' if decisions.get('admitted') else '[ ] ') + 'ADMIS(E) EN CLASSE DE : ' + admitted_class,
                   17.25,top+19.5, max_width=369)
-        self.text('[ ] REDOUBLE LA CLASSE DE : ____________________________',17.25,top+32.25)
+        repeat_prefix = ('[X] ' if decisions.get('repeat_if_failure') else '[ ] ') + 'REDOUBLE LA CLASSE DE : '
+        self.text(repeat_prefix, 17.25, top+32.25, max_width=369)
+        if decisions.get('repeat_if_failure'):
+            repeat_x = 17.25 + pdfmetrics.stringWidth(repeat_prefix, self.fonts['bold'], 6.9)
+            repeat_class = str(data.get('repeat_class_name') or '____________________________')
+            self.text(repeat_class, repeat_x, top+32.25, max_width=369-(repeat_x-17.25))
+            repeat_x += pdfmetrics.stringWidth(repeat_class, self.fonts['bold'], 6.9)
+            self.text(' si échec', repeat_x, top+32.25, kind='bold_italic', max_width=369-(repeat_x-17.25))
         decision_line = ('[X] ' if decisions.get('excluded') else '[ ] ') + 'Exclu(e)  '
         decision_line += ('[X] ' if decisions.get('competencies_not_acquired') else '[ ] ') + 'Compétences non acquises  '
         decision_line += ('[X] ' if decisions.get('conduct') else '[ ] ') + 'Conduite  '
