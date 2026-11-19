@@ -500,7 +500,7 @@ def schedule_group_labels(entries):
 
 def annual_bulletin_data(student, _cache=None):
     """Calcule le bulletin annuel sur les trois trimestres sans modifier le bulletin trimestriel."""
-    from models import SUBJECT_CATEGORIES, Attendance, Sanction
+    from models import SUBJECT_CATEGORIES, Attendance, Sanction, SchoolClass
     if not student.class_id:
         return None
     cache = _cache if _cache is not None else {}
@@ -624,6 +624,42 @@ def annual_bulletin_data(student, _cache=None):
     elif total_absence_hours > 30:
         conduct_exclusion_label = "Définitive"
 
+    # Décision annuelle automatique : ces indicateurs sont préparés une seule
+    # fois ici afin que le modèle HTML et le générateur vectoriel restent
+    # parfaitement synchronisés.
+    sanction_text = " ".join(
+        f"{sanction.type or ''} {sanction.description or ''}" for sanction in sanctions
+    ).casefold()
+    discipline_definitive = conduct_exclusion_label == "Définitive" or any(
+        marker in sanction_text for marker in ("exclusion définitive", "exclusion definitive", "exclu définitivement", "exclu definitivement")
+    )
+    rank_is_nc = overall_avg is not None and overall_avg < 3
+    excluded = (
+        not bool(student.school_fees_paid)
+        or rank_is_nc
+        or bool(student.is_repeater)
+        or discipline_definitive
+        or (overall_avg is not None and overall_avg < 6)
+    )
+    next_class_name = None
+    current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
+    if current_level_index >= 0 and current_level_index + 1 < len(LEVEL_ORDER):
+        next_level = LEVEL_ORDER[current_level_index + 1]
+        candidates = SchoolClass.query.filter_by(
+            department_id=student.school_class.department_id, level=next_level
+        ).order_by(SchoolClass.name).all()
+        matching = [item for item in candidates if item.specialty == student.school_class.specialty]
+        next_class_name = (matching or candidates)[0].name if (matching or candidates) else None
+    decision_marks = {
+        "admitted": overall_avg is not None and overall_avg >= 9 and not excluded,
+        "excluded": excluded,
+        "competencies_not_acquired": overall_avg is not None and overall_avg < 6,
+        "conduct": discipline_definitive,
+        "cannot_triplicate": bool(student.is_repeater),
+        "resigning": rank_is_nc,
+        "insolvency": not bool(student.school_fees_paid),
+    }
+
     return {"terms": terms, "categories": categories, "overall_points": round(points_total, 2),
             "overall_coef": coef_total, "overall_avg": overall_avg,
             "term_averages": [round(term_points[index] / term_coefs[index], 2) if term_coefs[index] else None for index in range(3)],
@@ -634,6 +670,8 @@ def annual_bulletin_data(student, _cache=None):
             "annual_nb_above_10": annual_nb_above_10,
             "annual_success_rate": annual_success_rate,
             "rank": class_rank if overall_avg is not None else None,
+            "rank_label": "NC" if rank_is_nc else (f"{class_rank}e" if class_rank else None),
+            "decision_marks": decision_marks, "next_class_name": next_class_name,
             "work_marks": competency_marks(overall_avg),
             "official_work_appreciation": appreciation_code(overall_avg),
             "absences_justified_hours": floor_hours(just_hours), "absences_justified_days": just_days,

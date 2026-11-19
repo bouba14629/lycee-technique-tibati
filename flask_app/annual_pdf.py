@@ -241,7 +241,7 @@ class AnnualPage:
         labels=[('Total des points',data.get('overall_points'),'Moyenne Générale de la classe',data.get('class_avg')),
                 ('Coefficient',data.get('overall_coef'),'Moyenne du premier',data.get('class_high')),
                 ('Moyenne annuelle',avg,'Moyennes ≥ 10',str(data.get('annual_nb_above_10', 0))+'/'+str(data.get('class_size', 0))),
-                ('Rang',str(data['rank'])+'e/'+str(data['class_size']) if data.get('rank') else '—/'+str(data.get('class_size',0)),
+                ('Rang',(data.get('rank_label') or '—')+'/'+str(data.get('class_size',0)),
                  'Taux réussite',_value(data.get('annual_success_rate'))+'%')]
         for i,items in enumerate(labels):
             self.row(top,11.625,edges,[ _value(v) for v in items],
@@ -279,10 +279,18 @@ class AnnualPage:
         self.box(LEFT,389.25,top,49.5,colors.white)
         self.box(389.25,RIGHT,top,49.5,colors.white)
         self.text('DÉCISION DU CONSEIL DE CLASSE',17.25,top+9.75,color=BLUE)
-        self.text('[ ] ADMIS(E) EN CLASSE DE : ______________________________',17.25,top+19.5)
+        decisions = data.get('decision_marks', {})
+        admitted_class = data.get('next_class_name') or '______________________________'
+        self.text(('[X] ' if decisions.get('admitted') else '[ ] ') + 'ADMIS(E) EN CLASSE DE : ' + admitted_class,
+                  17.25,top+19.5, max_width=369)
         self.text('[ ] REDOUBLE LA CLASSE DE : ____________________________',17.25,top+32.25)
-        self.text('[ ] Exclu(e)  [ ] Compétences non acquises  [ ] Conduite  [ ] Ne peut tripler  [ ] Démissionnaire  [ ] Insolvabilité',
-                  17.25,top+45,max_width=369)
+        decision_line = ('[X] ' if decisions.get('excluded') else '[ ] ') + 'Exclu(e)  '
+        decision_line += ('[X] ' if decisions.get('competencies_not_acquired') else '[ ] ') + 'Compétences non acquises  '
+        decision_line += ('[X] ' if decisions.get('conduct') else '[ ] ') + 'Conduite  '
+        decision_line += ('[X] ' if decisions.get('cannot_triplicate') else '[ ] ') + 'Ne peut tripler  '
+        decision_line += ('[X] ' if decisions.get('resigning') else '[ ] ') + 'Démissionnaire  '
+        decision_line += ('[X] ' if decisions.get('insolvency') else '[ ] ') + 'Insolvabilité'
+        self.text(decision_line, 17.25, top+45, max_width=369)
         self.text('TIBATI, le ______________',485.1,top+9.75,color=colors.HexColor('#6b7385'),align='center')
         self.text('LE PROVISEUR',485.1,top+24.75,color=BLUE,align='center')
         return top+49.5
