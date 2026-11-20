@@ -634,11 +634,9 @@ def annual_bulletin_data(student, _cache=None):
         marker in sanction_text for marker in ("exclusion définitive", "exclusion definitive", "exclu définitivement", "exclu definitivement")
     )
     rank_is_nc = overall_avg is not None and overall_avg < 3
-    class_name_upper = (student.school_class.name or "").strip().upper()
-    special_repeat_level = (
-        student.school_class.level in ("4A", "P", "Tle")
-        or class_name_upper.startswith(("QUATRIEME ANNEE", "PREMIERE ", "PREMIÈRE ", "TERMINALE "))
-    )
+    # Le redoublement conditionnel est réservé aux classes de quatrième année,
+    # Première et Terminale. Toutes les autres classes gardent cette case vide.
+    special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
     excluded = (
         not bool(student.school_fees_paid)
         or rank_is_nc
@@ -1172,6 +1170,7 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
 
 
 LEVEL_ORDER = ["1A", "2A", "3A", "4A", "2nde", "P", "Tle"]
+REPEAT_IF_FAILURE_LEVELS = frozenset(("4A", "P", "Tle"))
 
 
 def sort_classes_by_level(classes):
