@@ -1057,6 +1057,62 @@ def _bulletins_url(class_id=None, term=None):
     return url_for("censeur_bulletins", **params)
 
 
+def _grouped_bulletin_students_data(classes, term):
+    """Prépare les bulletins de plusieurs classes avec le même pipeline que l'export par classe."""
+    from pdf_utils import get_student_photo_source
+    from bulletin_qr import bulletin_qr_data_uri
+    from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES
+
+    students_data = []
+    bulletin_cache = {}
+    for cls in classes:
+        students = sorted(cls.students, key=lambda student: (
+            (student.first_name or "").strip().casefold(),
+            (student.last_name or "").strip().casefold(),
+            student.id,
+        ))
+        if not students:
+            continue
+        if term == "Annuel":
+            for student in students:
+                photo_source = get_student_photo_source(student)
+                data = annual_bulletin_data(student, _cache=bulletin_cache)
+                students_data.append({
+                    "student": student,
+                    "data": data,
+                    "photo_path": photo_source,
+                    "photo_available": bool(photo_source),
+                    "qr_data_uri": bulletin_qr_data_uri(student, term, data=data, school_year=get_current_school_year()),
+                })
+            continue
+
+        seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+        scheduled_courses = scheduled_courses_for_class(cls.id)
+        prefill_course_average_cache(
+            bulletin_cache,
+            [student.id for student in students],
+            [course.id for course in scheduled_courses],
+            term,
+        )
+        for student in students:
+            data = bulletin_data(student, term=term, _cache=bulletin_cache)
+            for category in data.get("categories", []):
+                category["rows"] = sorted(
+                    category.get("rows", []),
+                    key=lambda item: (item["course"].subject.name or "").strip().casefold(),
+                )
+            photo_source = get_student_photo_source(student)
+            students_data.append({
+                "student": student,
+                "data": data,
+                "bulletin_ref": f"{student.matricule}-T{T.index(term) + 1}-2025",
+                "photo_path": photo_source,
+                "photo_available": bool(photo_source),
+                "qr_data_uri": bulletin_qr_data_uri(student, term, data=data, school_year=get_current_school_year()),
+            })
+    return students_data
+
+
 @app.route("/censeur/classes/<int:class_id>/professeur-principal", methods=["POST"])
 @roles_required("censeur")
 def censeur_class_homeroom(class_id):
@@ -1479,6 +1535,7 @@ def censeur_bulletins_revoke_validation(class_id):
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
     from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source, bulletin_logo_pdf_path
+    from bulletin_qr import bulletin_qr_data_uri
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1500,13 +1557,15 @@ def censeur_bulletins_class_pdf(class_id):
         students_data = []
         for st in students:
             photo_source = get_student_photo_source(st)
+            data = annual_bulletin_data(st, _cache=bulletin_cache)
             students_data.append({
                 "student": st,
-                "data": annual_bulletin_data(st, _cache=bulletin_cache),
+                "data": data,
                 # Embarquement base64 : le PDF ne dépend plus du chemin local
                 # ou du proxy de stockage au moment du rendu xhtml2pdf.
                 "photo_path": photo_source,
                 "photo_available": bool(photo_source),
+                "qr_data_uri": bulletin_qr_data_uri(st, term, data=data, school_year=get_current_school_year()),
             })
         pdf = render_grouped_bulletins_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1543,6 +1602,7 @@ def censeur_bulletins_class_pdf(class_id):
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
             "photo_path": photo_source,
             "photo_available": bool(photo_source),
+            "qr_data_uri": bulletin_qr_data_uri(st, term, data=student_data, school_year=get_current_school_year()),
         })
     pdf = render_grouped_bulletins_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
@@ -1555,6 +1615,49 @@ def censeur_bulletins_class_pdf(class_id):
     filename = f"Bulletins_{cls.name}_{term}.pdf".replace(" ", "_")
     inline_preview = request.args.get("preview") == "1"
     return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview, download_name=filename)
+
+
+@app.route("/censeur/bulletins/toutes-classes/telecharger.pdf")
+@roles_required("censeur", "directeur")
+def censeur_bulletins_all_classes_pdf():
+    """Imprime tous les bulletins accessibles, une page par élève."""
+    from flask import send_file
+    from pdf_utils import render_grouped_bulletins_pdf, bulletin_logo_pdf_path
+    from utils import TERMS as T, TERM_ORDINALS
+
+    user = User.query.get(session["user_id"])
+    scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
+    classes_query = (SchoolClass.query.join(Department)
+                     .order_by(Department.name, SchoolClass.level, SchoolClass.name))
+    if scoped_class_ids is not None:
+        classes_query = classes_query.filter(SchoolClass.id.in_(scoped_class_ids))
+    classes = classes_query.all()
+    term = request.args.get("term", T[0])
+    if term == "Trimestre 3":
+        term = "Annuel"
+    if term not in (T[0], T[1], "Annuel"):
+        abort(400)
+    students_data = _grouped_bulletin_students_data(classes, term)
+    if not students_data:
+        flash("Aucun élève n’est disponible pour l’impression globale.", "warning")
+        return redirect(_bulletins_url(term=term))
+    context = {"school_year": get_current_school_year(), "approval": None}
+    if term == "Annuel":
+        template_name = "pdf/class_annual_bulletins_pdf.html"
+    else:
+        seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+        template_name = "pdf/class_bulletins_pdf.html"
+        context.update(TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b,
+                       term_ordinal=TERM_ORDINALS.get(term, ""),
+                       logo_path=bulletin_logo_pdf_path(), avatar_path=None)
+    pdf = render_grouped_bulletins_pdf(template_name, students_data=students_data, **context)
+    if not pdf:
+        abort(500)
+    suffix = "annuels" if term == "Annuel" else term.replace(" ", "_")
+    filename = f"Bulletins_toutes_classes_{suffix}.pdf"
+    inline_preview = request.args.get("preview") == "1"
+    return send_file(pdf, mimetype="application/pdf", as_attachment=not inline_preview,
+                     download_name=filename)
 
 
 def _sanctioned_students_query(user, search, date_from, date_to):

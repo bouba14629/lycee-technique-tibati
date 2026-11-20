@@ -29,12 +29,45 @@ def bulletin_qr_url(student, term):
     return public_base + path
 
 
-def bulletin_qr_data_uri(student, term):
-    """Petit QR PNG embarqué directement dans le HTML/PDF."""
+def bulletin_qr_payload(student, term, data=None, school_year=None):
+    """Contenu lisible du QR, sans dépendre d’un hôte ou d’une route locale."""
+    data = data or (annual_bulletin_data(student) if term == "Annuel" else bulletin_data(student, term=term)) or {}
+    marks = data.get("decision_marks") or {}
+    if marks.get("excluded"):
+        decision = "Exclu(e)"
+    elif marks.get("repeat_if_failure"):
+        decision = f"Redouble la classe de {data.get('repeat_class_name') or '—'} si échec"
+    elif marks.get("admitted"):
+        decision = f"Admis(e) en classe de {data.get('next_class_name') or '—'}"
+    else:
+        decision = "—"
+    photo = student.photo or "Non disponible"
+    if str(photo).startswith("data:"):
+        photo = "Photo disponible (image intégrée)"
+    elif len(str(photo)) > 180:
+        photo = "Photo disponible"
+    dob = student.dob.strftime("%d/%m/%Y") if student.dob else "—"
+    school_class = student.school_class.name if student.school_class else "—"
+    average = data.get("overall_avg")
+    return "\n".join([
+        "BULLETIN - LT TIBATI",
+        f"Noms et Prénoms : {student.full_name}",
+        f"Date et lieu de naissance : {dob} à {student.birth_place or '—'}",
+        f"Identifiant Unique : {student.matricule or '—'}",
+        f"Photo : {photo}",
+        f"Année Scolaire : {school_year or get_current_school_year()}",
+        f"Classe : {school_class}",
+        f"Moyenne : {average if average is not None else '—'}",
+        f"DÉCISION DU CONSEIL DE CLASSE : {decision}",
+    ])
+
+
+def bulletin_qr_data_uri(student, term, data=None, school_year=None):
+    """QR PNG détaillé embarqué directement dans le HTML/PDF."""
     try:
         code = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M,
                              box_size=4, border=1)
-        code.add_data(bulletin_qr_url(student, term))
+        code.add_data(bulletin_qr_payload(student, term, data=data, school_year=school_year))
         code.make(fit=True)
         image = code.make_image(fill_color="#102F55", back_color="white")
         output = BytesIO()

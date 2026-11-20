@@ -136,3 +136,4 @@
     <td style="width:24%; text-align:center; vertical-align:top; padding-top:2pt; height:70pt; color:#0B2545;"><span style="font-size:7pt; line-height:7pt; color:#0B2545;">TIBATI, le ______</span><span style="display:block; margin:0; line-height:7pt;">LE PROVISEUR</span>{% if approval %}<span style="display:block; line-height:7pt;" class="digital-stamp">VALIDÉ NUMÉRIQUEMENT<br>{{ approval.validated_by.full_name }} · {{ approval.validated_at.strftime('%d/%m/%Y') }}</span>{% endif %}<div style="height:40pt;"></div></td>
   </tr>
 </table>
+{% if qr_data_uri %}<img src="{{ qr_data_uri }}" alt="QR du bulletin" style="position:fixed; left:12pt; bottom:10pt; width:42pt; height:42pt;" />{% endif %}
