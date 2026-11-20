@@ -51,7 +51,8 @@
       <strong>Année Scolaire :</strong> {{ school_year }}<br>
       <strong>Classe :</strong> {{ student.school_class.name if student.school_class }}<br>
       <strong>Effectif :</strong> {{ student.school_class.students|length if student.school_class }}<br>
-      <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}
+      <strong>Professeur Principal :</strong> {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}<br>
+      <strong>Frais de Scolarité :</strong> {{ 'Oui' if student.school_fees_paid else 'Non' }}
     </td>
     <td width="20%" style="width:20%; padding:0 0 0 5pt; text-align:center; vertical-align:top;">
       <p class="student-photo-placement" align="center" style="margin:0; text-align:center; line-height:1;">{% if student_photo_path and (photo_available is not defined or photo_available) %}<img src="{{ student_photo_path }}" style="width:60pt; height:73pt; border:1pt solid #000;" width="60" height="73" alt="Photo de {{ student.full_name }}"/>{% endif %}</p>
