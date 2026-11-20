@@ -3,11 +3,12 @@ import os
 from io import BytesIO
 
 import qrcode
-from flask import current_app, render_template, abort, url_for
+from flask import current_app, render_template, abort, url_for, make_response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy.orm import joinedload
 
 from app import app
-from models import Student
+from models import Student, SchoolClass, Department
 from utils import TERMS, bulletin_data, annual_bulletin_data, get_current_school_year
 
 
@@ -83,10 +84,32 @@ def bulletin_qr_view(token):
         payload = _serializer().loads(token, max_age=3600 * 24 * 410)
     except (BadSignature, SignatureExpired):
         abort(404)
-    student = Student.query.get(payload.get("student_id"))
+    student = (Student.query.options(
+        joinedload(Student.user),
+        joinedload(Student.school_class).joinedload(SchoolClass.department).joinedload(Department.section),
+    ).filter(Student.id == payload.get("student_id")).first())
     term = payload.get("term")
     if not student or term not in (*TERMS, "Annuel"):
         abort(404)
+    school_year = get_current_school_year()
     data = annual_bulletin_data(student) if term == "Annuel" else bulletin_data(student, term=term)
-    return render_template("bulletin_qr.html", student=student, data=data, term=term,
-                           school_year=get_current_school_year())
+    marks = data.get("decision_marks") or {}
+    if marks.get("excluded"):
+        decision_label = "Exclu(e)"
+    elif marks.get("repeat_if_failure"):
+        decision_label = f"Redouble la classe de {data.get('repeat_class_name') or '—'} si échec"
+    elif marks.get("admitted"):
+        decision_label = f"Admis(e) en classe de {data.get('next_class_name') or '—'}"
+    else:
+        decision_label = "Décision non renseignée pour cette période"
+    from app import student_photo_url
+    response = make_response(render_template(
+        "bulletin_qr.html", student=student, data=data, term=term,
+        school_year=school_year, photo_url=student_photo_url(student.photo),
+        decision_label=decision_label,
+    ))
+    # Le token est signé et immuable ; un bref cache accélère les scans répétés
+    # sans conserver une ancienne note plus longtemps que quelques secondes.
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
