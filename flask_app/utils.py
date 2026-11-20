@@ -655,7 +655,7 @@ def annual_bulletin_data(student, _cache=None):
         matching = [item for item in candidates if item.specialty == student.school_class.specialty]
         next_class_name = (matching or candidates)[0].name if (matching or candidates) else None
     decision_marks = {
-        "admitted": overall_avg is not None and overall_avg >= 9 and not excluded,
+        "admitted": overall_avg is not None and overall_avg >= 9 and not excluded and not repeat_if_failure,
         "excluded": excluded,
         "competencies_not_acquired": overall_avg is not None and overall_avg < 6,
         "conduct": discipline_definitive,
