@@ -23,7 +23,8 @@
     <div class="period">{{ term }}<br>Année scolaire {{ school_year }}</div>
   </header>
   <nav class="actions" aria-label="Actions de la fiche">
-    <button class="primary" type="button" onclick="window.print()">Imprimer la fiche</button>
+    <button class="primary" type="button" onclick="downloadBulletinPdf()">Télécharger le bulletin PDF</button>
+    <button type="button" onclick="window.print()">Imprimer la fiche</button>
     <button type="button" onclick="downloadQrSheet()">Télécharger la fiche</button>
   </nav>
   <div class="identity">
@@ -58,6 +59,19 @@ function downloadQrSheet(){
   document.body.appendChild(link); link.click(); link.remove();
   setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
+
+function downloadBulletinPdf(){
+  const url={{ pdf_download_url|tojson }};
+  const frame=document.createElement('iframe');
+  frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:fixed;width:1px;height:1px;left:-100px;top:-100px;border:0;opacity:0';
+  frame.src=url;
+  document.body.appendChild(frame);
+  setTimeout(()=>frame.remove(),120000);
+}
+
+// Le QR ouvre cette fiche puis lance le PDF sans attendre une action supplémentaire.
+window.addEventListener('load',()=>setTimeout(downloadBulletinPdf,120));
 </script>
 </body>
 </html>

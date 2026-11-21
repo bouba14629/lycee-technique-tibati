@@ -7,7 +7,7 @@ from pathlib import Path
 
 import qrcode
 from PIL import Image, ImageOps
-from flask import abort, has_request_context, make_response, render_template, url_for
+from flask import abort, has_request_context, make_response, render_template, send_file, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy.orm import joinedload
 
@@ -17,8 +17,11 @@ from utils import TERMS, annual_bulletin_data, bulletin_data, get_current_school
 
 
 _QR_PAGE_CACHE = OrderedDict()
+_QR_PDF_CACHE = OrderedDict()
 _QR_PAGE_CACHE_TTL = 60
 _QR_PAGE_CACHE_MAX = 512
+_QR_PDF_CACHE_TTL = 60
+_QR_PDF_CACHE_MAX = 128
 
 
 def _serializer():
@@ -165,6 +168,7 @@ def _qr_view_data(student, data, term):
         "institution_name": "Lycée Technique de Tibati",
         "institution_logo_url": ltt_url_for("static", filename="img/logo.png"),
         "qr_image": bulletin_qr_data_uri(student, term),
+        "pdf_download_url": url_for("bulletin_qr_pdf", token=bulletin_qr_token(student, term)),
     }
 
 
@@ -187,15 +191,26 @@ def _cache_page(token, html):
         _QR_PAGE_CACHE.popitem(last=False)
 
 
-@app.get("/bulletin/qr/<token>")
-def bulletin_qr_view(token):
-    cached = _cached_page(token)
-    if cached:
-        result = make_response(cached)
-        result.headers["X-QR-Page-Cache"] = "HIT"
-        result.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=600"
-        result.headers["X-Content-Type-Options"] = "nosniff"
-        return result
+def _cached_pdf(token):
+    item = _QR_PDF_CACHE.get(token)
+    if not item:
+        return None
+    created, payload = item
+    if time.monotonic() - created > _QR_PDF_CACHE_TTL:
+        _QR_PDF_CACHE.pop(token, None)
+        return None
+    _QR_PDF_CACHE.move_to_end(token)
+    return payload
+
+
+def _cache_pdf(token, payload):
+    _QR_PDF_CACHE[token] = (time.monotonic(), payload)
+    _QR_PDF_CACHE.move_to_end(token)
+    while len(_QR_PDF_CACHE) > _QR_PDF_CACHE_MAX:
+        _QR_PDF_CACHE.popitem(last=False)
+
+
+def _qr_student_from_token(token):
     try:
         payload = _serializer().loads(token, max_age=3600 * 24 * 410)
     except (BadSignature, SignatureExpired):
@@ -208,6 +223,19 @@ def bulletin_qr_view(token):
     ).filter(Student.id == payload.get("student_id")).first())
     if not student:
         abort(404)
+    return student, term
+
+
+@app.get("/bulletin/qr/<token>")
+def bulletin_qr_view(token):
+    cached = _cached_page(token)
+    if cached:
+        result = make_response(cached)
+        result.headers["X-QR-Page-Cache"] = "HIT"
+        result.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=600"
+        result.headers["X-Content-Type-Options"] = "nosniff"
+        return result
+    student, term = _qr_student_from_token(token)
     data = annual_bulletin_data(student) if term == "Annuel" else bulletin_data(student, term=term)
     view_data = _qr_view_data(student, data, term)
     html = render_template("bulletin_qr.html", student=student, data=data, **view_data)
@@ -217,3 +245,48 @@ def bulletin_qr_view(token):
     result.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=600"
     result.headers["X-Content-Type-Options"] = "nosniff"
     return result
+
+
+@app.get("/bulletin/qr/<token>/download.pdf")
+def bulletin_qr_pdf(token):
+    """Téléchargement rapide du bulletin correspondant au QR signé."""
+    cached = _cached_pdf(token)
+    if cached:
+        pdf_bytes, filename = cached
+        return send_file(BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True,
+                         download_name=filename, max_age=0)
+    student, term = _qr_student_from_token(token)
+    from pdf_utils import get_student_photo_source, render_grouped_bulletins_pdf, render_pdf
+    photo_path = get_student_photo_source(student)
+    school_year = get_current_school_year()
+    if term == "Annuel":
+        data = annual_bulletin_data(student)
+        if not data:
+            abort(404)
+        pdf = render_grouped_bulletins_pdf(
+            "pdf/class_annual_bulletins_pdf.html",
+            students_data=[{"student": student, "data": data, "photo_path": photo_path,
+                            "photo_available": bool(photo_path), "qr_data_uri": None}],
+            school_year=school_year, approval=None, avatar_path=None,
+        )
+        filename = f"Bulletin_annuel_{student.matricule or student.id}.pdf"
+    else:
+        from utils import TERM_ORDINALS, TERM_SEQUENCES
+        data = bulletin_data(student, term=term)
+        if not data:
+            abort(404)
+        seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
+        pdf = render_pdf(
+            "pdf/bulletin_pdf.html", student=student, data=data, term=term,
+            TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
+            bulletin_ref=f"{student.matricule}-T{TERMS.index(term)+1}-2025",
+            approval=None, school_year=school_year, student_photo_path=photo_path,
+            photo_available=bool(photo_path),
+        )
+        filename = f"Bulletin_{student.last_name}_{student.first_name}_{term}.pdf".replace(" ", "_")
+    if not pdf:
+        abort(500)
+    payload = pdf.getvalue()
+    _cache_pdf(token, (payload, filename))
+    return send_file(BytesIO(payload), mimetype="application/pdf", as_attachment=True,
+                     download_name=filename, max_age=0)
