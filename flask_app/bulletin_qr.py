@@ -107,6 +107,24 @@ def bulletin_qr_data_uri(student, term):
 
 def _decision_label(data):
     marks = data.get("decision_marks", {}) if isinstance(data, dict) else {}
+    work_marks = data.get("work_marks", {}) if isinstance(data, dict) else {}
+    competency_labels = []
+    if work_marks.get("travail_insuffisant"):
+        competency_labels.append("Compétences non acquises")
+    if work_marks.get("bon_travail"):
+        competency_labels.append("Compétences moyennement acquises")
+    if work_marks.get("travail_passable"):
+        competency_labels.append("Compétences bien acquises")
+    if work_marks.get("assez_bon_travail"):
+        competency_labels.append("Compétences très bien acquises")
+    mention_labels = []
+    if work_marks.get("tableau_honneur"):
+        mention_labels.append("Tableau d'Honneur")
+    if work_marks.get("encouragements"):
+        mention_labels.append("Encouragements")
+    if work_marks.get("felicitations"):
+        mention_labels.append("Félicitations")
+    competency_decision = " · ".join(mention_labels + competency_labels)
     if marks.get("excluded"):
         reasons = []
         if marks.get("insolvency"):
@@ -119,12 +137,15 @@ def _decision_label(data):
             reasons.append("Conduite")
         if marks.get("competencies_not_acquired"):
             reasons.append("Compétences non acquises")
-        return "Exclu(e)" + (" — " + ", ".join(reasons) if reasons else "")
+        label = "Exclu(e)" + (" — " + ", ".join(reasons) if reasons else "")
+        return label + (" · " + competency_decision if competency_decision else "")
     if marks.get("admitted"):
-        return "Admis(e) en classe de " + str(data.get("next_class_name") or "—")
+        label = "Admis(e) en classe de " + str(data.get("next_class_name") or "—")
+        return label + (" · " + competency_decision if competency_decision else "")
     if marks.get("repeat_if_failure"):
-        return "Redouble la classe de " + str(data.get("repeat_class_name") or "—") + " si échec"
-    return "Décision en attente"
+        label = "Redouble la classe de " + str(data.get("repeat_class_name") or "—") + " si échec"
+        return label + (" · " + competency_decision if competency_decision else "")
+    return competency_decision or "Décision en attente"
 
 
 def _qr_view_data(student, data, term):
