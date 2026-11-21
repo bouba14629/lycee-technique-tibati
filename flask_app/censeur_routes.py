@@ -12,6 +12,7 @@ from utils import (roles_required, check_schedule_conflict, DAYS, general_averag
                     OFFICIAL_PERIODS, build_official_grid, filled_official_slots, user_scoped_class_ids, user_scoped_department_ids, TERMS,
                     TERM_SEQUENCES, council_statistics, sort_classes_by_level, annual_bulletin_data,
                     bulletin_data, scheduled_courses_for_class, get_current_school_year, schedule_extra_hours)
+from bulletin_qr import bulletin_qr_data_uri
 
 
 def _is_stt_class(school_class):
@@ -1060,7 +1061,6 @@ def _bulletins_url(class_id=None, term=None):
 def _grouped_bulletin_students_data(classes, term):
     """Prépare les bulletins de plusieurs classes avec le même pipeline que l'export par classe."""
     from pdf_utils import get_student_photo_source
-    from bulletin_qr import bulletin_qr_data_uri
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES
 
     students_data = []
@@ -1102,12 +1102,14 @@ def _grouped_bulletin_students_data(classes, term):
                     key=lambda item: (item["course"].subject.name or "").strip().casefold(),
                 )
             photo_source = get_student_photo_source(student)
+            compact = sum(len(category.get("rows", [])) for category in data.get("categories", [])) >= 18
             students_data.append({
                 "student": student,
                 "data": data,
                 "bulletin_ref": f"{student.matricule}-T{T.index(term) + 1}-2025",
                 "photo_path": photo_source,
                 "photo_available": bool(photo_source),
+                "compact": compact,
                 "qr_data_uri": bulletin_qr_data_uri(student, term, data=data, school_year=get_current_school_year()),
             })
     return students_data
@@ -1535,7 +1537,6 @@ def censeur_bulletins_revoke_validation(class_id):
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
     from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source, bulletin_logo_pdf_path
-    from bulletin_qr import bulletin_qr_data_uri
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1596,12 +1597,14 @@ def censeur_bulletins_class_pdf(class_id):
         # Une unique résolution de Student.photo pour cet élève ; le serveur
         # de stockage est sélectionné par pdf_utils, jamais par le Host Flask.
         photo_source = get_student_photo_source(st)
+        compact = sum(len(category.get("rows", [])) for category in student_data.get("categories", [])) >= 18
         students_data.append({
             "student": st,
             "data": student_data,
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
             "photo_path": photo_source,
             "photo_available": bool(photo_source),
+            "compact": compact,
             "qr_data_uri": bulletin_qr_data_uri(st, term, data=student_data, school_year=get_current_school_year()),
         })
     pdf = render_grouped_bulletins_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
