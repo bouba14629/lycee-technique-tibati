@@ -43,16 +43,20 @@ def _fonts(context):
     return result
 
 
-def _image(source, portrait=False):
+def _image(source, portrait=False, preserve_alpha=False):
     if not source:
         return None
     try:
         raw = BytesIO(base64.b64decode(source.split(',', 1)[1])) if str(source).startswith('data:') else source
         with Image.open(raw) as im:
-            im = ImageOps.exif_transpose(im).convert('RGB')
+            im = ImageOps.exif_transpose(im)
             if portrait:
                 # Proportions du cadre importé ; recadrage centré plutôt que déformation.
-                im = ImageOps.fit(im, (264, 296), Image.Resampling.LANCZOS)
+                im = ImageOps.fit(im.convert('RGB'), (264, 296), Image.Resampling.LANCZOS)
+            elif preserve_alpha:
+                im = im.convert('RGBA')
+            else:
+                im = im.convert('RGB')
             return ImageReader(im.copy())
     except Exception:
         LOGGER.warning('Annual model image invalid; retaining other students photos', exc_info=True)
@@ -324,6 +328,10 @@ def render_annual_bulletins_pdf(**context):
         if not row.get('data'):
             continue
         page=AnnualPage(pdf,fonts)
+        # Filigrane dessiné avant le contenu afin de rester en arrière-plan.
+        watermark = _image(context.get('bulletin_watermark_data_uri'), preserve_alpha=True)
+        if watermark:
+            pdf.drawImage(watermark, 118, 236, width=360, height=360, mask='auto')
         page.header(row['student'],row['data'],context)
         page.photo(row)
         bottom=page.footer(row['data'],page.grades(row['data']))
