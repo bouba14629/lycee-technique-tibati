@@ -161,6 +161,12 @@ class AnnualPage:
         if image:
             self.pdf.drawImage(image, 514.25, PAGE_H-211.5, width=49.5, height=55.5, mask='auto')
 
+    def qr(self, row):
+        """Dessine le QR de la période en bas à gauche, sans déplacer le modèle."""
+        image = _image(row.get('qr_data_uri'))
+        if image:
+            self.pdf.drawImage(image, 15, 12, width=34, height=34, mask='auto')
+
     def grades(self, data):
         # 18 matières / quatre catégories dans la référence. Les autres classes
         # gardent les mêmes colonnes/polices ; seules les lignes varient avec le programme.
@@ -320,6 +326,7 @@ def render_annual_bulletins_pdf(**context):
         page.header(row['student'],row['data'],context)
         page.photo(row)
         bottom=page.footer(row['data'],page.grades(row['data']))
+        page.qr(row)
         if bottom>PAGE_H-13.5:
             raise ValueError('Annual imported model does not fit on one page')
         pdf.showPage()

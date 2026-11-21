@@ -1,8 +1,42 @@
 <!doctype html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bulletin - {{ student.first_name }} {{ student.last_name }}</title>
-<style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#172033;margin:0;padding:24px}.card{max-width:900px;margin:auto;background:white;border:1px solid #d5dbe3;border-radius:8px;padding:22px}h1{color:#12365f;margin-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}.section{margin-top:18px;border-top:2px solid #12365f;padding-top:10px}.row{display:flex;justify-content:space-between;border-bottom:1px solid #e5e8ed;padding:5px 0}.muted{color:#667085}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style></head>
-<body><main class="card"><h1>Informations du bulletin</h1><p class="muted">Document vérifié — {{ term }} — {{ school_year }}</p>
-<div class="grid"><div><strong>Élève</strong><br>{{ student.first_name }} {{ student.last_name or '' }}</div><div><strong>Matricule</strong><br>{{ student.matricule }}</div><div><strong>Classe</strong><br>{{ student.school_class.name if student.school_class else '—' }}</div><div><strong>Date de naissance</strong><br>{{ student.birth_date.strftime('%d/%m/%Y') if student.birth_date else '—' }}</div></div>
-<div class="section"><h2>Résultats</h2>{% for category in data.categories %}<h3>{{ category.name }}</h3>{% for row in category.rows %}<div class="row"><span>{{ row.course.subject.name }}</span><strong>{{ row.term_average if row.term_average is not none else '—' }}</strong></div>{% endfor %}{% endfor %}</div>
-<div class="section"><div class="row"><span>Moyenne trimestrielle</span><strong>{{ data.term_average if data.term_average is not none else '—' }}</strong></div><div class="row"><span>Rang</span><strong>{{ data.rank or '—' }}</strong></div></div></main></body></html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bulletin — {{ full_name }}</title>
+  <style>
+    :root{font-family:Inter,Arial,sans-serif;color:#172033;background:#f4f6f8}
+    *{box-sizing:border-box}body{margin:0;padding:18px}.card{max-width:820px;margin:auto;background:#fff;border:1px solid #d7dee8;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px #102f5512}
+    header{background:#102f55;color:#fff;padding:20px 22px}h1{font-size:24px;margin:0 0 5px}header p{margin:0;color:#dbe8f7;font-size:14px}
+    .identity{display:grid;grid-template-columns:116px 1fr;gap:20px;padding:22px;border-bottom:1px solid #e5eaf0}.photo{width:116px;height:145px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;background:#f1f5f9}.photo-empty{height:145px;display:grid;place-items:center;text-align:center;color:#64748b;font-size:13px;border:1px dashed #aab7c7;border-radius:8px;background:#f8fafc}
+    h2{font-size:16px;color:#102f55;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px}.item{border-bottom:1px solid #edf0f4;padding-bottom:7px}.label{display:block;color:#64748b;font-size:12px;margin-bottom:2px}.value{font-weight:600;font-size:14px}
+    section{padding:18px 22px;border-bottom:1px solid #e5eaf0}.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.result{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #e3e8ef;border-radius:8px;background:#fbfcfe}.result strong{color:#102f55}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.decision{font-size:18px;font-weight:700;color:#102f55;background:#eef5fb;border-left:4px solid #1d70b8;padding:14px;border-radius:6px}
+    footer{padding:13px 22px;color:#64748b;font-size:12px}@media(max-width:600px){body{padding:0}.card{border-radius:0;border-left:0;border-right:0}.identity{grid-template-columns:1fr}.photo,.photo-empty{width:105px;height:132px}.grid,.results,.summary{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main class="card">
+  <header><h1>Fiche vérifiée du bulletin</h1><p>{{ term }} · Année scolaire {{ school_year }}</p></header>
+  <div class="identity">
+    <div>{% if photo_url %}<img class="photo" src="{{ photo_url }}" alt="Photo de {{ full_name }}">{% else %}<div class="photo-empty">Photo non disponible</div>{% endif %}</div>
+    <div><h2>Identité de l’élève</h2><div class="grid">
+      <div class="item"><span class="label">Noms et Prénoms</span><span class="value">{{ full_name }}</span></div>
+      <div class="item"><span class="label">Identifiant unique</span><span class="value">{{ matricule }}</span></div>
+      <div class="item"><span class="label">Date de naissance</span><span class="value">{{ birth_date }}</span></div>
+      <div class="item"><span class="label">Lieu de naissance</span><span class="value">{{ birth_place }}</span></div>
+    </div></div>
+  </div>
+  <section><h2>Scolarité</h2><div class="grid">
+    <div class="item"><span class="label">Année scolaire</span><span class="value">{{ school_year }}</span></div>
+    <div class="item"><span class="label">Classe</span><span class="value">{{ class_name }}</span></div>
+  </div></section>
+  <section><h2>Résultats</h2><div class="summary">
+    <div class="result"><span>Moyenne</span><strong>{{ average if average is not none else '—' }}/20</strong></div>
+    <div class="result"><span>Rang</span><strong>{{ rank or '—' }}</strong></div>
+    <div class="result"><span>Période</span><strong>{{ term }}</strong></div>
+  </div></section>
+  <section><h2>DÉCISION DU CONSEIL DE CLASSE</h2><div class="decision">{{ decision }}</div></section>
+  <footer>Document consultable à partir du code QR signé. Les informations correspondent au bulletin sélectionné.</footer>
+</main>
+</body>
+</html>

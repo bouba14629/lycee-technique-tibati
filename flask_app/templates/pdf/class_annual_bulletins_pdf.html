@@ -4,6 +4,7 @@
 <body>
 {% for item in students_data %}
 <div class="annual-page" style="{{ 'page-break-after:always;' if not loop.last }}">
+{% if item.qr_data_uri %}<img class="bulletin-qr" src="{{ item.qr_data_uri }}" alt="QR bulletin de {{ item.student.full_name }}">{% endif %}
 {% with student=item.student, data=item.data, student_photo_path=(item.photo_path or avatar_path), photo_available=(item.photo_available|default(false)), bulletin_logo_path=(bulletin_logo_path or logo_path), logo_path=logo_path %}
 {% include "pdf/_annual_bulletin_body.html" %}
 {% endwith %}

@@ -1289,6 +1289,7 @@ def censeur_honor_roll_register_export_pdf():
 def censeur_annual_bulletin_pdf(student_id):
     from flask import send_file
     from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source
+    from bulletin_qr import bulletin_qr_data_uri
     user = User.query.get(session["user_id"])
     student = Student.query.get_or_404(student_id)
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1301,7 +1302,7 @@ def censeur_annual_bulletin_pdf(student_id):
     photo_source = get_student_photo_source(student)
     pdf = render_grouped_bulletins_pdf("pdf/class_annual_bulletins_pdf.html",
                      students_data=[{"student": student, "data": data,
-                                     "photo_path": photo_source, "photo_available": bool(photo_source)}],
+                                     "photo_path": photo_source, "photo_available": bool(photo_source), "qr_data_uri": bulletin_qr_data_uri(student, "Annuel")}],
                      school_year=get_current_school_year(), approval=approval, avatar_path=None)
     if not pdf:
         abort(500)
@@ -1479,6 +1480,7 @@ def censeur_bulletins_revoke_validation(class_id):
 def censeur_bulletins_class_pdf(class_id):
     from flask import send_file
     from pdf_utils import render_grouped_bulletins_pdf, get_student_photo_source, bulletin_logo_pdf_path
+    from bulletin_qr import bulletin_qr_data_uri
     from utils import annual_bulletin_data, bulletin_data, prefill_course_average_cache, TERMS as T, TERM_SEQUENCES, TERM_ORDINALS
     user = User.query.get(session["user_id"])
     scoped_class_ids = user_scoped_class_ids(user) if user.role in ("censeur", "chef_orientation") else None
@@ -1507,6 +1509,7 @@ def censeur_bulletins_class_pdf(class_id):
                 # ou du proxy de stockage au moment du rendu xhtml2pdf.
                 "photo_path": photo_source,
                 "photo_available": bool(photo_source),
+                "qr_data_uri": bulletin_qr_data_uri(st, "Annuel"),
             })
         pdf = render_grouped_bulletins_pdf("pdf/class_annual_bulletins_pdf.html", students_data=students_data,
                          school_year=get_current_school_year(), approval=approval)
@@ -1543,6 +1546,7 @@ def censeur_bulletins_class_pdf(class_id):
             "bulletin_ref": f"{st.matricule}-T{T.index(term)+1}-2025",
             "photo_path": photo_source,
             "photo_available": bool(photo_source),
+            "qr_data_uri": bulletin_qr_data_uri(st, term),
         })
     pdf = render_grouped_bulletins_pdf("pdf/class_bulletins_pdf.html", students_data=students_data, term=term,
                       TERM_SEQ_A=seq_a, TERM_SEQ_B=seq_b, term_ordinal=TERM_ORDINALS.get(term, ""),
