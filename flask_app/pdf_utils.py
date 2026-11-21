@@ -318,30 +318,6 @@ def render_grouped_bulletins_pdf(template_name, students_data, **context):
     Le secours conserve exactement les sources photo, données et template.
     Aucun PDF incomplet ou sans les photos valides n'est retourné.
     """
-    # Un seul rendu HTML de plusieurs centaines de pages peut dépasser la
-    # mémoire ou le délai du serveur. Les petits exports gardent exactement
-    # le chemin historique ; les gros exports sont rendus par lots puis
-    # assemblés, ce qui conserve une page par bulletin.
-    chunk_size = 50
-    if len(students_data) > chunk_size:
-        try:
-            writer = PdfWriter()
-            for start in range(0, len(students_data), chunk_size):
-                chunk = students_data[start:start + chunk_size]
-                rendered = render_grouped_bulletins_pdf(template_name, chunk, **context)
-                if not rendered:
-                    return None
-                writer.append(PdfReader(rendered))
-            if not writer.pages:
-                return None
-            output = BytesIO()
-            writer.write(output)
-            output.seek(0)
-            return output
-        except Exception:
-            logger.exception("Grouped bulletin chunk assembly failed template=%s rows=%s", template_name, len(students_data))
-            return None
-
     pdf = render_pdf(template_name, students_data=students_data, **context)
     if pdf:
         return pdf

@@ -1,61 +1,8 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b2545">
-  <title>Bulletin vérifié — {{ student.full_name }}</title>
-  <style>
-    :root{--navy:#0b2545;--blue:#164a7a;--gold:#c9a227;--ink:#172033;--muted:#667085;--line:#e4e8ee;--soft:#f5f8fb}
-    *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(145deg,#eef3f8,#f9fbfd);color:var(--ink);margin:0;padding:18px}
-    .shell{max-width:940px;margin:0 auto}.card{background:#fff;border:1px solid #d8e0e8;border-radius:16px;box-shadow:0 12px 34px rgba(11,37,69,.12);overflow:hidden}
-    .hero{background:var(--navy);color:#fff;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{letter-spacing:.04em;font-size:12px;color:#f6d878;text-transform:uppercase;font-weight:700}.hero h1{font-size:25px;margin:6px 0 4px}.hero p{margin:0;color:#d8e5f2;font-size:13px}.verified{white-space:nowrap;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:9px 13px;font-size:12px;color:#fff;background:rgba(255,255,255,.08)}
-    .body{padding:24px 28px}.student-head{display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--line);padding-bottom:20px}.photo{width:86px;height:108px;object-fit:cover;border:2px solid var(--gold);border-radius:9px;background:var(--soft)}.student-head h2{margin:0 0 6px;color:var(--navy);font-size:23px}.matricule{font-family:monospace;color:var(--muted);font-size:13px}
-    .section{margin-top:22px}.section-title{display:flex;align-items:center;gap:9px;color:var(--navy);font-size:16px;margin:0 0 11px;padding-bottom:7px;border-bottom:2px solid var(--gold)}.section-title span{font-size:12px;color:var(--muted);font-weight:400}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:11px 13px;min-height:54px}.label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}.value{font-weight:700;color:var(--ink);font-size:14px;word-break:break-word}
-    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.stat{border:1px solid var(--line);border-radius:10px;padding:13px;text-align:center;background:#fff}.stat strong{display:block;color:var(--navy);font-size:20px}.stat span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.decision{border:1px solid #e6d58c;background:#fffaf0;border-left:5px solid var(--gold);border-radius:10px;padding:14px 16px;font-weight:700;color:var(--navy)}
-    .category{margin-top:15px}.category h3{font-size:13px;color:var(--blue);margin:0 0 5px}.results{width:100%;border-collapse:collapse;font-size:13px}.results th{background:var(--navy);color:#fff;text-align:left;font-size:11px;text-transform:uppercase;padding:8px}.results td{border-bottom:1px solid var(--line);padding:8px}.results th:not(:first-child),.results td:not(:first-child){text-align:center}.results tr:nth-child(even) td{background:#fbfcfd}.pending{color:var(--muted);font-style:italic}.footer{border-top:1px solid var(--line);margin-top:24px;padding-top:14px;color:var(--muted);font-size:11px;text-align:center}
-    @media(max-width:650px){body{padding:8px}.hero{padding:20px;display:block}.verified{display:inline-block;margin-top:14px}.body{padding:18px 15px}.grid,.stats{grid-template-columns:1fr 1fr}.student-head h2{font-size:19px}.photo{width:70px;height:88px}.results{font-size:12px}.results th,.results td{padding:7px 5px}}
-    @media(max-width:420px){.grid,.stats{grid-template-columns:1fr}.hero h1{font-size:22px}}
-  </style>
-</head>
-<body>
-<main class="shell"><article class="card">
-  <header class="hero"><div><div class="brand">Lycée Technique de Tibati</div><h1>Bulletin vérifié</h1><p>{{ term }} · Année scolaire {{ school_year }}</p></div><div class="verified">✓ Document authentifié</div></header>
-  <div class="body">
-    <section class="student-head">
-      <img class="photo" src="{{ photo_url }}" alt="Photo de {{ student.full_name }}" loading="lazy" onerror="this.onerror=null;this.style.visibility='hidden';">
-      <div><h2>{{ student.full_name }}</h2><div class="matricule">Identifiant unique : {{ student.matricule or '—' }}</div></div>
-    </section>
-
-    <section class="section"><h2 class="section-title">Identité et naissance</h2><div class="grid">
-      <div class="field"><span class="label">Noms et prénoms</span><span class="value">{{ student.full_name }}</span></div>
-      <div class="field"><span class="label">Identifiant unique</span><span class="value">{{ student.matricule or '—' }}</span></div>
-      <div class="field"><span class="label">Date de naissance</span><span class="value">{{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }}</span></div>
-      <div class="field"><span class="label">Lieu de naissance</span><span class="value">{{ student.birth_place or '—' }}</span></div>
-    </div></section>
-
-    <section class="section"><h2 class="section-title">Scolarité</h2><div class="grid">
-      <div class="field"><span class="label">Classe</span><span class="value">{{ student.school_class.name if student.school_class else '—' }}</span></div>
-      <div class="field"><span class="label">Section / département</span><span class="value">{{ student.school_class.department.name if student.school_class and student.school_class.department else '—' }}</span></div>
-      <div class="field"><span class="label">Frais de scolarité</span><span class="value">{{ 'Payés' if student.school_fees_paid else 'Non payés' }}</span></div>
-      <div class="field"><span class="label">Statut</span><span class="value">{{ student.status or 'Inscrit' }}</span></div>
-    </div></section>
-
-    <section class="section"><h2 class="section-title">Résultats <span>moyennes et classement</span></h2>
-      <div class="stats">
-        <div class="stat"><strong>{{ data.overall_avg if data.overall_avg is not none else '—' }}</strong><span>Moyenne</span></div>
-        <div class="stat"><strong>{{ data.rank_label if data.rank_label is defined and data.rank_label else (data.rank if data.rank is not none else '—') }}</strong><span>Rang</span></div>
-        <div class="stat"><strong>{{ data.class_avg if data.class_avg is not none else '—' }}</strong><span>Moyenne de classe</span></div>
-        <div class="stat"><strong>{{ data.class_size if data.class_size is defined else '—' }}</strong><span>Effectif</span></div>
-      </div>
-      {% for category in data.categories %}<div class="category"><h3>{{ category.name }}</h3><table class="results"><thead><tr><th>Matière</th><th>Moyenne</th><th>Coef.</th><th>Rang</th></tr></thead><tbody>
-        {% for row in category.rows %}<tr><td>{{ row.course.subject.name }}</td><td class="{{ 'pending' if row.pending|default(false) }}">{% if term == 'Annuel' %}{{ row.annual if row.annual is not none else '—' }}{% else %}{{ row.average if row.average is not none else '—' }}{% endif %}</td><td>{{ row.coef or '—' }}</td><td>{% if row.rank %}{{ row.rank }}e{% else %}—{% endif %}</td></tr>{% endfor %}
-      </tbody></table></div>{% endfor %}
-    </section>
-
-    <section class="section"><h2 class="section-title">Décision du conseil de classe</h2><div class="decision">{{ decision_label }}</div></section>
-    <div class="footer">Informations synchronisées avec le bulletin de l’établissement · Scan QR {{ term }}</div>
-  </div>
-</article></main>
-</body>
-</html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bulletin - {{ student.first_name }} {{ student.last_name }}</title>
+<style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#172033;margin:0;padding:24px}.card{max-width:900px;margin:auto;background:white;border:1px solid #d5dbe3;border-radius:8px;padding:22px}h1{color:#12365f;margin-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}.section{margin-top:18px;border-top:2px solid #12365f;padding-top:10px}.row{display:flex;justify-content:space-between;border-bottom:1px solid #e5e8ed;padding:5px 0}.muted{color:#667085}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style></head>
+<body><main class="card"><h1>Informations du bulletin</h1><p class="muted">Document vérifié — {{ term }} — {{ school_year }}</p>
+<div class="grid"><div><strong>Élève</strong><br>{{ student.first_name }} {{ student.last_name or '' }}</div><div><strong>Matricule</strong><br>{{ student.matricule }}</div><div><strong>Classe</strong><br>{{ student.school_class.name if student.school_class else '—' }}</div><div><strong>Date de naissance</strong><br>{{ student.birth_date.strftime('%d/%m/%Y') if student.birth_date else '—' }}</div></div>
+<div class="section"><h2>Résultats</h2>{% for category in data.categories %}<h3>{{ category.name }}</h3>{% for row in category.rows %}<div class="row"><span>{{ row.course.subject.name }}</span><strong>{{ row.term_average if row.term_average is not none else '—' }}</strong></div>{% endfor %}{% endfor %}</div>
+<div class="section"><div class="row"><span>Moyenne trimestrielle</span><strong>{{ data.term_average if data.term_average is not none else '—' }}</strong></div><div class="row"><span>Rang</span><strong>{{ data.rank or '—' }}</strong></div></div></main></body></html>
