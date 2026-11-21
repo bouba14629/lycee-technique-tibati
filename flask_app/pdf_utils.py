@@ -31,30 +31,6 @@ def bulletin_logo_pdf_path():
     return asset_path("img", "bulletin_official_logo.png")
 
 
-def bulletin_watermark_data_uri():
-    """Logo noir très pâle, autonome et utilisable par HTML/xhtml2pdf/ReportLab."""
-    source = bulletin_logo_pdf_path()
-    if not source or not os.path.isfile(source):
-        return None
-    cache_dir = _pdf_cache_dir("branding")
-    os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, "bulletin-watermark-v1.png")
-    try:
-        if not os.path.isfile(cache_path) or os.path.getmtime(cache_path) < os.path.getmtime(source):
-            with Image.open(source) as original:
-                gray = ImageOps.grayscale(ImageOps.exif_transpose(original))
-                gray.thumbnail((360, 360), Image.Resampling.LANCZOS)
-                # Noir sur fond blanc, mais avec une opacité maximale d’environ 10 %.
-                alpha = ImageOps.invert(gray).point(lambda value: int(value * 0.10))
-                black = Image.new("L", gray.size, 0)
-                watermark = Image.merge("RGBA", (black, black, black, alpha))
-                watermark.save(cache_path, format="PNG", optimize=True)
-        return pdf_image_data_uri(cache_path, "image/png")
-    except Exception:
-        logger.warning("Unable to create bulletin watermark", exc_info=True)
-        return None
-
-
 def storage_base_url():
     configured = os.getenv("LTT_STORAGE_BASE_URL", "").strip().rstrip("/")
     if configured:
@@ -303,7 +279,6 @@ def render_pdf(template_name, **context):
     embedded_logo = pdf_image_data_uri(logo_path)
     context.setdefault("logo_path", embedded_logo)
     context.setdefault("bulletin_logo_path", embedded_logo)
-    context.setdefault("bulletin_watermark_data_uri", bulletin_watermark_data_uri())
     avatar_path = pdf_asset(("img", "avatar_placeholder.png"), "/manus-storage/avatar_placeholder_42973e92.png")
     context.setdefault("avatar_path", pdf_image_data_uri(avatar_path))
     context.setdefault("student_photo_dir", asset_path("uploads", "students"))
