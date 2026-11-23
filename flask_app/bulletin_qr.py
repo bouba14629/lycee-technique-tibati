@@ -157,8 +157,39 @@ def _qr_reference(student, term):
     return f"QR-{identifier}-{term_code}"
 
 
+def _average_level_class(average):
+    """Retourne la couleur de la moyenne affichée sur la fiche QR."""
+    if average is None:
+        return "qr-average-pending"
+    if average < 10:
+        return "qr-average-low"
+    if average < 12:
+        return "qr-average-medium"
+    if average < 14:
+        return "qr-average-good"
+    if average < 16:
+        return "qr-average-very-good"
+    return "qr-average-excellent"
+
+
+def _decision_class(decision):
+    """Retourne une classe visuelle selon le statut de la décision."""
+    normalized = (decision or "").casefold()
+    if "exclu" in normalized:
+        return "qr-decision-excluded"
+    if "admis" in normalized:
+        return "qr-decision-admitted"
+    if "redouble" in normalized:
+        return "qr-decision-repeat"
+    if "attente" in normalized:
+        return "qr-decision-pending"
+    return "qr-decision-info"
+
+
 def _qr_view_data(student, data, term):
     school_class = student.school_class
+    average = data.get("overall_avg") if isinstance(data, dict) else None
+    decision = _decision_label(data)
     return {
         "full_name": student.full_name,
         "birth_date": student.dob.strftime("%d/%m/%Y") if student.dob else "—",
@@ -167,9 +198,11 @@ def _qr_view_data(student, data, term):
         "photo_url": student_photo_url(student.photo) if student.photo else None,
         "school_year": get_current_school_year(),
         "class_name": school_class.name if school_class else "—",
-        "average": data.get("overall_avg") if isinstance(data, dict) else None,
+        "average": average,
         "rank": data.get("rank_label") or data.get("rank") if isinstance(data, dict) else None,
-        "decision": _decision_label(data),
+        "decision": decision,
+        "average_level_class": _average_level_class(average),
+        "decision_class": _decision_class(decision),
         "term": term,
         "reference_number": _qr_reference(student, term),
         "generated_at": datetime.now().strftime("%d/%m/%Y à %H:%M"),

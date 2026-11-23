@@ -24,9 +24,9 @@
     .field { border-bottom: 1px solid #edf0f4; padding: 6px 0; }
     .label { color: #64748b; font-size: 8pt; }
     .value { font-weight: bold; font-size: 10pt; }
-    .qr-highlight { color: #c62828; font-weight: bold; }
+    .qr-average-low { color: #c62828; }.qr-average-medium { color: #ef6c00; }.qr-average-good { color: #2e7d32; }.qr-average-very-good { color: #1565c0; }.qr-average-excellent { color: #6a1b9a; }.qr-average-pending { color: #64748b; }
     .summary-table td { width: 33.33%; border: 1px solid #e3e8ef; padding: 10px; background: #fbfcfe; }
-    .decision { background: #eef5fb; border-left: 4px solid #1d70b8; padding: 12px; font-size: 13pt; font-weight: bold; color: #102f55; }
+    .decision { padding: 12px; font-size: 13pt; font-weight: bold; }.qr-decision-excluded { color: #b71c1c; background: #ffebee; border-left: 4px solid #c62828; }.qr-decision-admitted { color: #1b5e20; background: #e8f5e9; border-left: 4px solid #2e7d32; }.qr-decision-repeat { color: #e65100; background: #fff3e0; border-left: 4px solid #ef6c00; }.qr-decision-pending { color: #616161; background: #f5f5f5; border-left: 4px solid #9e9e9e; }.qr-decision-info { color: #0d47a1; background: #e3f2fd; border-left: 4px solid #1565c0; }
     .footer { padding: 12px 16px; color: #64748b; font-size: 8pt; }
   </style>
 </head>
@@ -77,13 +77,13 @@
     <div class="section">
       <div class="section-title">Résultats</div>
       <table class="summary-table">
-        <tr><td><span class="label">Moyenne</span><br><span class="value qr-highlight">{{ average if average is not none else '—' }}/20</span></td><td><span class="label">Rang</span><br><span class="value qr-highlight">{{ rank or '—' }}</span></td><td><span class="label">Document</span><br><span class="value">Fiche QR</span></td></tr>
+        <tr><td><span class="label">Moyenne</span><br><span class="value {{ average_level_class }}">{{ average if average is not none else '—' }}/20</span></td><td><span class="label">Rang</span><br><span class="value {{ average_level_class }}">{{ rank or '—' }}</span></td><td><span class="label">Document</span><br><span class="value">Fiche QR</span></td></tr>
       </table>
     </div>
 
     <div class="section">
       <div class="section-title">DÉCISION DU CONSEIL DE CLASSE</div>
-      <div class="decision">{{ decision }}</div>
+      <div class="decision {{ decision_class }}">{{ decision }}</div>
     </div>
     <div class="footer">{{ institution_name }} · Fiche générée à partir d’un code QR signé. Cette fiche ne contient pas le bulletin PDF.</div>
   </div>
