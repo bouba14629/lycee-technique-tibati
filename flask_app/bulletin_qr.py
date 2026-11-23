@@ -138,7 +138,7 @@ def _decision_label(data):
             reasons.append("Conduite")
         if marks.get("competencies_not_acquired"):
             reasons.append("Compétences non acquises")
-        label = "Exclu(e)" + (" — " + ", ".join(reasons) if reasons else "")
+        label = "Exclu(e) pour : " + (", ".join(reasons) if reasons else "—")
         return label + (" · " + competency_decision if competency_decision else "")
     if marks.get("admitted"):
         label = "Admis(e) en classe de " + str(data.get("next_class_name") or "—")
