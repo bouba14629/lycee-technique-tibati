@@ -160,10 +160,12 @@ def apply_logo_watermark(pdf_buffer):
             canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(width, height))
             with Image.open(watermark_path) as watermark:
                 image_width, image_height = watermark.size
-            target_width = min(width * 0.76, 470)
+            # Format proche du modèle importé : logo très grand, centré sur la
+            # page et visible derrière le tableau et les blocs inférieurs.
+            target_width = min(width * 0.89, 530)
             target_height = target_width * image_height / image_width
-            if target_height > height * 0.62:
-                target_height = height * 0.62
+            if target_height > height * 0.70:
+                target_height = height * 0.70
                 target_width = target_height * image_width / image_height
             x = (width - target_width) / 2
             y = (height - target_height) / 2
