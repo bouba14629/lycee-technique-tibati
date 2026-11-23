@@ -40,6 +40,10 @@
     <div class="item"><span class="label">Année scolaire</span><span class="value">{{ school_year }}</span></div>
     <div class="item"><span class="label">Classe</span><span class="value">{{ class_name }}</span></div>
   </div></section>
+  <section><h2>Traçabilité de la fiche</h2><div class="grid">
+    <div class="item"><span class="label">Numéro de référence</span><span class="value">{{ reference_number }}</span></div>
+    <div class="item"><span class="label">Date de génération</span><span class="value">{{ generated_at }}</span></div>
+  </div></section>
   <section><h2>Résultats</h2><div class="summary">
     <div class="result"><span>Moyenne</span><strong>{{ average if average is not none else '—' }}/20</strong></div>
     <div class="result"><span>Rang</span><strong>{{ rank or '—' }}</strong></div>

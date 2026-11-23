@@ -2,6 +2,7 @@ import base64
 import os
 import time
 from collections import OrderedDict
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
@@ -148,6 +149,14 @@ def _decision_label(data):
     return competency_decision or "Décision en attente"
 
 
+def _qr_reference(student, term):
+    """Construit une référence lisible et stable pour une fiche QR donnée."""
+    term_code = {"Trimestre 1": "T1", "Trimestre 2": "T2", "Trimestre 3": "T3", "Annuel": "AN"}.get(term, "QR")
+    identifier = "".join(character for character in (student.matricule or str(student.id))
+                        if character.isalnum() or character in "-_") or str(student.id)
+    return f"QR-{identifier}-{term_code}"
+
+
 def _qr_view_data(student, data, term):
     school_class = student.school_class
     return {
@@ -162,6 +171,8 @@ def _qr_view_data(student, data, term):
         "rank": data.get("rank_label") or data.get("rank") if isinstance(data, dict) else None,
         "decision": _decision_label(data),
         "term": term,
+        "reference_number": _qr_reference(student, term),
+        "generated_at": datetime.now().strftime("%d/%m/%Y à %H:%M"),
         "institution_name": "Lycée Technique de Tibati",
         "institution_logo_url": ltt_url_for("static", filename="img/logo.png"),
         "qr_image": bulletin_qr_data_uri(student, term),

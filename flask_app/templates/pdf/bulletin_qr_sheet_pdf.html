@@ -67,6 +67,13 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Traçabilité de la fiche</div>
+      <table class="summary-table">
+        <tr><td><span class="label">Numéro de référence</span><br><span class="value">{{ reference_number }}</span></td><td colspan="2"><span class="label">Date de génération</span><br><span class="value">{{ generated_at }}</span></td></tr>
+      </table>
+    </div>
+
+    <div class="section">
       <div class="section-title">Résultats</div>
       <table class="summary-table">
         <tr><td><span class="label">Moyenne</span><br><span class="value">{{ average if average is not none else '—' }}/20</span></td><td><span class="label">Rang</span><br><span class="value">{{ rank or '—' }}</span></td><td><span class="label">Document</span><br><span class="value">Fiche QR</span></td></tr>
