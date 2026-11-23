@@ -137,11 +137,21 @@ def apply_logo_watermark(pdf_buffer):
     """Place le logo grand format en filigrane sous le contenu de chaque page."""
     if not pdf_buffer:
         return pdf_buffer
+    original_position = None
     try:
+        try:
+            original_position = pdf_buffer.tell()
+            pdf_buffer.seek(0)
+            original_bytes = pdf_buffer.getvalue()
+        except Exception:
+            original_bytes = None
         watermark_path = _watermark_logo_path()
         if not watermark_path or not os.path.isfile(watermark_path):
             return pdf_buffer
         reader = PdfReader(pdf_buffer)
+        page_count = len(reader.pages)
+        if not page_count:
+            return pdf_buffer
         writer = PdfWriter()
         for page in reader.pages:
             width = float(page.mediabox.width)
@@ -164,15 +174,35 @@ def apply_logo_watermark(pdf_buffer):
             canvas_pdf.save()
             overlay_stream.seek(0)
             # over=False est essentiel : le filigrane est fusionné sous le bulletin.
-            page.merge_page(PdfReader(overlay_stream).pages[0], over=False)
+            overlay_page = PdfReader(overlay_stream).pages[0]
+            try:
+                page.merge_page(overlay_page, over=False)
+            except TypeError:
+                # Compatibilité avec les versions plus anciennes de pypdf.
+                page.merge_page(overlay_page)
             writer.add_page(page)
         output = BytesIO()
         writer.write(output)
         output.seek(0)
+        # Ne jamais transmettre un PDF partiellement fusionné ou illisible.
+        checked = PdfReader(output)
+        if len(checked.pages) != page_count:
+            raise ValueError("watermarked PDF page count mismatch")
+        output.seek(0)
         return output
     except Exception:
-        logger.exception("PDF logo watermark failed")
+        logger.warning("PDF logo watermark skipped; preserving original bulletin PDF", exc_info=True)
+        if original_bytes is not None:
+            fallback = BytesIO(original_bytes)
+            fallback.seek(0)
+            return fallback
         return pdf_buffer
+    finally:
+        if original_position is not None:
+            try:
+                pdf_buffer.seek(original_position)
+            except Exception:
+                pass
 
 
 def _is_bulletin_pdf_template(template_name):
