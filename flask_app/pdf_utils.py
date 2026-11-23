@@ -106,6 +106,84 @@ def pdf_image_data_uri(path, mime_type=None):
         return path
 
 
+def _watermark_logo_path():
+    """Prépare une version noir très pâle du logo, sans fond blanc opaque."""
+    logo_path = bulletin_logo_pdf_path()
+    if not logo_path or not os.path.isfile(logo_path):
+        return None
+    cache_dir = _pdf_cache_dir("watermark-v1")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, "ltt-logo-watermark.png")
+    try:
+        if os.path.isfile(cache_path) and os.path.getmtime(cache_path) >= os.path.getmtime(logo_path):
+            return cache_path
+        with Image.open(logo_path) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            image.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+            gray = ImageOps.grayscale(image)
+            # Les pixels sombres deviennent noirs avec une opacité faible ;
+            # le blanc du logo reste transparent pour ne pas masquer le texte.
+            alpha = gray.point(lambda value: max(0, min(42, int((255 - value) * 0.22))))
+            watermark = Image.new("RGBA", gray.size, (0, 0, 0, 0))
+            watermark.putalpha(alpha)
+            watermark.save(cache_path, format="PNG", optimize=True)
+        return cache_path
+    except Exception:
+        logger.warning("Watermark logo preparation failed", exc_info=True)
+        return None
+
+
+def apply_logo_watermark(pdf_buffer):
+    """Place le logo grand format en filigrane sous le contenu de chaque page."""
+    if not pdf_buffer:
+        return pdf_buffer
+    try:
+        watermark_path = _watermark_logo_path()
+        if not watermark_path or not os.path.isfile(watermark_path):
+            return pdf_buffer
+        reader = PdfReader(pdf_buffer)
+        writer = PdfWriter()
+        for page in reader.pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            overlay_stream = BytesIO()
+            canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(width, height))
+            with Image.open(watermark_path) as watermark:
+                image_width, image_height = watermark.size
+            target_width = min(width * 0.76, 470)
+            target_height = target_width * image_height / image_width
+            if target_height > height * 0.62:
+                target_height = height * 0.62
+                target_width = target_height * image_width / image_height
+            x = (width - target_width) / 2
+            y = (height - target_height) / 2
+            canvas_pdf.drawImage(
+                ImageReader(watermark_path), x, y, width=target_width, height=target_height,
+                preserveAspectRatio=True, mask="auto",
+            )
+            canvas_pdf.save()
+            overlay_stream.seek(0)
+            # over=False est essentiel : le filigrane est fusionné sous le bulletin.
+            page.merge_page(PdfReader(overlay_stream).pages[0], over=False)
+            writer.add_page(page)
+        output = BytesIO()
+        writer.write(output)
+        output.seek(0)
+        return output
+    except Exception:
+        logger.exception("PDF logo watermark failed")
+        return pdf_buffer
+
+
+def _is_bulletin_pdf_template(template_name):
+    return template_name in {
+        "pdf/bulletin_pdf.html",
+        "pdf/class_bulletins_pdf.html",
+        "pdf/bulletin_annual_pdf.html",
+        "pdf/class_annual_bulletins_pdf.html",
+    }
+
+
 def _photo_value_to_local_path(photo, base_url=None):
     """Convertit toute forme de valeur photo en fichier local lisible."""
     if not photo:
@@ -298,7 +376,7 @@ def render_pdf(template_name, **context):
     try:
         if template_name in ("pdf/bulletin_annual_pdf.html", "pdf/class_annual_bulletins_pdf.html"):
             from annual_pdf import render_annual_bulletins_pdf
-            return render_annual_bulletins_pdf(**context)
+            return apply_logo_watermark(render_annual_bulletins_pdf(**context))
         html = render_template(template_name, **context)
         buffer = BytesIO()
         result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
@@ -306,7 +384,7 @@ def render_pdf(template_name, **context):
         if result.err:
             logger.error("PDF rendering reported errors template=%s errors=%s", template_name, result.err)
             return None
-        return buffer
+        return apply_logo_watermark(buffer) if _is_bulletin_pdf_template(template_name) else buffer
     except Exception:
         logger.exception("PDF rendering failed template=%s", template_name)
         return None
