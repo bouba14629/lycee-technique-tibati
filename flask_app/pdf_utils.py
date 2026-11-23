@@ -134,7 +134,7 @@ def _watermark_logo_path():
 
 
 def apply_logo_watermark(pdf_buffer):
-    """Place le logo grand format en filigrane sous le contenu de chaque page."""
+    """Place le logo grand format en filigrane transparent sur chaque page."""
     if not pdf_buffer:
         return pdf_buffer
     original_position = None
@@ -173,10 +173,12 @@ def apply_logo_watermark(pdf_buffer):
             )
             canvas_pdf.save()
             overlay_stream.seek(0)
-            # over=False est essentiel : le filigrane est fusionné sous le bulletin.
+            # Le fond blanc des bulletins est opaque : un filigrane sous la page
+            # serait invisible. Il est donc fusionné au-dessus avec une alpha
+            # très faible ; les écrits restent lisibles grâce au PNG transparent.
             overlay_page = PdfReader(overlay_stream).pages[0]
             try:
-                page.merge_page(overlay_page, over=False)
+                page.merge_page(overlay_page, over=True)
             except TypeError:
                 # Compatibilité avec les versions plus anciennes de pypdf.
                 page.merge_page(overlay_page)
