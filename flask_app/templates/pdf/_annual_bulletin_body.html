@@ -1,5 +1,7 @@
 {% set marks = data.work_marks %}
 {% set avg = data.overall_avg %}
+{% set principal_name = student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' %}
+{% set principal_long = principal_name|length > 26 %}
 <table class="institution"><tr>
   <td width="28%">RÉPUBLIQUE DU CAMEROUN<br>Paix – Travail – Patrie<br>RÉGION DE L'ADAMAOUA<br>DDRES/DDES-DJEREM<br>LYCÉE TECHNIQUE DE TIBATI<br>Mle : 2CE1TEFD110320092</td>
   <td width="44%" class="center"><img src="{{ annual_logo_path or bulletin_logo_path }}" width="76" height="77" style="width:57pt; height:57.75pt;" alt="Logo du Lycée Technique de Tibati"/></td>
@@ -12,8 +14,8 @@
 <table class="name-line"><tr><td width="85%"></td><td width="15%">{{ student.full_name }}</td></tr></table>
 <table class="meta"><tr>
   <td width="50%">Noms et Prénoms : {{ student.full_name }}<br>Date de naissance : {{ student.dob.strftime('%d/%m/%Y') if student.dob else '—' }} à {{ student.birth_place or '—' }}<br>Genre : {{ student.sex or '—' }}<br>Identifiant Unique : {{ student.matricule }}<br>Redoublant : {{ 'Oui' if student.is_repeater else 'Non' }}</td>
-  <td width="36%" class="school-meta">Année Scolaire : {{ school_year }}<br>Classe : {{ student.school_class.name if student.school_class else '—' }}<br>Effectif : {{ data.class_size }}<br><span class="principal-teacher">Professeur Principal : {{ student.school_class.homeroom_teacher.user.formal_name if student.school_class and student.school_class.homeroom_teacher else '—' }}</span></td>
-  <td width="14%" class="photo-meta"><p class="student-photo-placement">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt; border:0;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% endif %}</p></td>
+  <td width="{{ 40 if principal_long else 36 }}%" class="school-meta" style="width:{{ 40 if principal_long else 36 }}%; font-size:{{ '6.8pt' if principal_long else '7.4pt' }};">Année Scolaire : {{ school_year }}<br>Classe : {{ student.school_class.name if student.school_class else '—' }}<br>Effectif : {{ data.class_size }}<br><span class="principal-teacher">Professeur Principal : {{ principal_name }}</span></td>
+  <td width="{{ 10 if principal_long else 14 }}%" class="photo-meta" style="width:{{ 10 if principal_long else 14 }}%;"><p class="student-photo-placement">{% if photo_available and student_photo_path %}<img class="student-photo" src="{{ student_photo_path }}" style="width:49.5pt; height:55.5pt; border:0;" width="66" height="74" alt="Photo de {{ student.full_name }}"/>{% endif %}</p></td>
 </tr></table>
 <table class="annual-grades" width="100%">
   <tr>
@@ -25,7 +27,7 @@
   {% set teacher_name = row.teacher.user.formal_name if row.teacher and row.teacher.user else '—' %}
   {% set compact_subject = (row.course.subject.name|length + teacher_name|length) > 55 %}
   <tr>
-    <td class="subject"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>{{ row.course.subject.name }} <span class="teacher"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>({{ teacher_name }})</span></td>
+    <td class="subject"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>{{ row.course.subject.name }} <span class="teacher" style="white-space:nowrap;{% if compact_subject %} font-size:6.225pt;{% endif %}">({{ teacher_name }})</span></td>
     <td class="center{{ ' low-score' if row.annual is not none and row.annual < 10 }}">{{ row.annual if row.annual is not none else '—' }}</td>
     {% for value in row.terms %}<td class="center{{ ' low-score' if value is not none and value < 10 }}">{{ value if value is not none else '—' }}</td>{% endfor %}
     <td class="center">{{ row.coef }}</td><td class="center">{{ row.points if row.points is not none else '—' }}</td><td class="center">{{ (row.rank|string) ~ 'e' if row.rank else '—' }}</td>
