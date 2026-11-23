@@ -988,6 +988,55 @@ def chef_travaux_class_schedule(class_id):
                            chef_travaux_view=True, published_only=True)
 
 
+@app.route("/chef-travaux/service-des-professeurs")
+@roles_required("chef_travaux")
+def chef_travaux_teacher_service():
+    """Service en lecture seule, limité aux créneaux pratiques publiés du CDT."""
+    user = User.query.get(session["user_id"])
+    allowed_class_ids = {school_class.id for school_class in _chef_travaux_practical_classes(user)}
+    entries = []
+    if allowed_class_ids:
+        entries = (ScheduleEntry.query
+                   .join(Course)
+                   .join(Subject, Course.subject_id == Subject.id)
+                   .filter(Course.class_id.in_(allowed_class_ids),
+                           Subject.category == "Enseignements Professionnels Pratiques",
+                           ScheduleEntry.published.is_(True))
+                   .options(joinedload(ScheduleEntry.course).joinedload(Course.subject),
+                            joinedload(ScheduleEntry.course).joinedload(Course.school_class),
+                            joinedload(ScheduleEntry.course).joinedload(Course.teacher).joinedload(Teacher.user))
+                   .order_by(ScheduleEntry.day, ScheduleEntry.start_time)
+                   .all())
+
+    teachers = {}
+    for entry in entries:
+        teacher = entry.course.teacher
+        if teacher and teacher.user:
+            teachers[teacher.id] = teacher
+
+    grids = {teacher_id: {day: [None] * len(OFFICIAL_PERIODS) for day in DAYS[:5]}
+             for teacher_id in teachers}
+    hours_done = {teacher_id: 0 for teacher_id in teachers}
+    for entry in entries:
+        teacher_id = entry.course.teacher_id
+        if teacher_id not in grids or entry.day not in grids[teacher_id]:
+            continue
+        for index, (start_time, end_time) in enumerate(OFFICIAL_PERIODS):
+            if entry.start_time < end_time and start_time < entry.end_time:
+                if grids[teacher_id][entry.day][index] is None:
+                    grids[teacher_id][entry.day][index] = entry
+                    hours_done[teacher_id] += 1
+
+    services = [{"teacher": teachers[teacher_id], "grid": grids[teacher_id],
+                 "hours_done": hours_done[teacher_id],
+                 "hours_due": teachers[teacher_id].hours_due or 0}
+                for teacher_id in teachers]
+    services.sort(key=lambda item: (item["teacher"].user.full_name or "").casefold())
+    return render_template("censeur_teacher_service.html", services=services,
+                           days=DAYS[:5], periods=OFFICIAL_PERIODS,
+                           school_year=get_current_school_year(), chef_travaux_view=True)
+
+
 @app.route("/censeur/bulletins")
 @roles_required("censeur", "directeur")
 def censeur_bulletins():
