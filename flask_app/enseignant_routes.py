@@ -9,12 +9,12 @@ DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi
           "Vendredi": "FRIDAY", "Samedi": "SATURDAY"}
 ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 COUNSELOR_ALLOWED_HOURS_DUE = (22, 25, 36, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
-GRADE_EDIT_WINDOW_DAYS = 10
-GRADE_REOPEN_WINDOW_DAYS = 7
+GRADE_EDIT_WINDOW_DAYS = 5
+GRADE_ENTRY_WINDOW_DAYS = 7
 
 
 def _teacher_grade_locked(grade):
-    """Une note existante est verrouillée dix jours après sa première saisie.
+    """Une note existante est verrouillée cinq jours après sa première saisie.
 
     La date historique de la note est utilisée afin de ne pas modifier les données
     déjà enregistrées ni exiger une migration destructive de la base existante.
@@ -31,20 +31,19 @@ def _teacher_indicator(teacher, course, term):
 def _teacher_notes_open(teacher, course, term):
     """Retourne vrai si les indicateurs autorisent actuellement la saisie.
 
-    Après dix jours, une nouvelle mise à jour des indicateurs ouvre la saisie
-    pendant sept jours ; cette règle ne modifie aucune note existante.
+    Les notes existantes deviennent non modifiables après cinq jours. La saisie
+    de nouvelles notes reste possible jusqu'au septième jour suivant la première
+    note enregistrée pour la matière et la période.
     """
     indicator = _teacher_indicator(teacher, course, term)
     if not indicator:
         return False
     grades = Grade.query.filter_by(course_id=course.id, term=term).all()
-    locked_dates = [grade.date for grade in grades if _teacher_grade_locked(grade) and grade.date]
-    if not locked_dates:
+    recorded_dates = [grade.date for grade in grades if grade.date]
+    if not recorded_dates:
         return True
-    updated_at = indicator.updated_at.date() if indicator.updated_at else None
-    lock_date = max(locked_dates)
-    return bool(updated_at and updated_at >= lock_date
-                and (date.today() - updated_at).days < GRADE_REOPEN_WINDOW_DAYS)
+    first_recorded_date = min(recorded_dates)
+    return (date.today() - first_recorded_date).days < GRADE_ENTRY_WINDOW_DAYS
 
 
 def current_teacher():
@@ -195,6 +194,9 @@ def teacher_devoir_delete(course_id, grade_id):
     g = Grade.query.get_or_404(grade_id)
     if g.course_id != course.id or g.type != "Devoir":
         abort(403)
+    if _teacher_grade_locked(g):
+        flash("Cette note est verrouillée depuis au moins 5 jours et ne peut plus être supprimée.", "warning")
+        return redirect(url_for("teacher_grades", course_id=course_id, term=g.term))
     notes_open = _teacher_notes_open(teacher, course, g.term)
     if not notes_open:
         flash("Saisie verrouillée : renseignez d'abord les indicateurs pédagogiques de cette matière.", "warning")
@@ -249,6 +251,7 @@ def teacher_grades(course_id):
                 abort(403)
         count = 0
         rejected_evaluation_notes = 0
+        rejected_locked_notes = 0
         for student in course.school_class.students:
             key = f"grade_{student.id}"
             val = request.form.get(key, "").strip()
@@ -272,7 +275,8 @@ def teacher_grades(course_id):
                 existing_grade = Grade.query.filter_by(student_id=student.id, course_id=course.id,
                                                          term=term, type="Évaluation", sequence=seq_num).first()
                 if existing_grade:
-                    if _teacher_grade_locked(existing_grade) and not notes_open:
+                    if _teacher_grade_locked(existing_grade):
+                        rejected_locked_notes += 1
                         continue
                     existing_grade.value = fval
                     existing_grade.date = date.fromisoformat(eval_date)
@@ -293,6 +297,8 @@ def teacher_grades(course_id):
         db.session.commit()
         if rejected_evaluation_notes:
             flash(f"{rejected_evaluation_notes} note(s) d’évaluation ignorée(s) : une note doit être comprise entre 0 et 20.", "danger")
+        if rejected_locked_notes:
+            flash(f"{rejected_locked_notes} note(s) ignorée(s) : elles sont verrouillées depuis au moins 5 jours.", "warning")
         flash(f"{count} notes enregistrées.", "success")
         return redirect(url_for("teacher_grades", course_id=course_id, term=term))
 
