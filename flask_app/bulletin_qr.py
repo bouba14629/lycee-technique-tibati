@@ -7,7 +7,7 @@ from pathlib import Path
 
 import qrcode
 from PIL import Image, ImageOps
-from flask import abort, has_request_context, make_response, render_template, url_for
+from flask import abort, has_request_context, make_response, render_template, send_file, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy.orm import joinedload
 
@@ -165,6 +165,7 @@ def _qr_view_data(student, data, term):
         "institution_name": "Lycée Technique de Tibati",
         "institution_logo_url": ltt_url_for("static", filename="img/logo.png"),
         "qr_image": bulletin_qr_data_uri(student, term),
+        "qr_sheet_pdf_url": url_for("bulletin_qr_sheet_pdf", token=bulletin_qr_token(student, term)),
     }
 
 
@@ -222,3 +223,24 @@ def bulletin_qr_view(token):
     result.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=600"
     result.headers["X-Content-Type-Options"] = "nosniff"
     return result
+
+
+@app.get("/bulletin/qr/<token>/download-sheet.pdf")
+def bulletin_qr_sheet_pdf(token):
+    """Télécharge la fiche QR seule, sans générer ni joindre le bulletin PDF."""
+    student, term = _qr_student_from_token(token)
+    data = annual_bulletin_data(student) if term == "Annuel" else bulletin_data(student, term=term)
+    view_data = _qr_view_data(student, data, term)
+    from pdf_utils import bulletin_logo_pdf_path, get_student_photo_source, pdf_image_data_uri, render_pdf
+
+    pdf = render_pdf(
+        "pdf/bulletin_qr_sheet_pdf.html",
+        **view_data,
+        logo_src=pdf_image_data_uri(bulletin_logo_pdf_path()),
+        photo_src=get_student_photo_source(student),
+    )
+    if not pdf:
+        abort(500)
+    filename = f"Fiche_QR_{student.matricule or student.id}_{term}.pdf".replace(" ", "_")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=True,
+                     download_name=filename, max_age=0)

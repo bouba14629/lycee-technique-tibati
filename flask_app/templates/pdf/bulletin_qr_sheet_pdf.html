@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 16mm; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #172033; font-size: 10pt; }
+    .card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 0; }
+    .header { background-color: #102f55; color: #ffffff; padding: 14px 16px; }
+    .header-table, .identity-table, .summary-table { width: 100%; border-collapse: collapse; }
+    .header-logo { width: 54px; height: 54px; object-fit: contain; background-color: #ffffff; padding: 3px; }
+    .brand { font-size: 16pt; font-weight: bold; padding-left: 12px; }
+    .subtitle { font-size: 9pt; color: #dbe8f7; padding-left: 12px; }
+    .period { text-align: right; color: #dbe8f7; font-size: 9pt; }
+    .section { padding: 14px 16px; border-bottom: 1px solid #e5eaf0; }
+    .section-title { color: #102f55; font-size: 12pt; font-weight: bold; margin-bottom: 9px; }
+    .photo-cell { width: 28%; vertical-align: top; text-align: center; }
+    .photo { width: 112px; height: 140px; object-fit: cover; border: 1px solid #cbd5e1; }
+    .photo-empty { width: 112px; height: 140px; border: 1px dashed #aab7c7; color: #64748b; text-align: center; vertical-align: middle; }
+    .qr-cell { width: 24%; vertical-align: top; text-align: center; }
+    .qr { width: 105px; height: 105px; }
+    .qr-caption { color: #64748b; font-size: 8pt; margin-top: 4px; }
+    .details-cell { width: 48%; vertical-align: top; padding: 0 12px; }
+    .field { border-bottom: 1px solid #edf0f4; padding: 6px 0; }
+    .label { color: #64748b; font-size: 8pt; }
+    .value { font-weight: bold; font-size: 10pt; }
+    .summary-table td { width: 33.33%; border: 1px solid #e3e8ef; padding: 10px; background: #fbfcfe; }
+    .decision { background: #eef5fb; border-left: 4px solid #1d70b8; padding: 12px; font-size: 13pt; font-weight: bold; color: #102f55; }
+    .footer { padding: 12px 16px; color: #64748b; font-size: 8pt; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <table class="header-table">
+        <tr>
+          <td style="width:64px;"><img class="header-logo" src="{{ logo_src }}" alt="Logo"></td>
+          <td><div class="brand">{{ institution_name }}</div><div class="subtitle">Fiche officielle vérifiée du bulletin</div></td>
+          <td class="period">{{ term }}<br>Année scolaire {{ school_year }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Identité de l’élève</div>
+      <table class="identity-table">
+        <tr>
+          <td class="photo-cell">
+            {% if photo_src %}<img class="photo" src="{{ photo_src }}" alt="Photo de {{ full_name }}">{% else %}<table><tr><td class="photo-empty">Photo non disponible</td></tr></table>{% endif %}
+          </td>
+          <td class="details-cell">
+            <div class="field"><span class="label">Noms et Prénoms</span><br><span class="value">{{ full_name }}</span></div>
+            <div class="field"><span class="label">Identifiant unique</span><br><span class="value">{{ matricule }}</span></div>
+            <div class="field"><span class="label">Date de naissance</span><br><span class="value">{{ birth_date }}</span></div>
+            <div class="field"><span class="label">Lieu de naissance</span><br><span class="value">{{ birth_place }}</span></div>
+          </td>
+          <td class="qr-cell"><img class="qr" src="{{ qr_image }}" alt="Code QR"><div class="qr-caption">Code QR signé</div></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Scolarité</div>
+      <table class="summary-table">
+        <tr><td><span class="label">Année scolaire</span><br><span class="value">{{ school_year }}</span></td><td><span class="label">Classe</span><br><span class="value">{{ class_name }}</span></td><td><span class="label">Période</span><br><span class="value">{{ term }}</span></td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Résultats</div>
+      <table class="summary-table">
+        <tr><td><span class="label">Moyenne</span><br><span class="value">{{ average if average is not none else '—' }}/20</span></td><td><span class="label">Rang</span><br><span class="value">{{ rank or '—' }}</span></td><td><span class="label">Document</span><br><span class="value">Fiche QR</span></td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">DÉCISION DU CONSEIL DE CLASSE</div>
+      <div class="decision">{{ decision }}</div>
+    </div>
+    <div class="footer">{{ institution_name }} · Fiche générée à partir d’un code QR signé. Cette fiche ne contient pas le bulletin PDF.</div>
+  </div>
+</body>
+</html>
