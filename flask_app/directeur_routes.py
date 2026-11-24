@@ -1874,6 +1874,44 @@ def dir_calendar_delete(event_id):
 
 
 # ----------------------------------------------------- paramètres généraux ---
+def _council_rates_by_level():
+    """Retourne les taux calculés sur les élèves ayant une moyenne annuelle."""
+    result = {
+        level: {"evaluated": 0, "admitted": 0, "failure": 0, "excluded": 0,
+                "success_rate": None, "failure_rate": None, "exclusion_rate": None}
+        for level in CLASS_LEVEL_LABELS
+    }
+    cache = {}
+    for student in Student.query.filter(Student.class_id.isnot(None)).all():
+        level = student.school_class.level if student.school_class else None
+        if level not in result:
+            continue
+        try:
+            annual = annual_bulletin_data(student, _cache=cache)
+        except Exception:
+            app.logger.exception("Impossible de calculer la décision de l’élève %s", student.id)
+            continue
+        if not annual or annual.get("overall_avg") is None:
+            continue
+        item = result[level]
+        item["evaluated"] += 1
+        marks = annual.get("decision_marks") or {}
+        if marks.get("excluded"):
+            item["excluded"] += 1
+        elif marks.get("admitted"):
+            item["admitted"] += 1
+        else:
+            item["failure"] += 1
+
+    for item in result.values():
+        denominator = item["evaluated"]
+        if denominator:
+            item["success_rate"] = round(item["admitted"] / denominator * 100, 1)
+            item["failure_rate"] = round(item["failure"] / denominator * 100, 1)
+            item["exclusion_rate"] = round(item["excluded"] / denominator * 100, 1)
+    return result
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1934,5 +1972,6 @@ def dir_settings():
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
+    decision_rates = _council_rates_by_level()
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS)
+                           class_level_labels=CLASS_LEVEL_LABELS, decision_rates=decision_rates)

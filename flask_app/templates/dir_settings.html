@@ -23,33 +23,39 @@
   <form method="POST">
     <input type="hidden" name="action" value="council_criteria">
     <div class="table-responsive">
-      <table class="table-ltt align-middle" style="min-width:780px;">
+      <table class="table-ltt align-middle" style="min-width:1120px;">
         <thead>
           <tr>
             <th rowspan="2">Niveau</th>
             <th colspan="2" class="text-center">Admission en classe supérieure</th>
             <th colspan="2" class="text-center">Reprise de la classe</th>
             <th colspan="2" class="text-center">Exclusion</th>
+            <th colspan="3" class="text-center">Résultats après enregistrement</th>
           </tr>
           <tr>
             <th>Min.</th><th>Max.</th><th>Min.</th><th>Max.</th><th>Min.</th><th>Max.</th>
+            <th>Taux de réussite</th><th>Taux d’échec</th><th>Taux d’exclusion</th>
           </tr>
         </thead>
         <tbody>
         {% for level, label in class_level_labels.items() %}
           {% set item = criteria.get(level) %}
+          {% set rates = decision_rates.get(level) %}
           <tr>
             <td class="fw-semibold">{{ label }} <small class="text-muted">({{ level }})</small></td>
             {% for field in ['admission_min','admission_max','repeat_min','repeat_max','exclusion_min','exclusion_max'] %}
               <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ item[field] if item else '' }}" placeholder="—" aria-label="{{ field }} {{ label }}"></td>
             {% endfor %}
+            <td class="text-success fw-semibold">{{ (rates.success_rate|string + ' %') if rates and rates.success_rate is not none else '—' }}</td>
+            <td class="text-warning fw-semibold">{{ (rates.failure_rate|string + ' %') if rates and rates.failure_rate is not none else '—' }}</td>
+            <td class="text-danger fw-semibold">{{ (rates.exclusion_rate|string + ' %') if rates and rates.exclusion_rate is not none else '—' }}</td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
     </div>
     <div class="text-muted mt-2 mb-3" style="font-size:11.5px;">
-      Les décisions liées aux frais impayés, au rang NC, à la conduite et au statut redoublant restent appliquées automatiquement en complément des seuils. Les critères configurés ici s’appliquent au bulletin annuel et au Conseil de classe.
+      Les taux sont calculés par niveau sur les élèves ayant une moyenne annuelle. Le taux d’échec correspond aux élèves évalués qui ne sont ni admis ni exclus. Les décisions liées aux frais impayés, au rang NC, à la conduite et au statut redoublant restent appliquées automatiquement en complément des seuils.
     </div>
     <button class="btn-ltt-navy"><i class="bi bi-save-fill"></i> Enregistrer les critères</button>
   </form>
