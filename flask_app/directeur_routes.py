@@ -8,7 +8,6 @@ import unicodedata
 from datetime import date, timedelta
 from urllib.request import Request, urlopen
 from flask import render_template, request, redirect, url_for, flash, session, abort
-from sqlalchemy.orm import joinedload
 from app import app, db
 from models import (
     User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student, Grade,
@@ -1899,9 +1898,9 @@ def _council_decision_statistics():
         for level, label in CLASS_LEVEL_LABELS.items()
     }
     cache = {}
-    students = (Student.query.options(
-                    joinedload(Student.school_class).selectinload(SchoolClass.students)
-                ).filter(Student.class_id.isnot(None)).all())
+    # Ne pas utiliser de stratégie eager spécifique ici : certaines installations
+    # SQLAlchemy anciennes échouent sur le chaînage joinedload/selectinload.
+    students = Student.query.filter(Student.class_id.isnot(None)).all()
     for student in students:
         school_class = student.school_class
         level = school_class.level if school_class else None
@@ -1909,7 +1908,12 @@ def _council_decision_statistics():
             continue
         item = stats[level]
         item["total"] += 1
-        annual = annual_bulletin_data(student, _cache=cache)
+        try:
+            annual = annual_bulletin_data(student, _cache=cache)
+        except Exception:
+            # Un élève incomplet ne doit jamais empêcher l’ouverture des paramètres.
+            app.logger.exception("Erreur de calcul annuel pour l’élève %s", student.id)
+            continue
         if not annual or annual.get("overall_avg") is None:
             continue
         item["evaluated"] += 1
