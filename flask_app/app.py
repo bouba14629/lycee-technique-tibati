@@ -12,7 +12,7 @@ from models import (
     db, User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
     Course, Grade, Attendance, Sanction, Reward, Room, Equipment, Reservation,
     ScheduleEntry, Message, Announcement, Notification, MaintenanceRequest,
-    Availability, ActivityLog, BulletinApproval, ClassCouncilDecision, CouncilDecisionCriterion, ROLES, ROLE_LABELS,
+    Availability, ActivityLog, BulletinApproval, ClassCouncilDecision, CouncilDecisionCriterion, OrientationAssignment, ROLES, ROLE_LABELS,
 )
 from utils import (
     login_required, roles_required, notify, student_average, subject_averages,

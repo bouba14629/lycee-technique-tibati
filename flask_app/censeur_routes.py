@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app import app, db
 from models import (
     SchoolClass, Course, Room, ScheduleEntry, Attendance, Sanction, Student, Department, Section, Subject, Teacher, User,
-    Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation,
+    Grade, PlannedAssessment, BulletinApproval, BulletinWorkAppreciation, OrientationAssignment,
     TeacherIndicator, CustomIndicatorValue,
 )
 from utils import (roles_required, check_schedule_conflict, DAYS, general_average, subject_averages,
@@ -19,6 +19,79 @@ def _is_stt_class(school_class):
     section = school_class.department.section if school_class and school_class.department else None
     values = ((section.code if section else ""), (section.name if section else ""))
     return any((value or "").strip().upper() == "STT" for value in values)
+
+
+# Niveaux concernés par l’orientation vers la classe immédiatement supérieure.
+ORIENTATION_SOURCE_LEVELS = ("1A", "2A", "3A", "4A", "2nde")
+ORIENTATION_NEXT_LEVEL = {"1A": "2A", "2A": "3A", "3A": "4A", "4A": "2nde", "2nde": "P"}
+
+
+def _orientation_target_classes(school_class):
+    next_level = ORIENTATION_NEXT_LEVEL.get(school_class.level)
+    if not next_level:
+        return []
+    candidates = SchoolClass.query.filter_by(department_id=school_class.department_id, level=next_level).order_by(
+        db.func.lower(SchoolClass.name)
+    ).all()
+    matching = [item for item in candidates if item.specialty == school_class.specialty]
+    return matching or candidates
+
+
+@app.route("/orientation", methods=["GET", "POST"])
+@roles_required("chef_orientation")
+def orientation_assignments():
+    """Affecte une classe supérieure aux élèves du premier cycle et de Seconde."""
+    school_year = get_current_school_year()
+    classes = SchoolClass.query.filter(SchoolClass.level.in_(ORIENTATION_SOURCE_LEVELS)).join(Department).order_by(
+        db.func.lower(Department.name), db.func.lower(SchoolClass.name)
+    ).all()
+    class_id = request.values.get("class_id", type=int)
+    cls = SchoolClass.query.get_or_404(class_id) if class_id else None
+    if cls and cls.level not in ORIENTATION_SOURCE_LEVELS:
+        abort(403)
+    if request.method == "POST":
+        if not cls:
+            flash("Sélectionnez une classe avant d’enregistrer l’orientation.", "warning")
+            return redirect(url_for("orientation_assignments"))
+        targets = {item.id: item for item in _orientation_target_classes(cls)}
+        students = sorted(list(cls.students), key=lambda item: ((item.first_name or "").casefold(),
+                                                                  (item.last_name or "").casefold()))
+        saved = {item.student_id: item for item in OrientationAssignment.query.filter_by(school_year=school_year)
+                 .join(Student).filter(Student.class_id == cls.id).all()}
+        for student in students:
+            raw_target_id = request.form.get(f"target_class_{student.id}", "").strip()
+            current = saved.get(student.id)
+            if not raw_target_id:
+                if current:
+                    db.session.delete(current)
+                continue
+            try:
+                target_id = int(raw_target_id)
+            except ValueError:
+                flash(f"Classe d’orientation invalide pour {student.full_name}.", "danger")
+                continue
+            if target_id not in targets:
+                flash(f"La classe choisie n’est pas autorisée pour {student.full_name}.", "danger")
+                continue
+            if not current:
+                db.session.add(OrientationAssignment(student_id=student.id, school_year=school_year,
+                                                     target_class_id=target_id, updated_by_id=session["user_id"]))
+            else:
+                current.target_class_id = target_id
+                current.updated_by_id = session["user_id"]
+        db.session.commit()
+        flash("Les choix d’orientation ont été enregistrés.", "success")
+        return redirect(url_for("orientation_assignments", class_id=cls.id))
+    rows = []
+    if cls:
+        targets = _orientation_target_classes(cls)
+        saved = {item.student_id: item for item in OrientationAssignment.query.filter_by(school_year=school_year)
+                 .join(Student).filter(Student.class_id == cls.id).all()}
+        students = sorted(list(cls.students), key=lambda item: ((item.first_name or "").casefold(),
+                                                                  (item.last_name or "").casefold()))
+        rows = [{"student": student, "targets": targets, "saved": saved.get(student.id)} for student in students]
+    return render_template("orientation_assignments.html", classes=classes, cls=cls, class_id=class_id,
+                           rows=rows, school_year=school_year)
 
 
 def _subject_compatible_with_class(subject, school_class):

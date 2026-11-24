@@ -500,7 +500,7 @@ def schedule_group_labels(entries):
 
 def annual_bulletin_data(student, _cache=None):
     """Calcule le bulletin annuel sur les trois trimestres sans modifier le bulletin trimestriel."""
-    from models import SUBJECT_CATEGORIES, Attendance, Sanction, SchoolClass, CouncilDecisionCriterion
+    from models import SUBJECT_CATEGORIES, Attendance, Sanction, SchoolClass, CouncilDecisionCriterion, OrientationAssignment
     if not student.class_id:
         return None
     cache = _cache if _cache is not None else {}
@@ -690,6 +690,14 @@ def annual_bulletin_data(student, _cache=None):
         "insolvency": not bool(student.school_fees_paid),
         "repeat_if_failure": repeat_if_failure,
     }
+    orientation_cache = cache.setdefault("orientation_assignments", {})
+    if student.id not in orientation_cache:
+        orientation_cache[student.id] = OrientationAssignment.query.filter_by(
+            student_id=student.id, school_year=get_current_school_year()
+        ).first()
+    orientation_assignment = orientation_cache[student.id]
+    if decision_marks["admitted"] and orientation_assignment and orientation_assignment.target_class:
+        next_class_name = orientation_assignment.target_class.name
 
     return {"terms": terms, "categories": categories, "overall_points": round(points_total, 2),
             "overall_coef": coef_total, "overall_avg": overall_avg,

@@ -108,6 +108,7 @@
 
       {% if current_user and current_user.role == 'chef_orientation' %}
       <div class="sidebar-section-title">Orientation scolaire</div>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='orientation_assignments' }}" href="{{ url_for('orientation_assignments') }}"><i class="bi bi-signpost-split-fill"></i> Orientation</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['role_schedule_validate','censeur_global_schedule_preview'] }}" href="{{ url_for('role_schedule_validate') }}"><i class="bi bi-calendar2-range-fill"></i> Emplois du temps par classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_teacher_schedule_list','censeur_teacher_schedule_official'] }}" href="{{ url_for('censeur_teacher_schedule_list') }}"><i class="bi bi-printer-fill"></i> Emplois individuels des conseillers</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>

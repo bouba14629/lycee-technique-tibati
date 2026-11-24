@@ -339,6 +339,20 @@ class ClassCouncilDecision(db.Model):
     __table_args__ = (db.UniqueConstraint("student_id", "school_year", name="uq_council_decision_student_year"),)
 
 
+class OrientationAssignment(db.Model):
+    """Classe supérieure choisie par le service d’orientation pour un élève."""
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    school_year = db.Column(db.String(12), nullable=False)
+    target_class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    student = db.relationship("Student", backref="orientation_assignments")
+    target_class = db.relationship("SchoolClass")
+    updated_by = db.relationship("User")
+    __table_args__ = (db.UniqueConstraint("student_id", "school_year", name="uq_orientation_assignment_student_year"),)
+
+
 class BulletinWorkAppreciation(db.Model):
     """Appréciation générale du travail, saisie par le Censeur pour un élève et un trimestre."""
     id = db.Column(db.Integer, primary_key=True)
