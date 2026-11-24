@@ -1912,6 +1912,15 @@ def _council_rates_by_level():
     return result
 
 
+def _empty_council_rates():
+    """Structure de repli pour afficher les critères même si les taux sont indisponibles."""
+    return {
+        level: {"evaluated": 0, "admitted": 0, "failure": 0, "excluded": 0,
+                "success_rate": None, "failure_rate": None, "exclusion_rate": None}
+        for level in CLASS_LEVEL_LABELS
+    }
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1972,6 +1981,10 @@ def dir_settings():
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
-    decision_rates = _council_rates_by_level()
+    try:
+        decision_rates = _council_rates_by_level()
+    except Exception:
+        app.logger.exception("Impossible de charger les taux du Conseil dans les paramètres généraux")
+        decision_rates = _empty_council_rates()
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
                            class_level_labels=CLASS_LEVEL_LABELS, decision_rates=decision_rates)
