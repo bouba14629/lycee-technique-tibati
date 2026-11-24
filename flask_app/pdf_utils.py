@@ -387,6 +387,7 @@ def select_student_photo_for_pdf(photo, fallback_path, base_url=None):
 
 def render_pdf(template_name, **context):
     """Rend un template Jinja dédié à l'impression en PDF et renvoie un flux binaire (BytesIO)."""
+    skip_watermark = bool(context.pop("_skip_watermark", False))
     logo_path = bulletin_logo_pdf_path()
     embedded_logo = pdf_image_data_uri(logo_path)
     context.setdefault("logo_path", embedded_logo)
@@ -410,7 +411,8 @@ def render_pdf(template_name, **context):
     try:
         if template_name in ("pdf/bulletin_annual_pdf.html", "pdf/class_annual_bulletins_pdf.html"):
             from annual_pdf import render_annual_bulletins_pdf
-            return apply_logo_watermark(render_annual_bulletins_pdf(**context))
+            pdf = render_annual_bulletins_pdf(**context)
+            return apply_logo_watermark(pdf) if not skip_watermark else pdf
         html = render_template(template_name, **context)
         buffer = BytesIO()
         result = pisa.CreatePDF(html, dest=buffer, link_callback=_pdf_link_callback)
@@ -418,7 +420,7 @@ def render_pdf(template_name, **context):
         if result.err:
             logger.error("PDF rendering reported errors template=%s errors=%s", template_name, result.err)
             return None
-        return apply_logo_watermark(buffer) if _is_bulletin_pdf_template(template_name) else buffer
+        return apply_logo_watermark(buffer) if _is_bulletin_pdf_template(template_name) and not skip_watermark else buffer
     except Exception:
         logger.exception("PDF rendering failed template=%s", template_name)
         return None
@@ -430,13 +432,15 @@ def render_grouped_bulletins_pdf(template_name, students_data, **context):
     Le secours conserve exactement les sources photo, données et template.
     Aucun PDF incomplet ou sans les photos valides n'est retourné.
     """
-    pdf = render_pdf(template_name, students_data=students_data, **context)
+    # Le filigrane est appliqué une seule fois sur le PDF groupé final afin
+    # qu'aucune fusion intermédiaire ne soit perdue pendant l'assemblage.
+    pdf = render_pdf(template_name, students_data=students_data, _skip_watermark=True, **context)
     if pdf:
-        return pdf
+        return apply_logo_watermark(pdf)
     try:
         writer = PdfWriter()
         for row in students_data:
-            individual = render_pdf(template_name, students_data=[row], **context)
+            individual = render_pdf(template_name, students_data=[row], _skip_watermark=True, **context)
             if not individual:
                 return None
             writer.append(PdfReader(individual))
@@ -445,7 +449,7 @@ def render_grouped_bulletins_pdf(template_name, students_data, **context):
         output = BytesIO()
         writer.write(output)
         output.seek(0)
-        return output
+        return apply_logo_watermark(output)
     except Exception:
         logger.exception("Grouped bulletin assembly failed template=%s", template_name)
         return None

@@ -166,7 +166,9 @@ class AnnualPage:
         """Dessine le QR de la période en bas à gauche, sans déplacer le modèle."""
         image = _image(row.get('qr_data_uri'))
         if image:
-            self.pdf.drawImage(image, 15, 12, width=34, height=34, mask='auto')
+            # 26 pt laisse une marge de sécurité suffisante pour conserver le
+            # modèle annuel sur une seule page A4.
+            self.pdf.drawImage(image, 15, 12, width=26, height=26, mask='auto')
 
     def grades(self, data):
         # 18 matières / quatre catégories dans la référence. Les autres classes
