@@ -30,11 +30,8 @@ def _orientation_target_classes(school_class):
     next_level = ORIENTATION_NEXT_LEVEL.get(school_class.level)
     if not next_level:
         return []
-    candidates = SchoolClass.query.filter_by(department_id=school_class.department_id, level=next_level).order_by(
-        db.func.lower(SchoolClass.name)
-    ).all()
-    matching = [item for item in candidates if item.specialty == school_class.specialty]
-    return matching or candidates
+    return (SchoolClass.query.filter_by(level=next_level).join(Department)
+            .order_by(db.func.lower(Department.name), db.func.lower(SchoolClass.name)).all())
 
 
 @app.route("/orientation", methods=["GET", "POST"])

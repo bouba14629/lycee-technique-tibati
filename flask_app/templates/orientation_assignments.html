@@ -48,7 +48,7 @@
               <select class="form-select" name="target_class_{{ row.student.id }}">
                 <option value="">— Aucun choix —</option>
                 {% for target in row.targets %}
-                  <option value="{{ target.id }}" {{ 'selected' if row.saved and row.saved.target_class_id == target.id }}>{{ target.name }}{% if target.specialty %} — {{ target.specialty }}{% endif %}</option>
+                  <option value="{{ target.id }}" {{ 'selected' if row.saved and row.saved.target_class_id == target.id }}>{{ target.name }} — {{ target.department.name }}{% if target.specialty %} — {{ target.specialty }}{% endif %}</option>
                 {% endfor %}
               </select>
             </td>
