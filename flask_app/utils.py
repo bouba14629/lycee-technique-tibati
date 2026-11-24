@@ -500,7 +500,7 @@ def schedule_group_labels(entries):
 
 def annual_bulletin_data(student, _cache=None):
     """Calcule le bulletin annuel sur les trois trimestres sans modifier le bulletin trimestriel."""
-    from models import SUBJECT_CATEGORIES, Attendance, Sanction, SchoolClass
+    from models import SUBJECT_CATEGORIES, Attendance, Sanction, SchoolClass, CouncilDecisionCriterion
     if not student.class_id:
         return None
     cache = _cache if _cache is not None else {}
@@ -639,17 +639,35 @@ def annual_bulletin_data(student, _cache=None):
         marker in sanction_text for marker in ("exclusion définitive", "exclusion definitive", "exclu définitivement", "exclu definitivement")
     )
     rank_is_nc = overall_avg is not None and overall_avg < 3
-    # Le redoublement conditionnel est réservé aux classes de quatrième année,
-    # Première et Terminale. Toutes les autres classes gardent cette case vide.
+    criteria_cache = cache.setdefault("council_criteria", {})
+    level = student.school_class.level
+    if level not in criteria_cache:
+        criteria_cache[level] = CouncilDecisionCriterion.query.filter_by(level=level).first()
+    criterion = criteria_cache[level]
+    def criterion_matches(value, minimum, maximum):
+        if value is None or (minimum is None and maximum is None):
+            return False
+        return ((minimum is None or value >= minimum) and (maximum is None or value <= maximum))
+
+    admission_configured = criterion and (criterion.admission_min is not None or criterion.admission_max is not None)
+    repeat_configured = criterion and (criterion.repeat_min is not None or criterion.repeat_max is not None)
+    exclusion_configured = criterion and (criterion.exclusion_min is not None or criterion.exclusion_max is not None)
+    # Le redoublement conditionnel reste réservé aux classes de quatrième année,
+    # Première et Terminale lorsque le Proviseur n'a pas configuré de seuil.
     special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
     excluded = (
         not bool(student.school_fees_paid)
         or rank_is_nc
         or bool(student.is_repeater)
         or discipline_definitive
-        or (overall_avg is not None and overall_avg < 6)
+        or (criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
+            if exclusion_configured else (overall_avg is not None and overall_avg < 6))
     )
-    repeat_if_failure = special_repeat_level and not bool(student.is_repeater) and not excluded
+    repeat_if_failure = (
+        not bool(student.is_repeater) and not excluded
+        and (criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
+             if repeat_configured else special_repeat_level)
+    )
     next_class_name = None
     current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
     if current_level_index >= 0 and current_level_index + 1 < len(LEVEL_ORDER):
@@ -660,7 +678,10 @@ def annual_bulletin_data(student, _cache=None):
         matching = [item for item in candidates if item.specialty == student.school_class.specialty]
         next_class_name = (matching or candidates)[0].name if (matching or candidates) else None
     decision_marks = {
-        "admitted": overall_avg is not None and overall_avg >= 9 and not excluded and not repeat_if_failure,
+        "admitted": (
+            criterion_matches(overall_avg, criterion.admission_min, criterion.admission_max)
+            if admission_configured else overall_avg is not None and overall_avg >= 9
+        ) and not excluded and not repeat_if_failure,
         "excluded": excluded,
         "competencies_not_acquired": overall_avg is not None and overall_avg < 6,
         "conduct": discipline_definitive,

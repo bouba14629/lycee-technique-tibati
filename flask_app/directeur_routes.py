@@ -1877,17 +1877,62 @@ def dir_calendar_delete(event_id):
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
-    from models import AppSetting
+    from models import AppSetting, CouncilDecisionCriterion
     setting = AppSetting.query.first()
     if not setting:
         setting = AppSetting(current_school_year="2025-2026")
         db.session.add(setting)
         db.session.commit()
     if request.method == "POST":
+        action = request.form.get("action", "school_year")
+        if action == "council_criteria":
+            parsed = {}
+            errors = []
+            fields = ("admission_min", "admission_max", "repeat_min", "repeat_max", "exclusion_min", "exclusion_max")
+            for level in CLASS_LEVEL_LABELS:
+                values = {}
+                for field in fields:
+                    raw = request.form.get(f"{field}_{level}", "").strip().replace(",", ".")
+                    if not raw:
+                        values[field] = None
+                        continue
+                    try:
+                        value = float(raw)
+                    except ValueError:
+                        errors.append(f"{CLASS_LEVEL_LABELS[level]} : valeur invalide")
+                        continue
+                    if value < 0 or value > 20:
+                        errors.append(f"{CLASS_LEVEL_LABELS[level]} : les moyennes doivent être entre 0 et 20")
+                    values[field] = value
+                for prefix in ("admission", "repeat", "exclusion"):
+                    minimum, maximum = values.get(f"{prefix}_min"), values.get(f"{prefix}_max")
+                    if minimum is not None and maximum is not None and minimum > maximum:
+                        errors.append(f"{CLASS_LEVEL_LABELS[level]} : le minimum {prefix} dépasse le maximum")
+                parsed[level] = values
+            if errors:
+                flash("Critères non enregistrés : " + " ; ".join(errors[:3]), "danger")
+                return redirect(url_for("dir_settings"))
+            existing = {item.level: item for item in CouncilDecisionCriterion.query.all()}
+            for level, values in parsed.items():
+                if not any(value is not None for value in values.values()):
+                    if level in existing:
+                        db.session.delete(existing[level])
+                    continue
+                criterion = existing.get(level)
+                if not criterion:
+                    criterion = CouncilDecisionCriterion(level=level)
+                    db.session.add(criterion)
+                for field, value in values.items():
+                    setattr(criterion, field, value)
+            db.session.commit()
+            flash("Les critères de décision du Conseil ont été enregistrés.", "success")
+            return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
         if new_year:
             setting.current_school_year = new_year
             db.session.commit()
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
-    return render_template("dir_settings.html", setting=setting)
+    criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
+    return render_template("dir_settings.html", setting=setting, criteria=criteria,
+                           class_level_labels=CLASS_LEVEL_LABELS)

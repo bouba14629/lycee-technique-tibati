@@ -514,6 +514,19 @@ class AppSetting(db.Model):
     current_school_year = db.Column(db.String(12), default="2025-2026")
 
 
+class CouncilDecisionCriterion(db.Model):
+    """Seuils de moyenne configurés par le Proviseur pour une décision annuelle."""
+    id = db.Column(db.Integer, primary_key=True)
+    level = db.Column(db.String(20), nullable=False, unique=True)
+    admission_min = db.Column(db.Float)
+    admission_max = db.Column(db.Float)
+    repeat_min = db.Column(db.Float)
+    repeat_max = db.Column(db.Float)
+    exclusion_min = db.Column(db.Float)
+    exclusion_max = db.Column(db.Float)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
 class SchoolCalendarEvent(db.Model):
     """Événement du calendrier scolaire (rentrée, trimestres, conseils de classe, vacances, examens…)
     affiché sur les tableaux de bord Proviseur/Censeur — modifiable par le Proviseur."""
