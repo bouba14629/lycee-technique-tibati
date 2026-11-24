@@ -514,8 +514,13 @@ def annual_bulletin_data(student, _cache=None):
         return grade_values_cache[key]
 
     terms = TERMS[:3]
-    courses = [course for course in scheduled_courses_for_class(student.class_id)
-               if "orientation scolaire" not in (course.subject.name or "").casefold()]
+    annual_courses_cache = cache.setdefault("annual_courses", {})
+    if student.class_id not in annual_courses_cache:
+        annual_courses_cache[student.class_id] = [
+            course for course in scheduled_courses_for_class(student.class_id)
+            if "orientation scolaire" not in (course.subject.name or "").casefold()
+        ]
+    courses = annual_courses_cache[student.class_id]
     categories, points_total, coef_total = [], 0.0, 0
     term_points, term_coefs = [0.0, 0.0, 0.0], [0, 0, 0]
     for category in SUBJECT_CATEGORIES:

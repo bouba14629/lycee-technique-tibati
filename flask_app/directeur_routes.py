@@ -9,12 +9,12 @@ from urllib.request import Request, urlopen
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from app import app, db
 from models import (
-    User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
+    User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student, Grade,
     Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation, ClassCouncilDecision,
 )
 from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
                    check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies,
-                   annual_bulletin_data, get_current_school_year)
+                   annual_bulletin_data, get_current_school_year, scheduled_courses_for_class, TERMS)
 
 
 CLASS_LEVEL_LABELS = {
@@ -1731,9 +1731,9 @@ def dir_teacher_schedule_official_xlsx(teacher_id):
 
 
 # ----------------------------------------------------- conseil de classe ---
-def _annual_council_default(student):
+def _annual_council_default(student, calculation_cache=None):
     """Convertit la décision calculée du bulletin annuel en choix éditable."""
-    data = annual_bulletin_data(student)
+    data = annual_bulletin_data(student, _cache=calculation_cache)
     marks = data.get("decision_marks", {})
     if marks.get("excluded"):
         reasons = []
@@ -1767,8 +1767,11 @@ def directeur_conseil_de_classe():
             flash("Sélectionnez une classe avant d’enregistrer les décisions.", "warning")
             return redirect(url_for("directeur_conseil_de_classe"))
         valid_types = {"", "admitted", "repeat", "excluded"}
-        for student in sorted(cls.students, key=lambda item: ((item.first_name or "").casefold(),
-                                                                (item.last_name or "").casefold())):
+        students = sorted(list(cls.students), key=lambda item: ((item.first_name or "").casefold(),
+                                                                  (item.last_name or "").casefold()))
+        saved = {item.student_id: item for item in ClassCouncilDecision.query.filter_by(school_year=school_year)
+                 .join(Student).filter(Student.class_id == cls.id).all()}
+        for student in students:
             choice = request.form.get(f"decision_type_{student.id}", "").strip()
             detail = request.form.get(f"decision_detail_{student.id}", "").strip()
             if choice not in valid_types:
@@ -1777,7 +1780,7 @@ def directeur_conseil_de_classe():
             if choice in {"admitted", "repeat", "excluded"} and not detail:
                 flash(f"Précisez la classe ou le motif pour {student.full_name}.", "warning")
                 continue
-            record = ClassCouncilDecision.query.filter_by(student_id=student.id, school_year=school_year).first()
+            record = saved.get(student.id)
             if not choice:
                 if record:
                     db.session.delete(record)
@@ -1796,11 +1799,28 @@ def directeur_conseil_de_classe():
 
     rows = []
     if cls:
+        students = sorted(list(cls.students), key=lambda item: ((item.first_name or "").casefold(),
+                                                                  (item.last_name or "").casefold()))
         saved = {item.student_id: item for item in ClassCouncilDecision.query.filter_by(school_year=school_year)
                  .join(Student).filter(Student.class_id == cls.id).all()}
-        for student in sorted(cls.students, key=lambda item: ((item.first_name or "").casefold(),
-                                                                (item.last_name or "").casefold())):
-            automatic = _annual_council_default(student)
+        courses = [course for course in scheduled_courses_for_class(cls.id)
+                   if "orientation scolaire" not in (course.subject.name or "").casefold()]
+        student_ids = [student.id for student in students]
+        course_ids = [course.id for course in courses]
+        calculation_cache = {"annual_courses": {cls.id: courses}, "annual_grade_values": {}}
+        if student_ids and course_ids:
+            grades = Grade.query.filter(
+                Grade.student_id.in_(student_ids),
+                Grade.course_id.in_(course_ids),
+                Grade.term.in_(TERMS[:3]),
+            ).all()
+            for grade in grades:
+                key = (grade.student_id, grade.course_id, grade.term)
+                calculation_cache["annual_grade_values"].setdefault(key, []).append(
+                    grade.value / (grade.max_value or 20) * 20
+                )
+        for student in students:
+            automatic = _annual_council_default(student, calculation_cache)
             record = saved.get(student.id)
             rows.append({"student": student, "automatic": automatic, "saved": record or automatic})
     return render_template("directeur_conseil.html", classes=classes, cls=cls, class_id=class_id,
