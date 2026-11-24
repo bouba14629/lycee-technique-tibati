@@ -28,9 +28,12 @@ ORIENTATION_NEXT_LEVEL = {"1A": "2A", "2A": "3A", "3A": "4A", "4A": "2nde", "2nd
 
 def _orientation_target_classes(school_class):
     next_level = ORIENTATION_NEXT_LEVEL.get(school_class.level)
-    if not next_level:
+    current_department = school_class.department
+    section_id = current_department.section_id if current_department else None
+    if not next_level or not section_id:
         return []
     return (SchoolClass.query.filter_by(level=next_level).join(Department)
+            .filter(Department.section_id == section_id)
             .order_by(db.func.lower(Department.name), db.func.lower(SchoolClass.name)).all())
 
 
