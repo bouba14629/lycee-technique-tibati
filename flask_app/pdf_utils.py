@@ -111,7 +111,9 @@ def _watermark_logo_path():
     logo_path = bulletin_logo_pdf_path()
     if not logo_path or not os.path.isfile(logo_path):
         return None
-    cache_dir = _pdf_cache_dir("watermark-v1")
+    # Version du cache volontairement changée : les anciens PNG étaient trop
+    # pâles et pouvaient sembler absents dans le PDF final selon le lecteur.
+    cache_dir = _pdf_cache_dir("watermark-v2")
     os.makedirs(cache_dir, exist_ok=True)
     cache_path = os.path.join(cache_dir, "ltt-logo-watermark.png")
     try:
@@ -123,7 +125,9 @@ def _watermark_logo_path():
             gray = ImageOps.grayscale(image)
             # Les pixels sombres deviennent noirs avec une opacité faible ;
             # le blanc du logo reste transparent pour ne pas masquer le texte.
-            alpha = gray.point(lambda value: max(0, min(42, int((255 - value) * 0.22))))
+            # Gris noir translucide, suffisamment contrasté pour rester visible
+            # sur les tableaux blancs tout en conservant la lecture du texte.
+            alpha = gray.point(lambda value: max(0, min(74, int((255 - value) * 0.34))))
             watermark = Image.new("RGBA", gray.size, (0, 0, 0, 0))
             watermark.putalpha(alpha)
             watermark.save(cache_path, format="PNG", optimize=True)
@@ -193,6 +197,7 @@ def apply_logo_watermark(pdf_buffer):
         if len(checked.pages) != page_count:
             raise ValueError("watermarked PDF page count mismatch")
         output.seek(0)
+        logger.info("PDF logo watermark applied pages=%s size=%sx%s", page_count, width, height)
         return output
     except Exception:
         logger.warning("PDF logo watermark skipped; preserving original bulletin PDF", exc_info=True)
