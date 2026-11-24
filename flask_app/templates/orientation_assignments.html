@@ -13,7 +13,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
       <h2 style="font-size:17px; color:var(--navy-900); margin-bottom:4px;">Orientation des élèves</h2>
-      <p class="text-muted mb-0">Année scolaire : <strong>{{ school_year }}</strong>. Seules les classes de première année, deuxième année, troisième année, quatrième année et Seconde sont proposées.</p>
+      <p class="text-muted mb-0">Année scolaire : <strong>{{ school_year }}</strong>. Les classes actuelles proposées sont limitées à la première année et à la Seconde.</p>
     </div>
   </div>
 
@@ -37,13 +37,15 @@
     </div>
     <div class="table-responsive">
       <table class="table-ltt orientation-table">
-        <thead><tr><th>N°</th><th>Nom et prénom</th><th>Matricule</th><th>Classe supérieure proposée</th></tr></thead>
+        <thead><tr><th>N°</th><th>Nom et prénom</th><th>Matricule</th><th>Date de naissance</th><th>Lieu de naissance</th><th>Classe supérieure proposée</th></tr></thead>
         <tbody>
         {% for row in rows %}
           <tr>
             <td>{{ loop.index }}</td>
             <td class="fw-semibold">{{ row.student.full_name }}</td>
             <td>{{ row.student.matricule }}</td>
+            <td>{{ row.student.dob.strftime('%d/%m/%Y') if row.student.dob else '—' }}</td>
+            <td>{{ row.student.birth_place or '—' }}</td>
             <td>
               <select class="form-select" name="target_class_{{ row.student.id }}">
                 <option value="">— Aucun choix —</option>
@@ -54,7 +56,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="4" class="text-center text-muted py-4">Aucun élève inscrit dans cette classe.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-4">Aucun élève inscrit dans cette classe.</td></tr>
         {% endfor %}
         </tbody>
       </table>

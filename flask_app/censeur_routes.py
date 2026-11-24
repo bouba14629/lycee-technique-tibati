@@ -22,7 +22,7 @@ def _is_stt_class(school_class):
 
 
 # Niveaux concernés par l’orientation vers la classe immédiatement supérieure.
-ORIENTATION_SOURCE_LEVELS = ("1A", "2A", "3A", "4A", "2nde")
+ORIENTATION_SOURCE_LEVELS = ("1A", "2nde")
 ORIENTATION_NEXT_LEVEL = {"1A": "2A", "2A": "3A", "3A": "4A", "4A": "2nde", "2nde": "P"}
 
 
