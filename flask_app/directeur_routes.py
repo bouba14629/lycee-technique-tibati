@@ -1874,6 +1874,50 @@ def dir_calendar_delete(event_id):
 
 
 # ----------------------------------------------------- paramètres généraux ---
+def _council_decision_statistics():
+    """Calcule les taux annuels sans modifier les bulletins ni les données élèves."""
+    stats = {
+        level: {"level": level, "label": label, "total": 0, "evaluated": 0,
+                "admitted": 0, "excluded": 0, "repeat": 0}
+        for level, label in CLASS_LEVEL_LABELS.items()
+    }
+    cache = {}
+    students = Student.query.filter(Student.class_id.isnot(None)).all()
+    for student in students:
+        school_class = student.school_class
+        level = school_class.level if school_class else None
+        if level not in stats:
+            continue
+        item = stats[level]
+        item["total"] += 1
+        annual = annual_bulletin_data(student, _cache=cache)
+        if not annual or annual.get("overall_avg") is None:
+            continue
+        item["evaluated"] += 1
+        marks = annual.get("decision_marks") or {}
+        if marks.get("admitted"):
+            item["admitted"] += 1
+        if marks.get("excluded"):
+            item["excluded"] += 1
+        if marks.get("repeat_if_failure"):
+            item["repeat"] += 1
+
+    overall = {"level": "all", "label": "Toutes les classes", "total": 0,
+               "evaluated": 0, "admitted": 0, "excluded": 0, "repeat": 0}
+    for item in stats.values():
+        for key in ("total", "evaluated", "admitted", "excluded", "repeat"):
+            overall[key] += item[key]
+
+    def add_rates(item):
+        denominator = item["evaluated"]
+        item["success_rate"] = round(item["admitted"] / denominator * 100, 1) if denominator else None
+        item["exclusion_rate"] = round(item["excluded"] / denominator * 100, 1) if denominator else None
+        item["repeat_rate"] = round(item["repeat"] / denominator * 100, 1) if denominator else None
+        return item
+
+    return add_rates(overall), [add_rates(item) for item in stats.values()]
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1934,5 +1978,7 @@ def dir_settings():
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
+    decision_overall, decision_stats = _council_decision_statistics()
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS)
+                           class_level_labels=CLASS_LEVEL_LABELS,
+                           decision_overall=decision_overall, decision_stats=decision_stats)
