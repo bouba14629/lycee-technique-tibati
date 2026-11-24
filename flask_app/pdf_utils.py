@@ -138,80 +138,8 @@ def _watermark_logo_path():
 
 
 def apply_logo_watermark(pdf_buffer):
-    """Place le logo grand format en filigrane transparent sur chaque page."""
-    if not pdf_buffer:
-        return pdf_buffer
-    original_position = None
-    try:
-        try:
-            original_position = pdf_buffer.tell()
-            pdf_buffer.seek(0)
-            original_bytes = pdf_buffer.getvalue()
-        except Exception:
-            original_bytes = None
-        watermark_path = _watermark_logo_path()
-        if not watermark_path or not os.path.isfile(watermark_path):
-            return pdf_buffer
-        reader = PdfReader(pdf_buffer)
-        page_count = len(reader.pages)
-        if not page_count:
-            return pdf_buffer
-        writer = PdfWriter()
-        for page in reader.pages:
-            width = float(page.mediabox.width)
-            height = float(page.mediabox.height)
-            overlay_stream = BytesIO()
-            canvas_pdf = canvas.Canvas(overlay_stream, pagesize=(width, height))
-            with Image.open(watermark_path) as watermark:
-                image_width, image_height = watermark.size
-            # Format proche du modèle importé : logo très grand, centré sur la
-            # page et visible derrière le tableau et les blocs inférieurs.
-            target_width = min(width * 0.89, 530)
-            target_height = target_width * image_height / image_width
-            if target_height > height * 0.70:
-                target_height = height * 0.70
-                target_width = target_height * image_width / image_height
-            x = (width - target_width) / 2
-            y = (height - target_height) / 2
-            canvas_pdf.drawImage(
-                ImageReader(watermark_path), x, y, width=target_width, height=target_height,
-                preserveAspectRatio=True, mask="auto",
-            )
-            canvas_pdf.save()
-            overlay_stream.seek(0)
-            # Le fond blanc des bulletins est opaque : un filigrane sous la page
-            # serait invisible. Il est donc fusionné au-dessus avec une alpha
-            # très faible ; les écrits restent lisibles grâce au PNG transparent.
-            overlay_page = PdfReader(overlay_stream).pages[0]
-            try:
-                page.merge_page(overlay_page, over=True)
-            except TypeError:
-                # Compatibilité avec les versions plus anciennes de pypdf.
-                page.merge_page(overlay_page)
-            writer.add_page(page)
-        output = BytesIO()
-        writer.write(output)
-        output.seek(0)
-        # Ne jamais transmettre un PDF partiellement fusionné ou illisible.
-        checked = PdfReader(output)
-        if len(checked.pages) != page_count:
-            raise ValueError("watermarked PDF page count mismatch")
-        output.seek(0)
-        logger.info("PDF logo watermark applied pages=%s size=%sx%s", page_count, width, height)
-        return output
-    except Exception:
-        logger.warning("PDF logo watermark skipped; preserving original bulletin PDF", exc_info=True)
-        if original_bytes is not None:
-            fallback = BytesIO(original_bytes)
-            fallback.seek(0)
-            return fallback
-        return pdf_buffer
-    finally:
-        if original_position is not None:
-            try:
-                pdf_buffer.seek(original_position)
-            except Exception:
-                pass
+    """Compatibilité historique : les bulletins sont désormais sans filigrane."""
+    return pdf_buffer
 
 
 def _is_bulletin_pdf_template(template_name):
