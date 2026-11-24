@@ -3,7 +3,6 @@ import os
 import json
 import csv
 import re
-import time
 import unicodedata
 from datetime import date, timedelta
 from urllib.request import Request, urlopen
@@ -27,15 +26,6 @@ CLASS_LEVEL_LABELS = {
     "P": "PREMIERE",
     "Tle": "TERMINALE",
 }
-
-# Le calcul annuel est volontairement réutilisé entre deux ouvertures rapprochées
-# de la page des paramètres. Il est invalidé après toute modification pertinente.
-_COUNCIL_STATS_CACHE = {}
-_COUNCIL_STATS_CACHE_TTL = 60
-
-
-def _invalidate_council_statistics_cache():
-    _COUNCIL_STATS_CACHE.clear()
 
 
 def normalize_import_header(value):
@@ -1884,65 +1874,6 @@ def dir_calendar_delete(event_id):
 
 
 # ----------------------------------------------------- paramètres généraux ---
-def _council_decision_statistics():
-    """Calcule les taux annuels sans modifier les bulletins ni les données élèves."""
-    cache_key = get_current_school_year()
-    cached = _COUNCIL_STATS_CACHE.get(cache_key)
-    now = time.monotonic()
-    if cached and cached["expires_at"] > now:
-        return cached["value"]
-
-    stats = {
-        level: {"level": level, "label": label, "total": 0, "evaluated": 0,
-                "admitted": 0, "excluded": 0, "repeat": 0}
-        for level, label in CLASS_LEVEL_LABELS.items()
-    }
-    cache = {}
-    # Ne pas utiliser de stratégie eager spécifique ici : certaines installations
-    # SQLAlchemy anciennes échouent sur le chaînage joinedload/selectinload.
-    students = Student.query.filter(Student.class_id.isnot(None)).all()
-    for student in students:
-        school_class = student.school_class
-        level = school_class.level if school_class else None
-        if level not in stats:
-            continue
-        item = stats[level]
-        item["total"] += 1
-        try:
-            annual = annual_bulletin_data(student, _cache=cache)
-        except Exception:
-            # Un élève incomplet ne doit jamais empêcher l’ouverture des paramètres.
-            app.logger.exception("Erreur de calcul annuel pour l’élève %s", student.id)
-            continue
-        if not annual or annual.get("overall_avg") is None:
-            continue
-        item["evaluated"] += 1
-        marks = annual.get("decision_marks") or {}
-        if marks.get("admitted"):
-            item["admitted"] += 1
-        if marks.get("excluded"):
-            item["excluded"] += 1
-        if marks.get("repeat_if_failure"):
-            item["repeat"] += 1
-
-    overall = {"level": "all", "label": "Toutes les classes", "total": 0,
-               "evaluated": 0, "admitted": 0, "excluded": 0, "repeat": 0}
-    for item in stats.values():
-        for key in ("total", "evaluated", "admitted", "excluded", "repeat"):
-            overall[key] += item[key]
-
-    def add_rates(item):
-        denominator = item["evaluated"]
-        item["success_rate"] = round(item["admitted"] / denominator * 100, 1) if denominator else None
-        item["exclusion_rate"] = round(item["excluded"] / denominator * 100, 1) if denominator else None
-        item["repeat_rate"] = round(item["repeat"] / denominator * 100, 1) if denominator else None
-        return item
-
-    value = add_rates(overall), [add_rates(item) for item in stats.values()]
-    _COUNCIL_STATS_CACHE[cache_key] = {"expires_at": now + _COUNCIL_STATS_CACHE_TTL, "value": value}
-    return value
-
-
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1994,18 +1925,14 @@ def dir_settings():
                 for field, value in values.items():
                     setattr(criterion, field, value)
             db.session.commit()
-            _invalidate_council_statistics_cache()
             flash("Les critères de décision du Conseil ont été enregistrés.", "success")
             return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
         if new_year:
             setting.current_school_year = new_year
             db.session.commit()
-            _invalidate_council_statistics_cache()
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
-    decision_overall, decision_stats = _council_decision_statistics()
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS,
-                           decision_overall=decision_overall, decision_stats=decision_stats)
+                           class_level_labels=CLASS_LEVEL_LABELS)
