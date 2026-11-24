@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Conseil de classe{% endblock %}
+{% block page_title %}Conseil de classe{% endblock %}
+{% block extra_css %}
+<style>
+  .council-table th { white-space:nowrap; }
+  .council-table td { vertical-align:middle; }
+  .council-detail { min-width:210px; }
+  .council-basis { font-size:11px; color:#6c757d; margin-top:3px; }
+  .decision-excluded { color:#a61b1b; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card-ltt">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 style="font-size:17px; color:var(--navy-900); margin-bottom:4px;">Décisions du Conseil de classe</h2>
+      <p class="text-muted mb-0">Année scolaire : <strong>{{ school_year }}</strong>. Les choix proposés sont préremplis selon le bulletin annuel.</p>
+    </div>
+    {% if cls %}<button class="btn-ltt-outline no-print" type="button" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimer</button>{% endif %}
+  </div>
+
+  <form method="get" class="row g-2 mb-4 no-print">
+    <div class="col-md-6 col-lg-5">
+      <label class="form-label fw-semibold" for="class_id">Classe</label>
+      <select class="form-select" id="class_id" name="class_id" onchange="this.form.submit()">
+        <option value="">— Choisir une classe —</option>
+        {% for item in classes %}
+          <option value="{{ item.id }}" {{ 'selected' if class_id == item.id }}>{{ item.name }} — {{ item.department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  {% if cls %}
+  <form method="post" action="{{ url_for('directeur_conseil_de_classe') }}?class_id={{ cls.id }}">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h3 style="font-size:15px; color:var(--navy-900);">{{ cls.name }} — {{ rows|length }} élève(s)</h3>
+      <button class="btn-ltt no-print" type="submit"><i class="bi bi-save2-fill"></i> Enregistrer les décisions</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table-ltt council-table">
+        <thead><tr><th>N°</th><th>Nom et prénom</th><th>Matricule</th><th>Date de naissance</th><th>Lieu de naissance</th><th>Décision du Conseil</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          {% set saved = row.saved %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td class="fw-semibold">{{ row.student.full_name }}</td>
+            <td>{{ row.student.matricule }}</td>
+            <td>{{ row.student.dob.strftime('%d/%m/%Y') if row.student.dob else '—' }}</td>
+            <td>{{ row.student.birth_place or '—' }}</td>
+            <td>
+              <select class="form-select council-choice" name="decision_type_{{ row.student.id }}" data-student="{{ row.student.id }}">
+                <option value="" {{ 'selected' if not saved.type }}>— Décision automatique / en attente —</option>
+                <option value="admitted" {{ 'selected' if saved.type == 'admitted' }}>Admis en</option>
+                <option value="repeat" {{ 'selected' if saved.type == 'repeat' }}>Redouble la</option>
+                <option value="excluded" {{ 'selected' if saved.type == 'excluded' }}>Exclu(e) pour</option>
+              </select>
+              <input class="form-control council-detail mt-1" name="decision_detail_{{ row.student.id }}" value="{{ saved.detail or '' }}" placeholder="Classe ou motif" data-detail="{{ row.student.id }}">
+              <div class="council-basis {% if row.automatic.type == 'excluded' %}decision-excluded{% endif %}">
+                Bulletin annuel :
+                {% if row.automatic.type == 'admitted' %}Admis en {{ row.automatic.detail }}
+                {% elif row.automatic.type == 'repeat' %}Redouble la {{ row.automatic.detail }}
+                {% elif row.automatic.type == 'excluded' %}Exclu(e) pour {{ row.automatic.detail }}
+                {% else %}En attente{% endif %}
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Aucun élève inscrit dans cette classe.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+  {% else %}
+    <p class="text-muted text-center py-5">Sélectionnez une classe pour afficher les élèves et préparer le Conseil de classe.</p>
+  {% endif %}
+</div>
+<script>
+  document.querySelectorAll('.council-choice').forEach(select => {
+    const detail = document.querySelector(`[data-detail="${select.dataset.student}"]`);
+    const refresh = () => {
+      detail.disabled = !select.value;
+      detail.placeholder = select.value === 'excluded' ? 'Motif d’exclusion' : 'Classe concernée';
+    };
+    select.addEventListener('change', refresh); refresh();
+  });
+</script>
+{% endblock %}

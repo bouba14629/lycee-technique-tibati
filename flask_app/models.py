@@ -325,6 +325,20 @@ class BulletinApproval(db.Model):
     __table_args__ = (db.UniqueConstraint("class_id", "term", name="uq_bulletin_approval_class_term"),)
 
 
+class ClassCouncilDecision(db.Model):
+    """Décision saisie par le Proviseur pour un élève et une année scolaire."""
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    school_year = db.Column(db.String(12), nullable=False)
+    decision_type = db.Column(db.String(20), nullable=False)  # admitted / repeat / excluded
+    detail = db.Column(db.String(255), nullable=False, default="")
+    updated_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, onupdate=datetime.utcnow)
+    student = db.relationship("Student", backref="class_council_decisions")
+    updated_by = db.relationship("User")
+    __table_args__ = (db.UniqueConstraint("student_id", "school_year", name="uq_council_decision_student_year"),)
+
+
 class BulletinWorkAppreciation(db.Model):
     """Appréciation générale du travail, saisie par le Censeur pour un élève et un trimestre."""
     id = db.Column(db.Integer, primary_key=True)

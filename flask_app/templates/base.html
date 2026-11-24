@@ -77,6 +77,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='dir_settings' }}" href="{{ url_for('dir_settings') }}"><i class="bi bi-gear-fill"></i> Paramètres généraux</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['students_list','student_detail','student_enroll'] }}" href="{{ url_for('students_list') }}"><i class="bi bi-mortarboard-fill"></i> Élèves</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_bulletins' }}" href="{{ url_for('censeur_bulletins') }}"><i class="bi bi-file-earmark-medical-fill"></i> Bulletins</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='directeur_conseil_de_classe' }}" href="{{ url_for('directeur_conseil_de_classe') }}"><i class="bi bi-people-fill"></i> Conseil de classe</a>
       <a class="sidebar-link {{ 'active' if request.endpoint in ['censeur_honor_roll_register','censeur_honor_roll_register_export'] }}" href="{{ url_for('censeur_honor_roll_register') }}"><i class="bi bi-award-fill"></i> Tableaux d’honneur</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='rooms_list' }}" href="{{ url_for('rooms_list') }}"><i class="bi bi-door-open-fill"></i> Salles &amp; équipements</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='censeur_indicators' }}" href="{{ url_for('censeur_indicators') }}"><i class="bi bi-bar-chart-line-fill"></i> Indicateurs pédagogiques</a>

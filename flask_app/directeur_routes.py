@@ -10,10 +10,11 @@ from flask import render_template, request, redirect, url_for, flash, session, a
 from app import app, db
 from models import (
     User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student,
-    Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation,
+    Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation, ClassCouncilDecision,
 )
 from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
-                   check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies)
+                   check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies,
+                   annual_bulletin_data, get_current_school_year)
 
 
 CLASS_LEVEL_LABELS = {
@@ -1727,6 +1728,83 @@ def dir_teacher_schedule_official_xlsx(teacher_id):
     filename = f"Emploi_du_temps_{teacher.user.full_name}.xlsx".replace(" ", "_")
     return send_file(workbook, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name=filename)
+
+
+# ----------------------------------------------------- conseil de classe ---
+def _annual_council_default(student):
+    """Convertit la décision calculée du bulletin annuel en choix éditable."""
+    data = annual_bulletin_data(student)
+    marks = data.get("decision_marks", {})
+    if marks.get("excluded"):
+        reasons = []
+        reason_labels = (
+            ("insolvency", "Insolvabilité"),
+            ("resigning", "Démissionnaire"),
+            ("cannot_triplicate", "Ne peut tripler"),
+            ("conduct", "Conduite"),
+            ("competencies_not_acquired", "Compétences non acquises"),
+        )
+        reasons.extend(label for key, label in reason_labels if marks.get(key))
+        return {"type": "excluded", "detail": ", ".join(reasons) or "Décision d’exclusion"}
+    if marks.get("admitted") and data.get("next_class_name"):
+        return {"type": "admitted", "detail": data["next_class_name"]}
+    if marks.get("repeat_if_failure") and data.get("repeat_class_name"):
+        return {"type": "repeat", "detail": data["repeat_class_name"]}
+    return {"type": "", "detail": ""}
+
+
+@app.route("/directeur/conseil-de-classe", methods=["GET", "POST"])
+@roles_required("directeur")
+def directeur_conseil_de_classe():
+    """Prépare les décisions du Conseil de classe du compte Proviseur."""
+    school_year = get_current_school_year()
+    classes = SchoolClass.query.join(Department).order_by(db.func.lower(Department.name),
+                                                          db.func.lower(SchoolClass.name)).all()
+    class_id = request.values.get("class_id", type=int)
+    cls = SchoolClass.query.get_or_404(class_id) if class_id else None
+    if request.method == "POST":
+        if not cls:
+            flash("Sélectionnez une classe avant d’enregistrer les décisions.", "warning")
+            return redirect(url_for("directeur_conseil_de_classe"))
+        valid_types = {"", "admitted", "repeat", "excluded"}
+        for student in sorted(cls.students, key=lambda item: ((item.first_name or "").casefold(),
+                                                                (item.last_name or "").casefold())):
+            choice = request.form.get(f"decision_type_{student.id}", "").strip()
+            detail = request.form.get(f"decision_detail_{student.id}", "").strip()
+            if choice not in valid_types:
+                flash(f"Décision invalide pour {student.full_name}.", "danger")
+                continue
+            if choice in {"admitted", "repeat", "excluded"} and not detail:
+                flash(f"Précisez la classe ou le motif pour {student.full_name}.", "warning")
+                continue
+            record = ClassCouncilDecision.query.filter_by(student_id=student.id, school_year=school_year).first()
+            if not choice:
+                if record:
+                    db.session.delete(record)
+                continue
+            if not record:
+                record = ClassCouncilDecision(student_id=student.id, school_year=school_year,
+                                              decision_type=choice, detail=detail, updated_by_id=session["user_id"])
+                db.session.add(record)
+            else:
+                record.decision_type = choice
+                record.detail = detail
+                record.updated_by_id = session["user_id"]
+        db.session.commit()
+        flash("Les décisions du Conseil de classe ont été enregistrées.", "success")
+        return redirect(url_for("directeur_conseil_de_classe", class_id=cls.id))
+
+    rows = []
+    if cls:
+        saved = {item.student_id: item for item in ClassCouncilDecision.query.filter_by(school_year=school_year)
+                 .join(Student).filter(Student.class_id == cls.id).all()}
+        for student in sorted(cls.students, key=lambda item: ((item.first_name or "").casefold(),
+                                                                (item.last_name or "").casefold())):
+            automatic = _annual_council_default(student)
+            record = saved.get(student.id)
+            rows.append({"student": student, "automatic": automatic, "saved": record or automatic})
+    return render_template("directeur_conseil.html", classes=classes, cls=cls, class_id=class_id,
+                           rows=rows, school_year=school_year)
 
 
 # ----------------------------------------------------- calendrier scolaire ---
