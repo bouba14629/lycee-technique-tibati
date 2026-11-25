@@ -159,8 +159,9 @@ class AnnualPage:
     def photo(self, row):
         image = _image(row.get('photo_path'), portrait=True) if row.get('photo_available') else None
         if image:
-            # Photo légèrement abaissée dans le bloc d'identité du modèle annuel.
-            self.pdf.drawImage(image, 514.25, PAGE_H-217.5, width=49.5, height=55.5, mask='auto')
+            # Position du cadre photo du modèle annuel, compatible avec le
+            # rendu groupé et individuel sur une seule page A4.
+            self.pdf.drawImage(image, 514.25, PAGE_H-211.5, width=49.5, height=55.5, mask='auto')
 
     def qr(self, row):
         """Dessine le QR de la période en bas à gauche, sans déplacer le modèle."""
