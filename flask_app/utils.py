@@ -663,11 +663,17 @@ def annual_bulletin_data(student, _cache=None):
         or (criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
             if exclusion_configured else (overall_avg is not None and overall_avg < 6))
     )
-    repeat_if_failure = (
-        not bool(student.is_repeater) and not excluded
-        and (criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
-             if repeat_configured else (overall_avg is not None and 6 <= overall_avg <= 8.99))
+    repeat_range_matches = (
+        criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
+        if repeat_configured else (overall_avg is not None and 6 <= overall_avg <= 8.99)
     )
+    # Une moyenne située dans la plage de reprise enregistrée doit produire
+    # la décision de reprise, même si un ancien motif secondaire avait marqué
+    # l'élève comme exclu. La classe actuelle est ensuite fournie par
+    # ``repeat_class_name`` au bulletin individuel et au bulletin groupé.
+    repeat_if_failure = bool(repeat_range_matches)
+    if repeat_if_failure:
+        excluded = False
     next_class_name = None
     current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
     if current_level_index >= 0 and current_level_index + 1 < len(LEVEL_ORDER):
