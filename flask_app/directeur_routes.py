@@ -1892,7 +1892,7 @@ def _student_counts_by_level():
 
 
 def _admitted_counts_by_level():
-    """Compte les élèves dont la décision annuelle est une admission."""
+    """Compte les admissions selon les critères de décision actuellement enregistrés."""
     counts = {level: 0 for level in CLASS_LEVEL_LABELS}
     cache = {}
     students = Student.query.filter(Student.class_id.isnot(None)).all()
@@ -1961,7 +1961,7 @@ def dir_settings():
                 for field, value in values.items():
                     setattr(criterion, field, value)
             db.session.commit()
-            flash("Les critères de décision du Conseil ont été enregistrés.", "success")
+            flash("Les critères de décision du Conseil ont été enregistrés et les admissions par niveau ont été recalculées.", "success")
             return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
         if new_year:
