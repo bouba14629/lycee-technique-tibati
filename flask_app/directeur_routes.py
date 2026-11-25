@@ -1882,6 +1882,25 @@ def _student_counts_by_level():
     return {level: int(count or 0) for level, count in rows}
 
 
+def _admitted_counts_by_level():
+    """Compte les élèves dont la décision annuelle est une admission."""
+    counts = {level: 0 for level in CLASS_LEVEL_LABELS}
+    cache = {}
+    students = Student.query.filter(Student.class_id.isnot(None)).all()
+    for student in students:
+        level = student.school_class.level if student.school_class else None
+        if level not in counts:
+            continue
+        try:
+            annual = annual_bulletin_data(student, _cache=cache)
+        except Exception:
+            app.logger.exception("Impossible de calculer l’admission de l’élève %s", student.id)
+            continue
+        if annual and (annual.get("decision_marks") or {}).get("admitted"):
+            counts[level] += 1
+    return counts
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1943,5 +1962,11 @@ def dir_settings():
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
     student_counts = _student_counts_by_level()
+    try:
+        admitted_counts = _admitted_counts_by_level()
+    except Exception:
+        app.logger.exception("Impossible de charger le nombre d’élèves admis par niveau")
+        admitted_counts = {level: 0 for level in CLASS_LEVEL_LABELS}
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts)
+                           class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts,
+                           admitted_counts=admitted_counts)
