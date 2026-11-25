@@ -1874,6 +1874,14 @@ def dir_calendar_delete(event_id):
 
 
 # ----------------------------------------------------- paramètres généraux ---
+def _student_counts_by_level():
+    """Retourne l’effectif inscrit, regroupé par niveau de classe."""
+    rows = (db.session.query(SchoolClass.level, db.func.count(Student.id))
+            .outerjoin(Student, Student.class_id == SchoolClass.id)
+            .group_by(SchoolClass.level).all())
+    return {level: int(count or 0) for level, count in rows}
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1934,5 +1942,6 @@ def dir_settings():
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
+    student_counts = _student_counts_by_level()
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS)
+                           class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts)
