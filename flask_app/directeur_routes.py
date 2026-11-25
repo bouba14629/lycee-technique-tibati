@@ -27,6 +27,15 @@ CLASS_LEVEL_LABELS = {
     "Tle": "TERMINALE",
 }
 
+DEFAULT_COUNCIL_CRITERIA = {
+    "admission_min": 9,
+    "admission_max": 20,
+    "repeat_min": 6,
+    "repeat_max": 8.99,
+    "exclusion_min": 0,
+    "exclusion_max": 5.99,
+}
+
 
 def normalize_import_header(value):
     """Uniformise les en-têtes de fichiers importés malgré les accents et variantes usuelles."""
@@ -1969,4 +1978,5 @@ def dir_settings():
         admitted_counts = {level: 0 for level in CLASS_LEVEL_LABELS}
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
                            class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts,
-                           admitted_counts=admitted_counts)
+                           admitted_counts=admitted_counts,
+                           council_defaults=DEFAULT_COUNCIL_CRITERIA)
