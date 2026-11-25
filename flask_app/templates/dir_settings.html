@@ -45,7 +45,8 @@
             <td class="text-center fw-semibold">{{ student_counts.get(level, 0) }}</td>
             <td class="text-center fw-semibold text-success">{{ admitted_counts.get(level, 0) }}</td>
             {% for field in ['admission_min','admission_max','repeat_min','repeat_max','exclusion_min','exclusion_max'] %}
-              <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ item[field] if item and item[field] is not none else council_defaults[field] }}" aria-label="{{ field }} {{ label }}"></td>
+              {% set configured_value = item|attr(field) if item else none %}
+              <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ configured_value if configured_value is not none else council_defaults[field] }}" aria-label="{{ field }} {{ label }}"></td>
             {% endfor %}
           </tr>
         {% endfor %}
