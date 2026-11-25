@@ -1885,39 +1885,10 @@ def dir_calendar_delete(event_id):
 # ----------------------------------------------------- paramètres généraux ---
 def _student_counts_by_level():
     """Retourne l’effectif inscrit, regroupé par niveau de classe."""
-    try:
-        rows = (db.session.query(SchoolClass.level, db.func.count(Student.id))
-                .outerjoin(Student, Student.class_id == SchoolClass.id)
-                .group_by(SchoolClass.level).all())
-        return {level: int(count or 0) for level, count in rows}
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("Impossible de charger les effectifs par niveau")
-        return {level: 0 for level in CLASS_LEVEL_LABELS}
-
-
-def _admitted_counts_by_level():
-    """Compte les admissions selon les critères de décision actuellement enregistrés."""
-    counts = {level: 0 for level in CLASS_LEVEL_LABELS}
-    cache = {}
-    try:
-        students = Student.query.filter(Student.class_id.isnot(None)).all()
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("Impossible de charger les élèves pour le calcul des admissions")
-        return counts
-    for student in students:
-        try:
-            level = student.school_class.level if student.school_class else None
-            if level not in counts:
-                continue
-            annual = annual_bulletin_data(student, _cache=cache)
-        except Exception:
-            app.logger.exception("Impossible de calculer l’admission de l’élève %s", student.id)
-            continue
-        if annual and (annual.get("decision_marks") or {}).get("admitted"):
-            counts[level] += 1
-    return counts
+    rows = (db.session.query(SchoolClass.level, db.func.count(Student.id))
+            .outerjoin(Student, Student.class_id == SchoolClass.id)
+            .group_by(SchoolClass.level).all())
+    return {level: int(count or 0) for level, count in rows}
 
 
 @app.route("/directeur/parametres", methods=["GET", "POST"])
@@ -1971,7 +1942,7 @@ def dir_settings():
                 for field, value in values.items():
                     setattr(criterion, field, value)
             db.session.commit()
-            flash("Les critères de décision du Conseil ont été enregistrés et les admissions par niveau ont été recalculées.", "success")
+            flash("Les critères de décision du Conseil ont été enregistrés.", "success")
             return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
         if new_year:
@@ -1979,18 +1950,8 @@ def dir_settings():
             db.session.commit()
             flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
-    try:
-        criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("Impossible de charger les critères de décision du Conseil")
-        criteria = {}
+    criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
     student_counts = _student_counts_by_level()
-    try:
-        admitted_counts = _admitted_counts_by_level()
-    except Exception:
-        app.logger.exception("Impossible de charger le nombre d’élèves admis par niveau")
-        admitted_counts = {level: 0 for level in CLASS_LEVEL_LABELS}
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
                            class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts,
-                           council_defaults=DEFAULT_COUNCIL_CRITERIA, admitted_counts=admitted_counts)
+                           council_defaults=DEFAULT_COUNCIL_CRITERIA)
