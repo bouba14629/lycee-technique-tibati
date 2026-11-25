@@ -652,22 +652,49 @@ def annual_bulletin_data(student, _cache=None):
     admission_configured = criterion and (criterion.admission_min is not None or criterion.admission_max is not None)
     repeat_configured = criterion and (criterion.repeat_min is not None or criterion.repeat_max is not None)
     exclusion_configured = criterion and (criterion.exclusion_min is not None or criterion.exclusion_max is not None)
-    # Le redoublement conditionnel reste réservé aux classes de quatrième année,
-    # Première et Terminale lorsque le Proviseur n'a pas configuré de seuil.
-    special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
-    excluded = (
-        not bool(student.school_fees_paid)
-        or rank_is_nc
-        or bool(student.is_repeater)
-        or discipline_definitive
-        or (criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
-            if exclusion_configured else (overall_avg is not None and overall_avg < 6))
+    criteria_configured = bool(admission_configured or repeat_configured or exclusion_configured)
+
+    # Lorsque le Proviseur a enregistré des plages, elles constituent la source
+    # de vérité de la décision annuelle. Cela évite qu'un motif secondaire
+    # (frais, rang NC, ancien statut de redoublant ou discipline) bloque une
+    # admission ou transforme une reprise déterminée par la moyenne en exclusion.
+    criteria_excluded = bool(
+        exclusion_configured and criterion_matches(
+            overall_avg, criterion.exclusion_min, criterion.exclusion_max
+        )
     )
-    repeat_if_failure = (
-        not bool(student.is_repeater) and not excluded
-        and (criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
-             if repeat_configured else (overall_avg is not None and 6 <= overall_avg <= 8.99))
+    criteria_repeat = bool(
+        repeat_configured and criterion_matches(
+            overall_avg, criterion.repeat_min, criterion.repeat_max
+        )
     )
+    criteria_admitted = bool(
+        admission_configured and criterion_matches(
+            overall_avg, criterion.admission_min, criterion.admission_max
+        )
+    )
+
+    if criteria_configured and (criteria_excluded or criteria_repeat or criteria_admitted):
+        excluded = criteria_excluded
+        repeat_if_failure = criteria_repeat and not excluded
+        admitted_by_criteria = criteria_admitted and not excluded and not repeat_if_failure
+    else:
+        # Compatibilité avec les établissements qui n'ont encore enregistré
+        # aucun critère complet : conserver les règles historiques par défaut.
+        excluded = (
+            not bool(student.school_fees_paid)
+            or rank_is_nc
+            or bool(student.is_repeater)
+            or discipline_definitive
+            or (criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
+                if exclusion_configured else (overall_avg is not None and overall_avg < 6))
+        )
+        repeat_if_failure = (
+            not bool(student.is_repeater) and not excluded
+            and (criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
+                 if repeat_configured else (overall_avg is not None and 6 <= overall_avg <= 8.99))
+        )
+        admitted_by_criteria = False
     next_class_name = None
     current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
     if current_level_index >= 0 and current_level_index + 1 < len(LEVEL_ORDER):
@@ -676,14 +703,20 @@ def annual_bulletin_data(student, _cache=None):
             department_id=student.school_class.department_id, level=next_level
         ).order_by(SchoolClass.name).all()
         matching = [item for item in candidates if item.specialty == student.school_class.specialty]
-        next_class_name = (matching or candidates)[0].name if (matching or candidates) else None
+        # Une admission ne doit jamais proposer une spécialité différente de
+        # celle de l'élève, même si une autre classe existe au niveau suivant.
+        next_class_name = matching[0].name if matching else None
     decision_marks = {
         "admitted": (
-            criterion_matches(overall_avg, criterion.admission_min, criterion.admission_max)
-            if admission_configured else overall_avg is not None and overall_avg >= 9
+            admitted_by_criteria
+            if criteria_configured else overall_avg is not None and overall_avg >= 9
         ) and not excluded and not repeat_if_failure,
         "excluded": excluded,
-        "competencies_not_acquired": overall_avg is not None and overall_avg < 6,
+        "competencies_not_acquired": (
+            criteria_excluded
+            if criteria_configured and criteria_excluded
+            else overall_avg is not None and overall_avg < 6
+        ),
         "conduct": discipline_definitive,
         "cannot_triplicate": bool(student.is_repeater),
         "resigning": rank_is_nc,
