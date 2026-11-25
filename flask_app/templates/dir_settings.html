@@ -17,7 +17,7 @@
   <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
     <div>
       <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Critères de décision du Conseil</h3>
-      <p class="text-muted mb-3" style="font-size:11.5px;">Saisissez des seuils inclusifs sur 20 pour chaque niveau. Une ligne entièrement vide conserve automatiquement la règle actuelle du bulletin annuel.</p>
+      <p class="text-muted mb-3" style="font-size:11.5px;">Les seuils par défaut sont : admission de 9 à 20, reprise de 6 à 8,99 et exclusion de 0 à 5,99. Vous pouvez les personnaliser pour chaque niveau.</p>
     </div>
   </div>
   <form method="POST">
@@ -43,7 +43,7 @@
             <td class="fw-semibold">{{ label }} <small class="text-muted">({{ level }})</small></td>
             <td class="text-center fw-semibold">{{ student_counts.get(level, 0) }}</td>
             {% for field in ['admission_min','admission_max','repeat_min','repeat_max','exclusion_min','exclusion_max'] %}
-              <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ item[field] if item else '' }}" placeholder="—" aria-label="{{ field }} {{ label }}"></td>
+              <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ item[field] if item and item[field] is not none else council_defaults[field] }}" aria-label="{{ field }} {{ label }}"></td>
             {% endfor %}
           </tr>
         {% endfor %}
