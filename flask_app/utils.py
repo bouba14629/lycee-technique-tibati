@@ -666,7 +666,7 @@ def annual_bulletin_data(student, _cache=None):
     repeat_if_failure = (
         not bool(student.is_repeater) and not excluded
         and (criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
-             if repeat_configured else (overall_avg is not None and 6 <= overall_avg <= 8.99))
+             if repeat_configured else special_repeat_level)
     )
     next_class_name = None
     current_level_index = LEVEL_ORDER.index(student.school_class.level) if student.school_class.level in LEVEL_ORDER else -1
