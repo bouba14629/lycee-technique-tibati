@@ -1895,28 +1895,66 @@ def _student_counts_by_level():
 def _admission_rates_by_level(levels):
     """Calcule le taux d'admission annuel selon les critères enregistrés.
 
-    Le calcul reste en mémoire : il réutilise annual_bulletin_data pour appliquer
-    exactement les seuils du Proviseur et les motifs automatiques d'exclusion,
-    sans créer ni modifier de décision en base.
+    Le calcul reste en mémoire et utilise une lecture groupée des notes. Il ne
+    doit pas appeler annual_bulletin_data pour chaque élève : cette fonction
+    calcule aussi les rangs de toute la classe et rendrait l'ouverture de la
+    page trop lente sur un établissement complet.
     """
+    from models import CouncilDecisionCriterion
     classes = SchoolClass.query.filter(SchoolClass.level.in_(tuple(levels))).all()
     students_by_level = {level: [] for level in levels}
+    courses_by_class = {}
     for school_class in classes:
         students_by_level.setdefault(school_class.level, []).extend(school_class.students)
+        courses_by_class[school_class.id] = [
+            course for course in scheduled_courses_for_class(school_class.id)
+            if "orientation scolaire" not in (course.subject.name or "").casefold()
+        ]
+    all_students = [student for students in students_by_level.values() for student in students]
+    all_student_ids = [student.id for student in all_students]
+    all_course_ids = [course.id for courses in courses_by_class.values() for course in courses]
+    grade_values = {}
+    if all_student_ids and all_course_ids:
+        grades = Grade.query.filter(
+            Grade.student_id.in_(all_student_ids),
+            Grade.course_id.in_(all_course_ids),
+            Grade.term.in_(TERMS),
+        ).all()
+        for grade in grades:
+            grade_values.setdefault((grade.student_id, grade.course_id, grade.term), []).append(
+                grade.value / (grade.max_value or 20) * 20
+            )
+    criteria = {item.level: item for item in CouncilDecisionCriterion.query.filter(
+        CouncilDecisionCriterion.level.in_(tuple(levels))
+    ).all()}
+
+    def matches(value, minimum, maximum):
+        return value is not None and (minimum is None or value >= minimum) and (maximum is None or value <= maximum)
+
     rates = {}
     for level, students in students_by_level.items():
         if not students:
             rates[level] = None
             continue
-        cache = {}
         admitted_count = 0
         for student in students:
-            try:
-                data = annual_bulletin_data(student, _cache=cache)
-                if data and data.get("decision_marks", {}).get("admitted"):
-                    admitted_count += 1
-            except Exception:
-                app.logger.exception("Impossible de calculer le taux d'admission pour l'élève %s", student.id)
+            points, coefficients = 0.0, 0
+            for course in courses_by_class.get(student.class_id, []):
+                term_averages = []
+                for term in TERMS:
+                    values = grade_values.get((student.id, course.id, term), [])
+                    if values:
+                        term_averages.append(sum(values) / len(values))
+                if term_averages:
+                    coefficient = course.subject.coefficient or 1
+                    points += (sum(term_averages) / len(term_averages)) * coefficient
+                    coefficients += coefficient
+            average = round(points / coefficients, 2) if coefficients else None
+            criterion = criteria.get(level)
+            minimum = criterion.admission_min if criterion and criterion.admission_min is not None else 9
+            maximum = criterion.admission_max if criterion and criterion.admission_max is not None else 20
+            if matches(average, minimum, maximum) and student.school_fees_paid and not student.is_repeater:
+                admitted_count += 1
         rates[level] = round(admitted_count / len(students) * 100, 1)
     return rates
 
