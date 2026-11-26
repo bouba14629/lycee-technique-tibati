@@ -1892,6 +1892,35 @@ def _student_counts_by_level():
     return {level: int(count or 0) for level, count in rows}
 
 
+def _admission_rates_by_level(levels):
+    """Calcule le taux d'admission annuel selon les critères enregistrés.
+
+    Le calcul reste en mémoire : il réutilise annual_bulletin_data pour appliquer
+    exactement les seuils du Proviseur et les motifs automatiques d'exclusion,
+    sans créer ni modifier de décision en base.
+    """
+    classes = SchoolClass.query.filter(SchoolClass.level.in_(tuple(levels))).all()
+    students_by_level = {level: [] for level in levels}
+    for school_class in classes:
+        students_by_level.setdefault(school_class.level, []).extend(school_class.students)
+    rates = {}
+    for level, students in students_by_level.items():
+        if not students:
+            rates[level] = None
+            continue
+        cache = {}
+        admitted_count = 0
+        for student in students:
+            try:
+                data = annual_bulletin_data(student, _cache=cache)
+                if data and data.get("decision_marks", {}).get("admitted"):
+                    admitted_count += 1
+            except Exception:
+                app.logger.exception("Impossible de calculer le taux d'admission pour l'élève %s", student.id)
+        rates[level] = round(admitted_count / len(students) * 100, 1)
+    return rates
+
+
 @app.route("/directeur/parametres", methods=["GET", "POST"])
 @roles_required("directeur")
 def dir_settings():
@@ -1954,6 +1983,7 @@ def dir_settings():
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
     student_counts = _student_counts_by_level()
     council_level_labels = {level: CLASS_LEVEL_LABELS[level] for level in COUNCIL_CRITERIA_LEVELS}
+    admission_rates = _admission_rates_by_level(COUNCIL_CRITERIA_LEVELS)
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
                            class_level_labels=council_level_labels, student_counts=student_counts,
-                           council_defaults=DEFAULT_COUNCIL_CRITERIA)
+                           council_defaults=DEFAULT_COUNCIL_CRITERIA, admission_rates=admission_rates)

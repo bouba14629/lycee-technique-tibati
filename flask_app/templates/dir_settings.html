@@ -28,6 +28,7 @@
           <tr>
             <th rowspan="2">Niveau</th>
             <th rowspan="2" class="text-center">Effectif des élèves</th>
+            <th rowspan="2" class="text-center">Taux d’admission</th>
             <th colspan="2" class="text-center">Admission en classe supérieure</th>
             <th colspan="2" class="text-center">Reprise de la classe</th>
             <th colspan="2" class="text-center">Exclusion</th>
@@ -42,6 +43,7 @@
           <tr>
             <td class="fw-semibold">{{ label }} <small class="text-muted">({{ level }})</small></td>
             <td class="text-center fw-semibold">{{ student_counts.get(level, 0) }}</td>
+            <td class="text-center fw-semibold">{% if admission_rates.get(level) is not none %}{{ admission_rates.get(level) }} %{% else %}—{% endif %}</td>
             {% for field in ['admission_min','admission_max','repeat_min','repeat_max','exclusion_min','exclusion_max'] %}
               <td><input type="number" min="0" max="20" step="0.01" class="form-control form-control-sm" name="{{ field }}_{{ level }}" value="{{ item[field] if item and item[field] is not none else council_defaults[field] }}" aria-label="{{ field }} {{ label }}"></td>
             {% endfor %}
