@@ -39,6 +39,20 @@
 </div>
 
 <div class="card-ltt">
+  <div class="section-title"><h2><i class="bi bi-upload me-1" style="color:var(--gold-500);"></i> Importer les matricules des élèves ayant payé</h2></div>
+  <form method="POST" action="{{ url_for('intendant_tuition_import_matricules') }}" enctype="multipart/form-data" class="row g-2 align-items-end">
+    <div class="col-md-8">
+      <label class="form-label">Fichier des matricules</label>
+      <input type="file" name="matricules_file" class="form-control" accept=".csv,.xlsx" required>
+      <div class="text-muted mt-1" style="font-size:11.5px;">CSV ou XLSX avec une colonne « Matricule » (ou « Identifiant unique »). Chaque matricule reconnu sera automatiquement marqué comme payé.</div>
+    </div>
+    <div class="col-md-4">
+      <button class="btn-ltt-gold w-100"><i class="bi bi-check2-square"></i> Importer et cocher Payé</button>
+    </div>
+  </form>
+</div>
+
+<div class="card-ltt">
   <div class="section-title d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h2><i class="bi bi-people-fill me-1" style="color:var(--gold-500);"></i> Liste des élèves</h2>
     <div class="d-flex gap-2">

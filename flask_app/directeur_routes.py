@@ -271,6 +271,100 @@ def intendant_tuition():
     return render_template("intendant_tuition.html", **context)
 
 
+@app.route("/intendant/frais-scolarite/import-matricules", methods=["POST"])
+@roles_required("intendant")
+def intendant_tuition_import_matricules():
+    """Importe une liste de matricules et coche uniquement les élèves correspondants."""
+    from openpyxl import load_workbook
+
+    file = request.files.get("matricules_file")
+    if not file or not file.filename:
+        flash("Veuillez sélectionner un fichier CSV ou Excel contenant les matricules.", "warning")
+        return redirect(url_for("intendant_tuition"))
+
+    filename = file.filename.lower()
+    rows = []
+    try:
+        if filename.endswith(".csv"):
+            rows = list(csv.reader(file.read().decode("utf-8-sig").splitlines()))
+        elif filename.endswith(".xlsx"):
+            workbook = load_workbook(file, data_only=True, read_only=True)
+            rows = list(workbook.active.iter_rows(values_only=True))
+        else:
+            flash("Format non pris en charge — utilisez un fichier CSV ou XLSX.", "danger")
+            return redirect(url_for("intendant_tuition"))
+    except UnicodeDecodeError:
+        flash("Le fichier CSV doit être encodé en UTF-8.", "danger")
+        return redirect(url_for("intendant_tuition"))
+    except Exception:
+        flash("Fichier illisible — vérifiez le format CSV ou XLSX.", "danger")
+        return redirect(url_for("intendant_tuition"))
+
+    non_empty_rows = [row for row in rows if any(str(value or "").strip() for value in row)]
+    if not non_empty_rows:
+        flash("Le fichier sélectionné est vide.", "warning")
+        return redirect(url_for("intendant_tuition"))
+
+    first_row = non_empty_rows[0]
+    normalized_headers = [normalize_import_header(value) for value in first_row]
+    matricule_headers = {"matricule", "matricule scolaire", "identifiant unique", "identifiant"}
+    matricule_index = next((index for index, header in enumerate(normalized_headers)
+                            if header in matricule_headers), None)
+    data_rows = non_empty_rows[1:] if matricule_index is not None else non_empty_rows
+    matricule_index = matricule_index if matricule_index is not None else 0
+
+    def cell_text(value):
+        if value is None:
+            return ""
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+
+    students_by_matricule = {
+        cell_text(student.matricule).casefold(): student
+        for student in Student.query.all()
+        if cell_text(student.matricule)
+    }
+    imported = set()
+    matched = 0
+    already_paid = 0
+    unknown = []
+    duplicates = 0
+    for row in data_rows:
+        if matricule_index >= len(row):
+            continue
+        matricule = cell_text(row[matricule_index])
+        if not matricule:
+            continue
+        key = matricule.casefold()
+        if key in imported:
+            duplicates += 1
+            continue
+        imported.add(key)
+        student = students_by_matricule.get(key)
+        if not student:
+            unknown.append(matricule)
+            continue
+        if student.school_fees_paid:
+            already_paid += 1
+        else:
+            student.school_fees_paid = True
+            matched += 1
+
+    db.session.commit()
+    message = f"{matched} élève(s) marqué(s) comme payé(s) à partir des matricules importés."
+    if already_paid:
+        message += f" {already_paid} déjà payé(s)."
+    flash(message, "success" if matched or already_paid else "warning")
+    if unknown:
+        sample = " ; ".join(unknown[:5])
+        suffix = " …" if len(unknown) > 5 else ""
+        flash(f"{len(unknown)} matricule(s) introuvable(s) : {sample}{suffix}", "warning")
+    if duplicates:
+        flash(f"{duplicates} doublon(s) ignoré(s) dans le fichier.", "info")
+    return redirect(url_for("intendant_tuition"))
+
+
 @app.route("/intendant/frais-scolarite/export.xlsx")
 @roles_required("intendant")
 def intendant_tuition_export():
