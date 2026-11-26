@@ -299,7 +299,8 @@ def intendant_tuition_import_matricules():
         filename = request.form.get("source_filename", "matricules_import")[:255]
         students_by_matricule = {student.matricule.strip().casefold(): student for student in Student.query.all()}
         imported = set()
-        marked_paid = already_paid = unknown = duplicates = 0
+        marked_paid = already_paid = duplicates = 0
+        unknown_matricules = []
         for matricule in matricules:
             key = matricule.casefold()
             if key in imported:
@@ -308,7 +309,7 @@ def intendant_tuition_import_matricules():
             imported.add(key)
             student = students_by_matricule.get(key)
             if not student:
-                unknown += 1
+                unknown_matricules.append(matricule)
             elif student.school_fees_paid:
                 already_paid += 1
             else:
@@ -316,12 +317,14 @@ def intendant_tuition_import_matricules():
                 marked_paid += 1
         log = TuitionImportLog(user_id=session["user_id"], filename=filename,
                                marked_paid=marked_paid, already_paid=already_paid,
-                               unknown=unknown, duplicates=duplicates)
+                               unknown=len(unknown_matricules), duplicates=duplicates)
         db.session.add(log)
         db.session.commit()
         flash(f"{marked_paid} élève(s) marqué(s) comme payé(s). {already_paid} déjà payé(s).", "success")
-        if unknown:
-            flash(f"{unknown} matricule(s) introuvable(s) ont été ignorés.", "warning")
+        if unknown_matricules:
+            sample = " ; ".join(unknown_matricules[:10])
+            suffix = " …" if len(unknown_matricules) > 10 else ""
+            flash(f"Matricule(s) non retrouvé(s) et ignoré(s) ({len(unknown_matricules)}) : {sample}{suffix}", "warning")
         if duplicates:
             flash(f"{duplicates} doublon(s) ignoré(s) dans le fichier.", "info")
         return redirect(url_for("intendant_tuition"))
