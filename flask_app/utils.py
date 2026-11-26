@@ -652,8 +652,9 @@ def annual_bulletin_data(student, _cache=None):
     admission_configured = criterion and (criterion.admission_min is not None or criterion.admission_max is not None)
     repeat_configured = criterion and (criterion.repeat_min is not None or criterion.repeat_max is not None)
     exclusion_configured = criterion and (criterion.exclusion_min is not None or criterion.exclusion_max is not None)
-    # Le redoublement conditionnel reste réservé aux classes de quatrième année,
-    # Première et Terminale lorsque le Proviseur n'a pas configuré de seuil.
+    # La reprise demandée ici concerne uniquement les niveaux 1A, 2A, 3A et
+    # Seconde. Le seuil enregistré dans les Paramètres généraux ne doit donc
+    # pas cocher la reprise pour les autres niveaux.
     special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
     excluded = (
         not bool(student.school_fees_paid)
@@ -671,7 +672,7 @@ def annual_bulletin_data(student, _cache=None):
     # la décision de reprise, même si un ancien motif secondaire avait marqué
     # l'élève comme exclu. La classe actuelle est ensuite fournie par
     # ``repeat_class_name`` au bulletin individuel et au bulletin groupé.
-    repeat_if_failure = bool(repeat_range_matches)
+    repeat_if_failure = bool(special_repeat_level and repeat_range_matches)
     if repeat_if_failure:
         excluded = False
     next_class_name = None
@@ -1210,7 +1211,7 @@ def class_statistics(cls, term, subject_category=None, sequence=None, course_id=
 
 
 LEVEL_ORDER = ["1A", "2A", "3A", "4A", "2nde", "P", "Tle"]
-REPEAT_IF_FAILURE_LEVELS = frozenset(("4A", "P", "Tle"))
+REPEAT_IF_FAILURE_LEVELS = frozenset(("1A", "2A", "3A", "2nde"))
 
 
 def sort_classes_by_level(classes):
