@@ -15,7 +15,8 @@ from models import (
 )
 from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
                    check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies,
-                   annual_bulletin_data, get_current_school_year, scheduled_courses_for_class, TERMS)
+                   annual_bulletin_data, get_current_school_year, scheduled_courses_for_class, TERMS,
+                   LEVEL_ORDER, REPEAT_IF_FAILURE_LEVELS)
 
 
 CLASS_LEVEL_LABELS = {
@@ -1743,6 +1744,126 @@ def dir_teacher_schedule_official_xlsx(teacher_id):
 
 
 # ----------------------------------------------------- conseil de classe ---
+def _annual_council_defaults_for_class(school_class, students, courses, school_year):
+    """Calcule les choix automatiques du Conseil en une seule passe groupée.
+
+    Cette vue n'a besoin que de la moyenne annuelle et de la décision ; elle
+    évite donc les rangs et profils détaillés du bulletin annuel complet.
+    """
+    from models import Attendance, CouncilDecisionCriterion, OrientationAssignment, Sanction
+
+    student_ids = [student.id for student in students]
+    course_ids = [course.id for course in courses]
+    grade_values = {}
+    if student_ids and course_ids:
+        grades = Grade.query.filter(
+            Grade.student_id.in_(student_ids), Grade.course_id.in_(course_ids), Grade.term.in_(TERMS[:3])
+        ).all()
+        for grade in grades:
+            grade_values.setdefault((grade.student_id, grade.course_id, grade.term), []).append(
+                grade.value / (grade.max_value or 20) * 20
+            )
+    criteria = CouncilDecisionCriterion.query.filter_by(level=school_class.level).first()
+    criterion_matches = lambda value, minimum, maximum: (
+        value is not None and (minimum is None or value >= minimum) and (maximum is None or value <= maximum)
+    )
+    admissions = {}
+    repeat_level = school_class.level in REPEAT_IF_FAILURE_LEVELS
+    absences = Attendance.query.filter(Attendance.student_id.in_(student_ids), Attendance.type == "Absence").all() if student_ids else []
+    sanctions = Sanction.query.filter(Sanction.student_id.in_(student_ids)).all() if student_ids else []
+    absences_by_student, sanctions_by_student = {}, {}
+    for absence in absences:
+        absences_by_student.setdefault(absence.student_id, []).append(absence)
+    for sanction in sanctions:
+        sanctions_by_student.setdefault(sanction.student_id, []).append(sanction)
+    orientation = OrientationAssignment.query.filter(
+        OrientationAssignment.student_id.in_(student_ids), OrientationAssignment.school_year == school_year
+    ).all() if student_ids else []
+    orientation_by_student = {item.student_id: item for item in orientation}
+    next_class_name = None
+    if school_class.level in LEVEL_ORDER and LEVEL_ORDER.index(school_class.level) + 1 < len(LEVEL_ORDER):
+        next_level = LEVEL_ORDER[LEVEL_ORDER.index(school_class.level) + 1]
+        candidates = SchoolClass.query.filter_by(
+            department_id=school_class.department_id, level=next_level
+        ).order_by(SchoolClass.name).all()
+        matching = [item for item in candidates if item.specialty == school_class.specialty]
+        next_class_name = (matching or candidates)[0].name if (matching or candidates) else None
+
+    for student in students:
+        points, coefficients = 0.0, 0
+        for course in courses:
+            term_averages = []
+            for term in TERMS[:3]:
+                values = grade_values.get((student.id, course.id, term), [])
+                if values:
+                    term_averages.append(sum(values) / len(values))
+            if term_averages:
+                coefficient = course.subject.coefficient or 1
+                points += (sum(term_averages) / len(term_averages)) * coefficient
+                coefficients += coefficient
+        average = round(points / coefficients, 2) if coefficients else None
+        student_absences = absences_by_student.get(student.id, [])
+        absence_hours = 0.0
+        for absence in student_absences:
+            try:
+                h1, m1 = map(int, (absence.start_time or "").split(":"))
+                h2, m2 = map(int, (absence.end_time or "").split(":"))
+                absence_hours += max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60)
+            except (AttributeError, TypeError, ValueError):
+                pass
+        sanction_text = " ".join(
+            f"{sanction.type or ''} {sanction.description or ''}" for sanction in sanctions_by_student.get(student.id, [])
+        ).casefold()
+        definitive = absence_hours > 30 or any(marker in sanction_text for marker in (
+            "exclusion définitive", "exclusion definitive", "exclu définitivement", "exclu definitivement"
+        ))
+        rank_is_nc = average is not None and average < 3
+        exclusion = (
+            criterion_matches(average, criteria.exclusion_min, criteria.exclusion_max)
+            if criteria and (criteria.exclusion_min is not None or criteria.exclusion_max is not None)
+            else average is not None and average < 6
+        )
+        exclusion = (not bool(student.school_fees_paid) or rank_is_nc or bool(student.is_repeater)
+                     or definitive or exclusion)
+        repeat = (
+            criterion_matches(average, criteria.repeat_min, criteria.repeat_max)
+            if criteria and (criteria.repeat_min is not None or criteria.repeat_max is not None)
+            else average is not None and 6 <= average <= 8.99
+        )
+        repeat = bool(repeat_level and repeat)
+        if repeat:
+            exclusion = False
+        admitted = (
+            criterion_matches(average, criteria.admission_min, criteria.admission_max)
+            if criteria and (criteria.admission_min is not None or criteria.admission_max is not None)
+            else average is not None and average >= 9
+        ) and not exclusion and not repeat
+        admitted_detail = next_class_name
+        assigned = orientation_by_student.get(student.id)
+        if admitted and assigned and assigned.target_class:
+            admitted_detail = assigned.target_class.name
+        reasons = []
+        if not student.school_fees_paid:
+            reasons.append("Insolvabilité")
+        if rank_is_nc:
+            reasons.append("Démissionnaire")
+        if student.is_repeater:
+            reasons.append("Ne peut tripler")
+        if definitive:
+            reasons.append("Conduite")
+        if exclusion and average is not None and average < 6:
+            reasons.append("Compétences non acquises")
+        if exclusion:
+            admissions[student.id] = {"type": "excluded", "detail": ", ".join(reasons) or "Décision d’exclusion"}
+        elif admitted and admitted_detail:
+            admissions[student.id] = {"type": "admitted", "detail": admitted_detail}
+        elif repeat:
+            admissions[student.id] = {"type": "repeat", "detail": school_class.name}
+        else:
+            admissions[student.id] = {"type": "", "detail": ""}
+    return admissions
+
+
 def _annual_council_default(student, calculation_cache=None):
     """Convertit la décision calculée du bulletin annuel en choix éditable."""
     data = annual_bulletin_data(student, _cache=calculation_cache)
@@ -1817,22 +1938,9 @@ def directeur_conseil_de_classe():
                  .join(Student).filter(Student.class_id == cls.id).all()}
         courses = [course for course in scheduled_courses_for_class(cls.id)
                    if "orientation scolaire" not in (course.subject.name or "").casefold()]
-        student_ids = [student.id for student in students]
-        course_ids = [course.id for course in courses]
-        calculation_cache = {"annual_courses": {cls.id: courses}, "annual_grade_values": {}}
-        if student_ids and course_ids:
-            grades = Grade.query.filter(
-                Grade.student_id.in_(student_ids),
-                Grade.course_id.in_(course_ids),
-                Grade.term.in_(TERMS[:3]),
-            ).all()
-            for grade in grades:
-                key = (grade.student_id, grade.course_id, grade.term)
-                calculation_cache["annual_grade_values"].setdefault(key, []).append(
-                    grade.value / (grade.max_value or 20) * 20
-                )
+        automatic_by_student = _annual_council_defaults_for_class(cls, students, courses, school_year)
         for student in students:
-            automatic = _annual_council_default(student, calculation_cache)
+            automatic = automatic_by_student.get(student.id, {"type": "", "detail": ""})
             record = saved.get(student.id)
             rows.append({"student": student, "automatic": automatic, "saved": record or automatic})
     return render_template("directeur_conseil.html", classes=classes, cls=cls, class_id=class_id,
