@@ -7,7 +7,7 @@
   <h3 style="font-size:13px; color:var(--navy-800); text-transform:uppercase; letter-spacing:.5px;">Année scolaire en cours</h3>
   <form method="POST" class="form-ltt">
     <input type="hidden" name="action" value="school_year">
-    <label>Année scolaire</label>
+    <label>Année scolaire <span style="color:#c62828; font-style:italic;">ACTUELLE</span> <span class="text-muted">{{ current_school_year }}</span></label>
     <select name="school_year" class="form-select mb-2" aria-label="Année scolaire">
       {% for school_year in school_year_options %}
         <option value="{{ school_year }}" {% if school_year == setting.current_school_year %}selected{% endif %}>{{ school_year }}</option>
