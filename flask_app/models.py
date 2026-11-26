@@ -243,6 +243,19 @@ class ActivityLog(db.Model):
     user = db.relationship("User")
 
 
+class TuitionImportLog(db.Model):
+    """Journal des imports de matricules de paiement effectués par l'Intendant."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    marked_paid = db.Column(db.Integer, default=0, nullable=False)
+    already_paid = db.Column(db.Integer, default=0, nullable=False)
+    unknown = db.Column(db.Integer, default=0, nullable=False)
+    duplicates = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    user = db.relationship("User")
+
+
 class Parent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)

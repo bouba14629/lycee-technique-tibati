@@ -12,6 +12,7 @@ from app import app, db
 from models import (
     User, Section, Department, SchoolClass, Subject, Teacher, Parent, Student, Grade,
     Room, Equipment, MaintenanceRequest, ScheduleEntry, Course, Reservation, ClassCouncilDecision,
+    TuitionImportLog,
 )
 from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
                    check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies,
@@ -267,102 +268,120 @@ def intendant_tuition():
     students = context["students_q"].all()
     context["students"] = students
     context["paid_students"] = [student for student in students if student.school_fees_paid]
+    context["import_logs"] = TuitionImportLog.query.order_by(TuitionImportLog.created_at.desc()).limit(20).all()
     context.pop("students_q")
     return render_template("intendant_tuition.html", **context)
+
+
+def _tuition_import_matricules(file):
+    """Lit un fichier de matricules et retourne son nom ainsi que les valeurs uniques candidates."""
+    from import_utils import read_tabular_rows, get_value
+
+    filename = (file.filename or "").strip()
+    parsed_rows = read_tabular_rows(file)
+    matricules = []
+    for _line_number, row in parsed_rows:
+        matricule = get_value(row, "Matricule", "Matricule scolaire", "Identifiant unique", "Identifiant")
+        if matricule:
+            matricules.append(matricule)
+    if not matricules:
+        raise ValueError("aucun matricule trouvé dans le fichier")
+    return filename, matricules
 
 
 @app.route("/intendant/frais-scolarite/import-matricules", methods=["POST"])
 @roles_required("intendant")
 def intendant_tuition_import_matricules():
-    """Importe une liste de matricules et coche uniquement les élèves correspondants."""
-    from openpyxl import load_workbook
+    """Affiche un aperçu puis coche les élèves après confirmation explicite."""
+    action = request.form.get("action", "preview")
+    if action == "confirm":
+        matricules = [value.strip() for value in request.form.getlist("matricules") if value.strip()]
+        filename = request.form.get("source_filename", "matricules_import")[:255]
+        students_by_matricule = {student.matricule.strip().casefold(): student for student in Student.query.all()}
+        imported = set()
+        marked_paid = already_paid = unknown = duplicates = 0
+        for matricule in matricules:
+            key = matricule.casefold()
+            if key in imported:
+                duplicates += 1
+                continue
+            imported.add(key)
+            student = students_by_matricule.get(key)
+            if not student:
+                unknown += 1
+            elif student.school_fees_paid:
+                already_paid += 1
+            else:
+                student.school_fees_paid = True
+                marked_paid += 1
+        log = TuitionImportLog(user_id=session["user_id"], filename=filename,
+                               marked_paid=marked_paid, already_paid=already_paid,
+                               unknown=unknown, duplicates=duplicates)
+        db.session.add(log)
+        db.session.commit()
+        flash(f"{marked_paid} élève(s) marqué(s) comme payé(s). {already_paid} déjà payé(s).", "success")
+        if unknown:
+            flash(f"{unknown} matricule(s) introuvable(s) ont été ignorés.", "warning")
+        if duplicates:
+            flash(f"{duplicates} doublon(s) ignoré(s) dans le fichier.", "info")
+        return redirect(url_for("intendant_tuition"))
 
     file = request.files.get("matricules_file")
     if not file or not file.filename:
         flash("Veuillez sélectionner un fichier CSV ou Excel contenant les matricules.", "warning")
         return redirect(url_for("intendant_tuition"))
-
-    filename = file.filename.lower()
-    rows = []
     try:
-        if filename.endswith(".csv"):
-            rows = list(csv.reader(file.read().decode("utf-8-sig").splitlines()))
-        elif filename.endswith(".xlsx"):
-            workbook = load_workbook(file, data_only=True, read_only=True)
-            rows = list(workbook.active.iter_rows(values_only=True))
-        else:
-            flash("Format non pris en charge — utilisez un fichier CSV ou XLSX.", "danger")
-            return redirect(url_for("intendant_tuition"))
-    except UnicodeDecodeError:
-        flash("Le fichier CSV doit être encodé en UTF-8.", "danger")
+        filename, matricules = _tuition_import_matricules(file)
+    except ValueError as exc:
+        flash(str(exc), "danger")
         return redirect(url_for("intendant_tuition"))
-    except Exception:
-        flash("Fichier illisible — vérifiez le format CSV ou XLSX.", "danger")
-        return redirect(url_for("intendant_tuition"))
-
-    non_empty_rows = [row for row in rows if any(str(value or "").strip() for value in row)]
-    if not non_empty_rows:
-        flash("Le fichier sélectionné est vide.", "warning")
-        return redirect(url_for("intendant_tuition"))
-
-    first_row = non_empty_rows[0]
-    normalized_headers = [normalize_import_header(value) for value in first_row]
-    matricule_headers = {"matricule", "matricule scolaire", "identifiant unique", "identifiant"}
-    matricule_index = next((index for index, header in enumerate(normalized_headers)
-                            if header in matricule_headers), None)
-    data_rows = non_empty_rows[1:] if matricule_index is not None else non_empty_rows
-    matricule_index = matricule_index if matricule_index is not None else 0
-
-    def cell_text(value):
-        if value is None:
-            return ""
-        if isinstance(value, float) and value.is_integer():
-            return str(int(value))
-        return str(value).strip()
-
-    students_by_matricule = {
-        cell_text(student.matricule).casefold(): student
-        for student in Student.query.all()
-        if cell_text(student.matricule)
-    }
-    imported = set()
-    matched = 0
-    already_paid = 0
-    unknown = []
-    duplicates = 0
-    for row in data_rows:
-        if matricule_index >= len(row):
-            continue
-        matricule = cell_text(row[matricule_index])
-        if not matricule:
-            continue
+    students_by_matricule = {student.matricule.strip().casefold(): student for student in Student.query.all()}
+    seen = set()
+    preview = []
+    for matricule in matricules:
         key = matricule.casefold()
-        if key in imported:
-            duplicates += 1
-            continue
-        imported.add(key)
-        student = students_by_matricule.get(key)
-        if not student:
-            unknown.append(matricule)
-            continue
-        if student.school_fees_paid:
-            already_paid += 1
+        if key in seen:
+            preview.append({"matricule": matricule, "status": "Doublon — ignoré"})
+        elif key not in students_by_matricule:
+            preview.append({"matricule": matricule, "status": "Introuvable — ignoré"})
+        elif students_by_matricule[key].school_fees_paid:
+            preview.append({"matricule": matricule, "status": "Déjà payé"})
         else:
-            student.school_fees_paid = True
-            matched += 1
+            preview.append({"matricule": matricule, "status": "Sera marqué payé"})
+        seen.add(key)
+    context = _intendant_filter_context(request.values)
+    students = context["students_q"].all()
+    context.update(students=students, paid_students=[student for student in students if student.school_fees_paid],
+                   import_logs=TuitionImportLog.query.order_by(TuitionImportLog.created_at.desc()).limit(20).all(),
+                   import_preview=preview, import_filename=filename)
+    context.pop("students_q")
+    return render_template("intendant_tuition.html", **context)
 
-    db.session.commit()
-    message = f"{matched} élève(s) marqué(s) comme payé(s) à partir des matricules importés."
-    if already_paid:
-        message += f" {already_paid} déjà payé(s)."
-    flash(message, "success" if matched or already_paid else "warning")
-    if unknown:
-        sample = " ; ".join(unknown[:5])
-        suffix = " …" if len(unknown) > 5 else ""
-        flash(f"{len(unknown)} matricule(s) introuvable(s) : {sample}{suffix}", "warning")
-    if duplicates:
-        flash(f"{duplicates} doublon(s) ignoré(s) dans le fichier.", "info")
-    return redirect(url_for("intendant_tuition"))
+
+@app.route("/intendant/frais-scolarite/modele.<format>")
+@roles_required("intendant")
+def intendant_tuition_template_download(format):
+    """Télécharge un modèle CSV ou XLSX prêt à remplir avec les matricules."""
+    from io import BytesIO
+    from flask import send_file
+    if format == "csv":
+        content = "Matricule\nLTT100001\n"
+        return send_file(BytesIO(content.encode("utf-8-sig")), as_attachment=True,
+                         download_name="modele_matricules_paiement.csv", mimetype="text/csv")
+    if format == "xlsx":
+        from openpyxl import Workbook
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Matricules"
+        sheet.append(["Matricule"])
+        sheet.append(["LTT100001"])
+        sheet.column_dimensions["A"].width = 24
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        return send_file(output, as_attachment=True, download_name="modele_matricules_paiement.xlsx",
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    abort(404)
 
 
 @app.route("/intendant/frais-scolarite/export.xlsx")
