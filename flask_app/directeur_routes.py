@@ -4,6 +4,7 @@ import json
 import csv
 import re
 import unicodedata
+import time
 from datetime import date, timedelta
 from urllib.request import Request, urlopen
 from flask import render_template, request, redirect, url_for, flash, session, abort
@@ -27,6 +28,7 @@ CLASS_LEVEL_LABELS = {
     "Tle": "TERMINALE",
 }
 COUNCIL_CRITERIA_LEVELS = ("1A", "2A", "3A", "2nde")
+_ADMISSION_RATES_CACHE = {"at": 0.0, "levels": (), "rates": {}}
 
 DEFAULT_COUNCIL_CRITERIA = {
     "admission_min": 9,
@@ -1900,8 +1902,13 @@ def _admission_rates_by_level(levels):
     calcule aussi les rangs de toute la classe et rendrait l'ouverture de la
     page trop lente sur un établissement complet.
     """
+    levels = tuple(levels)
+    now = time.monotonic()
+    if (_ADMISSION_RATES_CACHE["levels"] == levels
+            and now - _ADMISSION_RATES_CACHE["at"] < 60):
+        return dict(_ADMISSION_RATES_CACHE["rates"])
     from models import CouncilDecisionCriterion
-    classes = SchoolClass.query.filter(SchoolClass.level.in_(tuple(levels))).all()
+    classes = SchoolClass.query.filter(SchoolClass.level.in_(levels)).all()
     students_by_level = {level: [] for level in levels}
     courses_by_class = {}
     for school_class in classes:
@@ -1925,7 +1932,7 @@ def _admission_rates_by_level(levels):
                 grade.value / (grade.max_value or 20) * 20
             )
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.filter(
-        CouncilDecisionCriterion.level.in_(tuple(levels))
+        CouncilDecisionCriterion.level.in_(levels)
     ).all()}
 
     def matches(value, minimum, maximum):
@@ -1956,7 +1963,12 @@ def _admission_rates_by_level(levels):
             if matches(average, minimum, maximum) and student.school_fees_paid and not student.is_repeater:
                 admitted_count += 1
         rates[level] = round(admitted_count / len(students) * 100, 1)
+    _ADMISSION_RATES_CACHE.update({"at": time.monotonic(), "levels": levels, "rates": dict(rates)})
     return rates
+
+
+def _invalidate_admission_rates_cache():
+    _ADMISSION_RATES_CACHE.update({"at": 0.0, "levels": (), "rates": {}})
 
 
 @app.route("/directeur/parametres", methods=["GET", "POST"])
@@ -2010,6 +2022,7 @@ def dir_settings():
                 for field, value in values.items():
                     setattr(criterion, field, value)
             db.session.commit()
+            _invalidate_admission_rates_cache()
             flash("Les critères de décision du Conseil ont été enregistrés.", "success")
             return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
