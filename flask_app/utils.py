@@ -656,13 +656,16 @@ def annual_bulletin_data(student, _cache=None):
     # Seconde. Le seuil enregistré dans les Paramètres généraux ne doit donc
     # pas cocher la reprise pour les autres niveaux.
     special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
+    exclusion_range_matches = (
+        criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
+        if exclusion_configured else (overall_avg is not None and overall_avg < 6)
+    )
     excluded = (
         not bool(student.school_fees_paid)
         or rank_is_nc
         or bool(student.is_repeater)
         or discipline_definitive
-        or (criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
-            if exclusion_configured else (overall_avg is not None and overall_avg < 6))
+        or exclusion_range_matches
     )
     repeat_range_matches = (
         criterion_matches(overall_avg, criterion.repeat_min, criterion.repeat_max)
@@ -690,7 +693,7 @@ def annual_bulletin_data(student, _cache=None):
             if admission_configured else overall_avg is not None and overall_avg >= 9
         ) and not excluded and not repeat_if_failure,
         "excluded": excluded,
-        "competencies_not_acquired": overall_avg is not None and overall_avg < 6,
+        "competencies_not_acquired": exclusion_range_matches,
         "conduct": discipline_definitive,
         "cannot_triplicate": bool(student.is_repeater),
         "resigning": rank_is_nc,
