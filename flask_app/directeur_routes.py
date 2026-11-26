@@ -26,6 +26,7 @@ CLASS_LEVEL_LABELS = {
     "P": "PREMIERE",
     "Tle": "TERMINALE",
 }
+COUNCIL_CRITERIA_LEVELS = ("1A", "2A", "3A", "2nde")
 
 DEFAULT_COUNCIL_CRITERIA = {
     "admission_min": 9,
@@ -1906,7 +1907,7 @@ def dir_settings():
             parsed = {}
             errors = []
             fields = ("admission_min", "admission_max", "repeat_min", "repeat_max", "exclusion_min", "exclusion_max")
-            for level in CLASS_LEVEL_LABELS:
+            for level in COUNCIL_CRITERIA_LEVELS:
                 values = {}
                 for field in fields:
                     raw = request.form.get(f"{field}_{level}", "").strip().replace(",", ".")
@@ -1952,6 +1953,7 @@ def dir_settings():
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
     student_counts = _student_counts_by_level()
+    council_level_labels = {level: CLASS_LEVEL_LABELS[level] for level in COUNCIL_CRITERIA_LEVELS}
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
-                           class_level_labels=CLASS_LEVEL_LABELS, student_counts=student_counts,
+                           class_level_labels=council_level_labels, student_counts=student_counts,
                            council_defaults=DEFAULT_COUNCIL_CRITERIA)
