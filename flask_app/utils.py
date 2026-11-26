@@ -79,13 +79,23 @@ def delete_student_with_dependencies(student, delete_user=True):
         db.session.delete(user)
 
 
+def current_school_year_label(today=None):
+    """Retourne l'année scolaire officielle au format AAAA-AAAA.
+
+    La période commence le 1er juillet et se termine le 30 juin suivant.
+    """
+    today = today or date.today()
+    start_year = today.year if today.month >= 7 else today.year - 1
+    return f"{start_year}-{start_year + 1}"
+
+
 def get_current_school_year():
     """Année scolaire actuelle, paramétrable par le Proviseur (page /directeur/parametres) —
     à utiliser partout où l'année scolaire doit s'afficher, plutôt qu'une valeur codée en dur."""
     from models import AppSetting
     setting = AppSetting.query.first()
     if not setting:
-        setting = AppSetting(current_school_year="2025-2026")
+        setting = AppSetting(current_school_year=current_school_year_label())
         db.session.add(setting)
         db.session.commit()
     return setting.current_school_year

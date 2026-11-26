@@ -8,8 +8,12 @@
   <form method="POST" class="form-ltt">
     <input type="hidden" name="action" value="school_year">
     <label>Année scolaire</label>
-    <input type="text" name="school_year" class="form-control mb-2" value="{{ setting.current_school_year }}" placeholder="ex : 2025-2026">
-    <div class="text-muted mb-3" style="font-size:11.5px;">Cette valeur s'affiche automatiquement partout où l'année scolaire doit apparaître : bulletins, emplois du temps, exports Excel/PDF, tableau de bord — aucun besoin de la modifier ailleurs.</div>
+    <select name="school_year" class="form-select mb-2" aria-label="Année scolaire">
+      {% for school_year in school_year_options %}
+        <option value="{{ school_year }}" {% if school_year == setting.current_school_year %}selected{% endif %}>{{ school_year }}</option>
+      {% endfor %}
+    </select>
+    <div class="text-muted mb-3" style="font-size:11.5px;">Une année scolaire va du 1er juillet au 30 juin. La période en cours ({{ current_school_year }}) est proposée par défaut lorsqu'aucune année n'est encore enregistrée. Cette valeur s'affiche automatiquement partout où l'année scolaire doit apparaître.</div>
     <button class="btn-ltt-navy"><i class="bi bi-save-fill"></i> Enregistrer</button>
   </form>
 </div>

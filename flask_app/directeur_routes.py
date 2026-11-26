@@ -15,7 +15,8 @@ from models import (
 )
 from utils import (roles_required, notify, user_scoped_department_ids, generate_account_password,
                    check_schedule_conflict, schedule_extra_hours, delete_student_with_dependencies,
-                   annual_bulletin_data, get_current_school_year, scheduled_courses_for_class, TERMS,
+                   annual_bulletin_data, current_school_year_label, get_current_school_year,
+                   scheduled_courses_for_class, TERMS,
                    LEVEL_ORDER, REPEAT_IF_FAILURE_LEVELS)
 
 
@@ -2085,9 +2086,15 @@ def dir_settings():
     from models import AppSetting, CouncilDecisionCriterion
     setting = AppSetting.query.first()
     if not setting:
-        setting = AppSetting(current_school_year="2025-2026")
+        setting = AppSetting(current_school_year=current_school_year_label())
         db.session.add(setting)
         db.session.commit()
+    current_year = current_school_year_label()
+    current_start = int(current_year.split("-", 1)[0])
+    school_year_options = [f"{year}-{year + 1}" for year in range(current_start - 5, current_start + 6)]
+    if setting.current_school_year not in school_year_options:
+        school_year_options.append(setting.current_school_year)
+        school_year_options.sort()
     if request.method == "POST":
         action = request.form.get("action", "school_year")
         if action == "council_criteria":
@@ -2135,9 +2142,13 @@ def dir_settings():
             return redirect(url_for("dir_settings"))
         new_year = request.form.get("school_year", "").strip()
         if new_year:
-            setting.current_school_year = new_year
-            db.session.commit()
-            flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
+            match = re.fullmatch(r"(\d{4})-(\d{4})", new_year)
+            if not match or int(match.group(2)) != int(match.group(1)) + 1:
+                flash("Année scolaire invalide : choisissez une période au format AAAA-AAAA.", "danger")
+            else:
+                setting.current_school_year = new_year
+                db.session.commit()
+                flash(f"Année scolaire mise à jour : {new_year}. Elle s'applique désormais partout.", "success")
         return redirect(url_for("dir_settings"))
     criteria = {item.level: item for item in CouncilDecisionCriterion.query.all()}
     student_counts = _student_counts_by_level()
@@ -2145,4 +2156,5 @@ def dir_settings():
     admission_rates = _admission_rates_by_level(COUNCIL_CRITERIA_LEVELS)
     return render_template("dir_settings.html", setting=setting, criteria=criteria,
                            class_level_labels=council_level_labels, student_counts=student_counts,
-                           council_defaults=DEFAULT_COUNCIL_CRITERIA, admission_rates=admission_rates)
+                           council_defaults=DEFAULT_COUNCIL_CRITERIA, admission_rates=admission_rates,
+                           school_year_options=school_year_options, current_school_year=current_year)
