@@ -356,7 +356,9 @@ def intendant_tuition_import_matricules():
     students = context["students_q"].all()
     context.update(students=students, paid_students=[student for student in students if student.school_fees_paid],
                    import_logs=TuitionImportLog.query.order_by(TuitionImportLog.created_at.desc()).limit(20).all(),
-                   import_preview=preview, import_filename=filename)
+                   import_preview=preview, import_filename=filename,
+                   missing_matricules=[item["matricule"] for item in preview
+                                       if item["status"].startswith("Introuvable")])
     context.pop("students_q")
     return render_template("intendant_tuition.html", **context)
 
