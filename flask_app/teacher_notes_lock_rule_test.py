@@ -61,12 +61,19 @@ with app.app_context():
     grade.date = date.today() - timedelta(days=4)
     db.session.commit()
     status = _teacher_notes_status(teacher, course, "Trimestre 1")
+    assert status["expiration_date"] == date.today() + timedelta(days=5)
+    assert status["open"] is True
+    # L’évaluation non renseignée reste donc saisissable malgré cette note ancienne.
+    indicator.updated_at = datetime.utcnow() - timedelta(days=4)
+    db.session.commit()
+    status = _teacher_notes_status(teacher, course, "Trimestre 1")
     assert status["expiration_date"] == date.today() + timedelta(days=1)
     assert _notify_teacher_before_notes_lock(teacher, course, "Trimestre 1", status) is True
     db.session.commit()
     assert Notification.query.filter_by(user_id=teacher.user_id).count() == 1
     assert _notify_teacher_before_notes_lock(teacher, course, "Trimestre 1", status) is False
 
+    indicator.updated_at = datetime.utcnow() - timedelta(days=5)
     grade.date = date.today() - timedelta(days=5)
     db.session.commit()
     assert _teacher_grade_locked(grade) is True

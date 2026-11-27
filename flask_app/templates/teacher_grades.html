@@ -29,7 +29,7 @@
         {% elif notes_days_remaining == 1 %}<span class="text-danger">(demain)</span>
         {% elif notes_days_remaining > 1 %}<span>({{ notes_days_remaining }} jours restants)</span>{% endif %}
       {% else %}
-        <span class="ms-2">L’échéance sera calculée après la première saisie de notes.</span>
+        <span class="ms-2">L’échéance sera calculée après l’enregistrement d’un indicateur postérieur aux dernières notes.</span>
       {% endif %}
     </span>
   </div>
@@ -56,7 +56,7 @@
       {% if planned_assessments %}
       <div class="col-md-5">
         <label>Évaluation planifiée</label>
-        <select name="assessment_id" class="form-select"><option value="">— Saisie libre —</option>{% for assessment in planned_assessments %}<option value="{{ assessment.id }}">Séq. {{ assessment.sequence }} · {{ assessment.title }} · {{ assessment.scheduled_date.strftime('%d/%m/%Y') }} · {{ assessment.status }}</option>{% endfor %}</select>
+        <select name="assessment_id" class="form-select"><option value="">— Saisie libre —</option>{% for assessment in planned_assessments %}<option value="{{ assessment.id }}" data-sequence="{{ assessment.sequence }}">Séq. {{ assessment.sequence }} · {{ assessment.title }} · {{ assessment.scheduled_date.strftime('%d/%m/%Y') }} · {{ assessment.status }}</option>{% endfor %}</select>
       </div>
       {% endif %}
       <div class="col-md-{{ '3' if planned_assessments else '4' }}">
@@ -97,7 +97,7 @@
           <td>{{ s.full_name }}</td>
           <td class="text-muted"><code>{{ s.matricule }}</code></td>
           <td class="text-muted" style="font-size:11.5px;">{{ s.dob.strftime('%d/%m/%Y') if s.dob else '—' }}{{ ' à ' + s.birth_place if s.birth_place else '' }}</td>
-          <td><input type="number" step="0.5" min="0" max="20" name="grade_{{ s.id }}" class="form-control grade-entry" inputmode="decimal" {{ 'disabled' if notes_locked or (seq_a_grades.get(s.id) and seq_a_grades[s.id].id in locked_grade_ids) }}></td>
+          <td><input type="number" step="0.5" min="0" max="20" name="grade_{{ s.id }}" class="form-control grade-entry" inputmode="decimal" data-locked-a="{{ '1' if s.id in locked_seq_a_ids else '0' }}" data-locked-b="{{ '1' if s.id in locked_seq_b_ids else '0' }}" {{ 'disabled' if notes_locked or s.id in locked_seq_a_ids }}></td>
           <td class="text-muted" style="font-size:12px;">{{ notes_trim_preview.get(s.id) if notes_trim_preview.get(s.id) is not none else '—' }}</td>
           <td class="text-muted" style="font-size:12px;">{{ seq_a_grades[s.id].value if seq_a_grades.get(s.id) else '—' }}</td>
           <td class="text-muted" style="font-size:12px;">{{ seq_b_grades[s.id].value if seq_b_grades.get(s.id) else '—' }}</td>
@@ -138,6 +138,28 @@
   };
   buttons.forEach(button => button.addEventListener('click', () => apply(button.dataset.letter)));
   apply('');
+}());
+(function () {
+  const typeSelect = document.querySelector('select[name="type"]');
+  const assessmentSelect = document.querySelector('select[name="assessment_id"]');
+  const inputs = Array.from(document.querySelectorAll('.grade-entry'));
+  if (!typeSelect || !inputs.length) return;
+  const selectedSequence = () => {
+    const assessment = assessmentSelect && assessmentSelect.selectedOptions[0];
+    if (assessment && assessment.dataset.sequence) return assessment.dataset.sequence;
+    return typeSelect.value === 'Évaluation-B' ? '2' : '1';
+  };
+  const refreshLocks = () => {
+    const sequence = selectedSequence();
+    inputs.forEach(input => {
+      if (input.closest('tr')?.hidden) return;
+      const locked = sequence === '2' ? input.dataset.lockedB === '1' : input.dataset.lockedA === '1';
+      input.disabled = {{ 'true' if notes_locked else 'false' }} || locked;
+    });
+  };
+  typeSelect.addEventListener('change', refreshLocks);
+  if (assessmentSelect) assessmentSelect.addEventListener('change', refreshLocks);
+  refreshLocks();
 }());
 </script>
 {% endblock %}
