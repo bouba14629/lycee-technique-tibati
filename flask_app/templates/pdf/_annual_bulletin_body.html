@@ -30,7 +30,7 @@
     <td class="subject"{% if compact_subject %} style="font-size:6.225pt;"{% endif %}>{{ row.course.subject.name }} <span class="teacher" style="white-space:nowrap;{% if compact_subject %} font-size:6.225pt;{% endif %}">({{ teacher_name }})</span></td>
     <td class="center{{ ' low-score' if row.annual is not none and row.annual < 10 }}">{{ row.annual if row.annual is not none else '—' }}</td>
     {% for value in row.terms %}<td class="center{{ ' low-score' if value is not none and value < 10 }}">{{ value if value is not none else '—' }}</td>{% endfor %}
-    <td class="center">{{ row.coef }}</td><td class="center">{{ row.points if row.points is not none else '—' }}</td><td class="center">{{ (row.rank|string) ~ 'e' if row.rank else '—' }}</td>
+    <td class="center">{{ row.coef }}</td><td class="center">{{ row.points if row.points is not none else '—' }}</td><td class="center">{{ row.rank_label if row.rank_label else '—' }}</td>
     <td class="appreciation"{% if (row.appreciation|default('Notes en attente'))|length > 38 %} style="font-size:6.225pt;"{% endif %}>{{ row.appreciation|default('Notes en attente') }}</td>
   </tr>
   {% endfor %}

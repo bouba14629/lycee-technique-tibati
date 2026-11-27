@@ -11,6 +11,25 @@ TERM_ORDINALS = {"Trimestre 1": "PREMIER", "Trimestre 2": "DEUXIÈME", "Trimestr
 TERM_SEQUENCES = {"Trimestre 1": (1, 2), "Trimestre 2": (3, 4), "Trimestre 3": (5, 6)}
 
 
+def format_rank_label(rank, sex=None):
+    """Formate uniquement l'affichage d'un rang, sans modifier sa valeur numérique.
+
+    Le suffixe historique ``e`` est conservé pour les rangs supérieurs à 1.
+    Les valeurs textuelles telles que ``NC`` sont retournées telles quelles.
+    """
+    if rank is None or rank == "":
+        return None
+    if isinstance(rank, str) and not rank.strip().isdigit():
+        return rank
+    try:
+        numeric_rank = int(rank)
+    except (TypeError, ValueError):
+        return str(rank)
+    if numeric_rank == 1:
+        return "1ère" if str(sex or "").strip().casefold() in {"f", "féminin", "feminin"} else "1er"
+    return f"{numeric_rank}e"
+
+
 def floor_hours(value):
     """Convertit une durée positive en entier naturel par arrondi inférieur."""
     try:
@@ -355,6 +374,7 @@ def bulletin_data(student, term=None, _cache=None):
             if avg is None:
                 rows.append({"course": c, "notes_trim": None, "eval_a": ea, "eval_b": eb, "coef": coef,
                              "points": None, "average": None, "rank": None, "class_size": 0,
+                             "rank_label": None,
                              "pending": True, "appreciation": "Notes en attente"})
                 pending_count += 1
                 continue
@@ -369,6 +389,7 @@ def bulletin_data(student, term=None, _cache=None):
             rank = next((i + 1 for i, (pid, _) in enumerate(peer_avgs) if pid == student.id), None)
             rows.append({"course": c, "notes_trim": _notes_trim_display(nt, ea, eb), "eval_a": ea, "eval_b": eb, "coef": coef,
                           "points": points, "average": avg, "rank": rank, "class_size": len(peer_avgs),
+                          "rank_label": format_rank_label(rank, student.sex),
                           "pending": False, "appreciation": appreciation_code(avg)})
             cat_points += points
             cat_coef += coef
@@ -474,7 +495,8 @@ def bulletin_data(student, term=None, _cache=None):
     return {
         "term": term, "term_seq_a": seq_a, "term_seq_b": seq_b, "categories": categories,
         "overall_points": round(overall_points, 2),
-        "overall_coef": overall_coef, "overall_avg": overall_avg, "rank": rank, "class_size": class_size,
+        "overall_coef": overall_coef, "overall_avg": overall_avg, "rank": rank,
+        "rank_label": format_rank_label(rank, student.sex), "class_size": class_size,
         "class_avg": class_avg, "highest_avg": highest_avg, "lowest_avg": lowest_avg,
         "non_classed_count": non_classed_count,
         "nb_above_10": nb_above_10, "success_rate": success_rate,
@@ -566,6 +588,7 @@ def annual_bulletin_data(student, _cache=None):
                 rank = 1 + sum(1 for peer_annual in peer_annuals if peer_annual > annual)
             rows.append({"course": course, "teacher": course.teacher, "terms": term_values, "annual": annual,
                          "coef": coef, "points": points, "rank": rank,
+                         "rank_label": format_rank_label(rank, student.sex),
                          "pending": annual is None,
                          "appreciation": appreciation_code(annual) if annual is not None else "Notes en attente"})
             if points is not None:
@@ -744,7 +767,7 @@ def annual_bulletin_data(student, _cache=None):
             "annual_nb_above_10": annual_nb_above_10,
             "annual_success_rate": annual_success_rate,
             "rank": class_rank if overall_avg is not None else None,
-            "rank_label": "NC" if rank_is_nc else (f"{class_rank}e" if class_rank else None),
+            "rank_label": "NC" if rank_is_nc else format_rank_label(class_rank, student.sex),
             "decision_marks": decision_marks, "next_class_name": next_class_name,
             "repeat_class_name": student.school_class.name if repeat_if_failure else None,
             "repeat_failure_note": " si échec" if final_repeat_level and repeat_if_failure else "",

@@ -220,7 +220,7 @@ class AnnualPage:
                 self.text(caption, x, baseline, size=teacher_size, kind='italic', color=BLACK)
                 annual = row.get('annual')
                 values = [annual]+list(row.get('terms', [None]*3))+[row.get('coef'),row.get('points'),
-                          str(row['rank'])+'e' if row.get('rank') else '—']
+                          row.get('rank_label') or '—']
                 for index, value in enumerate(values, 1):
                     self.text(_value(value),(COLUMN_EDGES[index]+COLUMN_EDGES[index+1])/2,baseline,
                               color=_color(value) if index in (1,2,3,4) else BLACK,align='center')
