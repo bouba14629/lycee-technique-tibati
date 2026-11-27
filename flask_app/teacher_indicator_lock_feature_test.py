@@ -15,16 +15,19 @@ planned_fields = [
 for field in planned_fields:
     assert f'name="{field}"' in template
     assert f'"{field}"' in route
-assert "{{ 'readonly' if indicator else '' }}" in template
-assert 'current_user.role != "conseiller_orientation" and indicator' in template
+assert "{{ 'readonly' if indicator else '' }}" not in template
+assert 'current_user.role != "conseiller_orientation" and indicator' not in template
 assert "editable_fields" in route
 assert '"hours_done", "lessons_done", "digital_lessons_done"' in route
-assert "Après le premier enregistrement, les objectifs prévus sont verrouillés." in template
+assert "Après le premier enregistrement, les objectifs prévus sont verrouillés." not in template
 assert "Chaque valeur réalisée doit être inférieure ou égale à la valeur prévue correspondante." in route
 assert "pairs = [(\"hours_due\", \"hours_done\")" in route
 assert "unlock_planned" not in censeur_route[censeur_route.index("def censeur_indicator_edit"):]
 assert "Une valeur réalisée déjà enregistrée ne peut pas être diminuée." not in censeur_route[censeur_route.index("def censeur_indicator_edit"):]
-assert "planned_values = {field: (getattr(ind, field) if ind.id else request.form.get(field, 0, type=int))" in route
+assert "planned_values = {field: request.form.get(field, getattr(ind, field, 0), type=int)" in route
+assert "GRADE_ENTRY_WINDOW_DAYS = 7" not in route
+assert "def _teacher_notes_open" in route
+assert "return True\n    grades = Grade.query" not in route[route.index("def _teacher_notes_open"):route.index("def current_teacher")]
 assert "Les valeurs enregistrées sont chargées directement et peuvent être modifiées par le censeur sans restriction." in (ROOT / "templates" / "censeur_indicators.html").read_text(encoding="utf-8")
 
 print("TEACHER_INDICATOR_LOCK_FEATURE_TEST_OK")

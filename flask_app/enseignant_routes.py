@@ -10,7 +10,7 @@ DAY_EN = {"Lundi": "MONDAY", "Mardi": "TUESDAY", "Mercredi": "WEDNESDAY", "Jeudi
 ALLOWED_HOURS_DUE = (22, 25, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 COUNSELOR_ALLOWED_HOURS_DUE = (22, 25, 36, 44, 50, 66, 75, 88, 100, 110, 125, 132, 154, 176)
 GRADE_EDIT_WINDOW_DAYS = 5
-GRADE_ENTRY_WINDOW_DAYS = 7
+GRADE_ENTRY_WINDOW_DAYS = 5
 
 
 def _teacher_grade_locked(grade):
@@ -29,18 +29,17 @@ def _teacher_indicator(teacher, course, term):
 
 
 def _teacher_notes_open(teacher, course, term):
-    """La saisie globale des notes reste ouverte pour l'enseignant.
-
-    Le verrouillage individuel des notes existantes depuis cinq jours reste
-    appliqué par ``_teacher_grade_locked`` afin de protéger l'historique.
-    """
-    return True
-    grades = Grade.query.filter_by(course_id=course.id, term=term).all()
-    recorded_dates = [grade.date for grade in grades if grade.date]
-    if not recorded_dates:
+    """Déverrouille après un indicateur enregistré après la dernière note."""
+    indicator = _teacher_indicator(teacher, course, term)
+    if not indicator or not indicator.updated_at:
+        return False
+    latest_grade_date = (Grade.query.filter_by(course_id=course.id, term=term)
+                         .with_entities(db.func.max(Grade.date)).scalar())
+    if latest_grade_date is None:
         return True
-    first_recorded_date = min(recorded_dates)
-    return (date.today() - first_recorded_date).days < GRADE_ENTRY_WINDOW_DAYS
+    if indicator.updated_at.date() < latest_grade_date:
+        return False
+    return (date.today() - latest_grade_date).days < GRADE_ENTRY_WINDOW_DAYS
 
 
 def current_teacher():
@@ -327,7 +326,7 @@ def teacher_grades(course_id):
     planned_assessments = PlannedAssessment.query.filter_by(course_id=course.id, term=term).order_by(PlannedAssessment.sequence).all()
     locked_grade_ids = {
         grade.id for grade in (*seq_a_grades.values(), *seq_b_grades.values())
-        if _teacher_grade_locked(grade) and not notes_open
+        if _teacher_grade_locked(grade)
     }
     return render_template("teacher_grades.html", course=course, students=students, term=term,
                             terms=TERMS, seq_a=seq_a, seq_b=seq_b, notes_trim_preview=notes_trim_preview,
@@ -710,7 +709,7 @@ def teacher_indicators():
                     target_ind = TeacherIndicator(teacher_id=teacher.id, course_id=target.id, term=term)
                     db.session.add(target_ind)
                 values = {field: request.form.get(field, 0, type=int) for field in done_fields}
-                planned = {field: (getattr(target_ind, field) if target_ind.id else request.form.get(field, 0, type=int))
+                planned = {field: request.form.get(field, getattr(target_ind, field, 0), type=int)
                            for field in planned_fields}
                 planned["hours_due"] = submitted_hours_due
                 pairs = list(zip(planned_fields, done_fields))
@@ -758,15 +757,16 @@ def teacher_indicators():
         if not ind:
             ind = TeacherIndicator(teacher_id=teacher.id, course_id=course.id, term=term)
             db.session.add(ind)
-        # Les objectifs pédagogiques sont verrouillés après le premier enregistrement
-        # et ne peuvent être modifiés que par un censeur via son formulaire dédié.
+        # Les dix indicateurs standards peuvent tous être corrigés puis
+        # enregistrés par l'enseignant : une seule modification suffit à
+        # déverrouiller la saisie des notes.
         planned_fields = {"hours_due", "lessons_planned", "digital_lessons_planned",
                           "tp_planned", "digital_tp_planned"}
         editable_fields = ["hours_done", "lessons_done", "digital_lessons_done",
                            "tp_done"]
         if session.get("role") != "conseiller_orientation":
             editable_fields.append("digital_tp_done")
-        planned_values = {field: (getattr(ind, field) if ind.id else request.form.get(field, 0, type=int))
+        planned_values = {field: request.form.get(field, getattr(ind, field, 0), type=int)
                           for field in planned_fields}
         done_values = {field: request.form.get(field, 0, type=int) for field in editable_fields}
         pairs = [("hours_due", "hours_done"), ("lessons_planned", "lessons_done"),
