@@ -6,8 +6,10 @@ os.environ["LTT_ENV"] = "development"
 os.environ["LTT_INITIAL_ADMIN_PASSWORD"] = "FoundateurTest#2026"
 
 from app import app
-from enseignant_routes import _teacher_grade_locked, _teacher_notes_open
-from models import Course, Department, Grade, SchoolClass, Section, Student, Subject, Teacher, TeacherIndicator, User, db
+from enseignant_routes import (_notify_teacher_before_notes_lock, _teacher_grade_locked,
+                               _teacher_notes_open, _teacher_notes_status)
+from models import (Course, Department, Grade, Notification, SchoolClass, Section,
+                    Student, Subject, Teacher, TeacherIndicator, User, db)
 
 
 with app.app_context():
@@ -52,6 +54,18 @@ with app.app_context():
     # Un seul indicateur enregistré suffit, même si tous les autres valent zéro.
     assert _teacher_notes_open(teacher, course, "Trimestre 1") is True
     assert _teacher_grade_locked(grade) is False
+    status = _teacher_notes_status(teacher, course, "Trimestre 1")
+    assert status["opening_date"] == date.today()
+    assert status["expiration_date"] == date.today() + timedelta(days=5)
+
+    grade.date = date.today() - timedelta(days=4)
+    db.session.commit()
+    status = _teacher_notes_status(teacher, course, "Trimestre 1")
+    assert status["expiration_date"] == date.today() + timedelta(days=1)
+    assert _notify_teacher_before_notes_lock(teacher, course, "Trimestre 1", status) is True
+    db.session.commit()
+    assert Notification.query.filter_by(user_id=teacher.user_id).count() == 1
+    assert _notify_teacher_before_notes_lock(teacher, course, "Trimestre 1", status) is False
 
     grade.date = date.today() - timedelta(days=5)
     db.session.commit()

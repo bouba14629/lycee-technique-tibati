@@ -28,18 +28,52 @@ def _teacher_indicator(teacher, course, term):
     return TeacherIndicator.query.filter_by(teacher_id=teacher.id, course_id=course.id, term=term).first()
 
 
-def _teacher_notes_open(teacher, course, term):
-    """Déverrouille après un indicateur enregistré après la dernière note."""
+def _teacher_notes_status(teacher, course, term):
+    """Retourne l'état et les dates de la fenêtre de saisie des notes."""
     indicator = _teacher_indicator(teacher, course, term)
     if not indicator or not indicator.updated_at:
-        return False
+        return {"open": False, "indicator": None, "opening_date": None,
+                "last_grade_date": None, "expiration_date": None,
+                "days_remaining": None}
     latest_grade_date = (Grade.query.filter_by(course_id=course.id, term=term)
                          .with_entities(db.func.max(Grade.date)).scalar())
-    if latest_grade_date is None:
-        return True
-    if indicator.updated_at.date() < latest_grade_date:
+    opening_date = indicator.updated_at.date()
+    current_date = date.today()
+    expiration_date = (latest_grade_date + timedelta(days=GRADE_ENTRY_WINDOW_DAYS)
+                       if latest_grade_date is not None else None)
+    is_after_latest_grade = latest_grade_date is None or opening_date >= latest_grade_date
+    open_window = is_after_latest_grade and (
+        latest_grade_date is None or (current_date - latest_grade_date).days < GRADE_ENTRY_WINDOW_DAYS
+    )
+    days_remaining = ((expiration_date - current_date).days
+                      if expiration_date is not None else None)
+    return {"open": open_window, "indicator": indicator,
+            "opening_date": opening_date, "last_grade_date": latest_grade_date,
+            "expiration_date": expiration_date, "days_remaining": days_remaining}
+
+
+def _teacher_notes_open(teacher, course, term):
+    """Déverrouille après un indicateur enregistré après la dernière note."""
+    return _teacher_notes_status(teacher, course, term)["open"]
+
+
+def _notify_teacher_before_notes_lock(teacher, course, term, status):
+    """Crée une seule alerte persistante le jour précédant le verrouillage."""
+    if not teacher or not teacher.user_id or status["expiration_date"] is None:
         return False
-    return (date.today() - latest_grade_date).days < GRADE_ENTRY_WINDOW_DAYS
+    remaining = status["days_remaining"]
+    if not status["open"] or remaining is None or remaining < 0 or remaining > 1:
+        return False
+    from models import Notification
+    expiration = status["expiration_date"].strftime("%d/%m/%Y")
+    link = f"/enseignant/notes/{course.id}?term={term}&lock_notice={expiration}"
+    existing = Notification.query.filter_by(user_id=teacher.user_id, link=link).first()
+    if existing:
+        return False
+    notify(teacher.user_id,
+           f"La saisie des notes de {course.subject.name} — {course.school_class.name} "
+           f"sera verrouillée le {expiration}.", link=link)
+    return True
 
 
 def current_teacher():
@@ -217,11 +251,16 @@ def teacher_grades(course_id):
     if student_sort not in {"asc", "desc"}:
         student_sort = "asc"
     seq_a, seq_b = TERM_SEQUENCES.get(term, (1, 2))
-    notes_open = _teacher_notes_open(teacher, course, term)
+    notes_status = _teacher_notes_status(teacher, course, term)
+    notes_open = notes_status["open"]
+    if request.method == "GET" and session.get("role") == "enseignant":
+        if _notify_teacher_before_notes_lock(teacher, course, term, notes_status):
+            db.session.commit()
 
     if request.method == "POST":
         term = request.form.get("term", TERMS[0])
-        notes_open = _teacher_notes_open(teacher, course, term)
+        notes_status = _teacher_notes_status(teacher, course, term)
+        notes_open = notes_status["open"]
         if session.get("role") == "enseignant" and not notes_open:
             flash("Saisie verrouillée : renseignez d'abord les indicateurs pédagogiques de cette matière.", "warning")
             return redirect(url_for("teacher_grades", course_id=course_id, term=term))
@@ -334,6 +373,9 @@ def teacher_grades(course_id):
                             auto_appreciations=auto_appreciations, course_class_avg=course_class_avg,
                             nb_evaluated=len(class_avgs), planned_assessments=planned_assessments,
                             student_sort=student_sort, indicators_filled=notes_open,
+                            notes_opened_at=notes_status["opening_date"],
+                            notes_expires_at=notes_status["expiration_date"],
+                            notes_days_remaining=notes_status["days_remaining"],
                             notes_locked=not notes_open and session.get("role") == "enseignant",
                             locked_grade_ids=locked_grade_ids)
 

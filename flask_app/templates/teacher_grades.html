@@ -15,6 +15,24 @@
 {% endblock %}
 {% block content %}
 <div class="card-ltt">
+  <div class="alert alert-info d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <span>
+      <i class="bi bi-calendar2-check-fill"></i>
+      {% if notes_opened_at %}
+        <strong>Ouverture :</strong> {{ notes_opened_at.strftime('%d/%m/%Y') }}.
+      {% else %}
+        <strong>Ouverture :</strong> en attente de l’enregistrement d’un indicateur pédagogique.
+      {% endif %}
+      {% if notes_expires_at %}
+        <strong class="ms-2">Expiration :</strong> {{ notes_expires_at.strftime('%d/%m/%Y') }}
+        {% if notes_days_remaining == 0 %}<span class="text-danger">(aujourd’hui)</span>
+        {% elif notes_days_remaining == 1 %}<span class="text-danger">(demain)</span>
+        {% elif notes_days_remaining > 1 %}<span>({{ notes_days_remaining }} jours restants)</span>{% endif %}
+      {% else %}
+        <span class="ms-2">L’échéance sera calculée après la première saisie de notes.</span>
+      {% endif %}
+    </span>
+  </div>
   {% if notes_locked %}
   <div class="alert alert-warning d-flex justify-content-between align-items-center gap-2 flex-wrap">
     <span><i class="bi bi-lock-fill"></i> <strong>Saisie verrouillée.</strong> Enregistrez au moins un indicateur pédagogique après la dernière saisie de notes. Les notes individuelles sont verrouillées après 5 jours.</span>
