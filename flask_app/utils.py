@@ -716,6 +716,15 @@ def annual_bulletin_data(student, _cache=None):
         "insolvency": not bool(student.school_fees_paid),
         "repeat_if_failure": repeat_if_failure,
     }
+    # Toute case de motif cochée implique nécessairement la décision globale
+    # « Exclu(e) pour ». Cela protège les deux rendus annuels contre une
+    # divergence future entre le calcul du motif et celui de la case principale.
+    exclusion_reasons = ("competencies_not_acquired", "insolvency", "resigning",
+                         "cannot_triplicate", "conduct")
+    if any(decision_marks.get(reason) for reason in exclusion_reasons):
+        decision_marks["excluded"] = True
+        decision_marks["admitted"] = False
+        decision_marks["repeat_if_failure"] = False
     orientation_cache = cache.setdefault("orientation_assignments", {})
     if student.id not in orientation_cache:
         orientation_cache[student.id] = OrientationAssignment.query.filter_by(

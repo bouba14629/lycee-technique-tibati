@@ -206,6 +206,7 @@
       {% endif %}
       <div class="topbar-actions">
         {% if current_user and current_user.last_login_at %}<div class="d-none d-xl-flex flex-column text-end me-1" style="font-size:10.5px; line-height:1.25; color:var(--muted);"><span>Dernière connexion</span><strong style="color:var(--navy-800); font-size:11.5px;">{{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}</strong></div>{% endif %}
+        <button type="button" class="icon-btn" data-app-refresh aria-label="Rafraîchir le site" title="Rafraîchir le site"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span class="icon-btn-label">Rafraîchir</span></button>
         <button type="button" class="icon-btn d-none" data-pwa-install aria-label="Installer l’application" title="Installer l’application"><i class="bi bi-download" aria-hidden="true"></i><span class="icon-btn-label">Installer</span></button>
         <a class="icon-btn position-relative {{ 'text-danger fw-bold' if unread_announcements else '' }}" href="{{ url_for('announcements') }}" title="Annonces" aria-label="Annonces"><i class="bi bi-megaphone" aria-hidden="true"></i><span class="icon-btn-label">Annonces</span>{% if unread_announcements %}<span class="icon-badge bg-danger">{{ unread_announcements }}</span>{% endif %}</a>
         <a class="icon-btn" href="{{ url_for('messages_inbox') }}" title="Messagerie">
@@ -324,6 +325,14 @@ document.querySelectorAll('[data-app-back]').forEach(function(button) {
   button.addEventListener('contextmenu', function(event) {
     event.preventDefault();
     returnToPreviousRubrique();
+  });
+});
+
+document.querySelectorAll('[data-app-refresh]').forEach(function(button) {
+  button.addEventListener('click', function() {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    window.location.reload();
   });
 });
 

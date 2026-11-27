@@ -32,11 +32,30 @@ def _teacher_notes_open(teacher, course, term):
     """Retourne vrai si les indicateurs autorisent actuellement la saisie.
 
     Les notes existantes deviennent non modifiables après cinq jours. La saisie
-    de nouvelles notes reste possible jusqu'au septième jour suivant la première
-    note enregistrée pour la matière et la période.
+    de nouvelles notes est autorisée dès qu'au moins un indicateur pédagogique
+    a été réellement renseigné et enregistré pour la matière et la période.
     """
     indicator = _teacher_indicator(teacher, course, term)
     if not indicator:
+        return False
+    # ``hours_due`` possède une valeur obligatoire par défaut dans le formulaire.
+    # Il ne constitue donc pas, à lui seul, un indicateur rempli. Les autres
+    # champs standard ou une valeur personnalisée non nulle suffisent.
+    progress_fields = (
+        "hours_done", "lessons_planned", "lessons_done",
+        "digital_lessons_planned", "digital_lessons_done",
+        "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done",
+    )
+    has_progress = any((getattr(indicator, field, 0) or 0) != 0 for field in progress_fields)
+    if not has_progress and (indicator.observations or "").strip():
+        has_progress = True
+    if not has_progress:
+        from models import CustomIndicatorValue
+        has_progress = any(
+            (value.planned or 0) != 0 or (value.done or 0) != 0
+            for value in CustomIndicatorValue.query.filter_by(course_id=course.id, term=term).all()
+        )
+    if not has_progress:
         return False
     grades = Grade.query.filter_by(course_id=course.id, term=term).all()
     recorded_dates = [grade.date for grade in grades if grade.date]
