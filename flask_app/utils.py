@@ -662,10 +662,11 @@ def annual_bulletin_data(student, _cache=None):
     admission_configured = criterion and (criterion.admission_min is not None or criterion.admission_max is not None)
     repeat_configured = criterion and (criterion.repeat_min is not None or criterion.repeat_max is not None)
     exclusion_configured = criterion and (criterion.exclusion_min is not None or criterion.exclusion_max is not None)
-    # La reprise demandée ici concerne uniquement les niveaux 1A, 2A, 3A et
+    # La reprise paramétrée concerne uniquement les niveaux 1A, 2A, 3A et
     # Seconde. Le seuil enregistré dans les Paramètres généraux ne doit donc
-    # pas cocher la reprise pour les autres niveaux.
+    # pas cocher cette reprise pour les autres niveaux.
     special_repeat_level = student.school_class.level in REPEAT_IF_FAILURE_LEVELS
+    final_repeat_level = student.school_class.level in {"4A", "P", "Tle"}
     exclusion_range_matches = (
         criterion_matches(overall_avg, criterion.exclusion_min, criterion.exclusion_max)
         if exclusion_configured else (overall_avg is not None and overall_avg < 6)
@@ -686,6 +687,11 @@ def annual_bulletin_data(student, _cache=None):
     # l'élève comme exclu. La classe actuelle est ensuite fournie par
     # ``repeat_class_name`` au bulletin individuel et au bulletin groupé.
     repeat_if_failure = bool(special_repeat_level and repeat_range_matches)
+    # En 4A, Première et Terminale, un élève non exclu ne passe pas dans une
+    # classe supérieure : le bulletin annuel indique uniquement la reprise de
+    # sa classe actuelle, avec la mention « si échec ».
+    if final_repeat_level and not excluded:
+        repeat_if_failure = True
     if repeat_if_failure:
         excluded = False
     next_class_name = None
@@ -732,6 +738,7 @@ def annual_bulletin_data(student, _cache=None):
             "rank_label": "NC" if rank_is_nc else (f"{class_rank}e" if class_rank else None),
             "decision_marks": decision_marks, "next_class_name": next_class_name,
             "repeat_class_name": student.school_class.name if repeat_if_failure else None,
+            "repeat_failure_note": " si échec" if final_repeat_level and repeat_if_failure else "",
             "work_marks": competency_marks(overall_avg),
             "official_work_appreciation": appreciation_code(overall_avg),
             "absences_justified_hours": floor_hours(just_hours), "absences_justified_days": just_days,

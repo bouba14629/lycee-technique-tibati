@@ -298,7 +298,8 @@ class AnnualPage:
         if decisions.get('repeat_if_failure'):
             repeat_x = 17.25 + pdfmetrics.stringWidth(repeat_prefix, self.fonts['bold'], 6.9)
             repeat_class = str(data.get('repeat_class_name') or '____________________________')
-            self.text(repeat_class, repeat_x, top+32.25, max_width=369-(repeat_x-17.25))
+            repeat_note = str(data.get('repeat_failure_note') or '')
+            self.text(repeat_class + repeat_note, repeat_x, top+32.25, max_width=369-(repeat_x-17.25))
         decision_line = ('[X] ' if decisions.get('excluded') else '[ ] ') + 'Exclu(e) pour :  '
         decision_line += ('[X] ' if decisions.get('competencies_not_acquired') else '[ ] ') + 'Compétences non acquises  '
         decision_line += ('[X] ' if decisions.get('conduct') else '[ ] ') + 'Conduite  '
