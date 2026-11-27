@@ -38,25 +38,10 @@ def _teacher_notes_open(teacher, course, term):
     indicator = _teacher_indicator(teacher, course, term)
     if not indicator:
         return False
-    # ``hours_due`` possède une valeur obligatoire par défaut dans le formulaire.
-    # Il ne constitue donc pas, à lui seul, un indicateur rempli. Les autres
-    # champs standard ou une valeur personnalisée non nulle suffisent.
-    progress_fields = (
-        "hours_done", "lessons_planned", "lessons_done",
-        "digital_lessons_planned", "digital_lessons_done",
-        "tp_planned", "tp_done", "digital_tp_planned", "digital_tp_done",
-    )
-    has_progress = any((getattr(indicator, field, 0) or 0) != 0 for field in progress_fields)
-    if not has_progress and (indicator.observations or "").strip():
-        has_progress = True
-    if not has_progress:
-        from models import CustomIndicatorValue
-        has_progress = any(
-            (value.planned or 0) != 0 or (value.done or 0) != 0
-            for value in CustomIndicatorValue.query.filter_by(course_id=course.id, term=term).all()
-        )
-    if not has_progress:
-        return False
+    # L'enregistrement du formulaire constitue la validation de l'indicateur.
+    # Un champ peut légitimement être modifié à zéro ou rester nul tandis qu'un
+    # autre champ est renseigné : la présence de l'indicateur enregistré suffit
+    # donc à déverrouiller les notes.
     grades = Grade.query.filter_by(course_id=course.id, term=term).all()
     recorded_dates = [grade.date for grade in grades if grade.date]
     if not recorded_dates:
