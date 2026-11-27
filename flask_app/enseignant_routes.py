@@ -29,19 +29,12 @@ def _teacher_indicator(teacher, course, term):
 
 
 def _teacher_notes_open(teacher, course, term):
-    """Retourne vrai si les indicateurs autorisent actuellement la saisie.
+    """La saisie globale des notes reste ouverte pour l'enseignant.
 
-    Les notes existantes deviennent non modifiables après cinq jours. La saisie
-    de nouvelles notes est autorisée dès qu'au moins un indicateur pédagogique
-    a été réellement renseigné et enregistré pour la matière et la période.
+    Le verrouillage individuel des notes existantes depuis cinq jours reste
+    appliqué par ``_teacher_grade_locked`` afin de protéger l'historique.
     """
-    indicator = _teacher_indicator(teacher, course, term)
-    if not indicator:
-        return False
-    # L'enregistrement du formulaire constitue la validation de l'indicateur.
-    # Un champ peut légitimement être modifié à zéro ou rester nul tandis qu'un
-    # autre champ est renseigné : la présence de l'indicateur enregistré suffit
-    # donc à déverrouiller les notes.
+    return True
     grades = Grade.query.filter_by(course_id=course.id, term=term).all()
     recorded_dates = [grade.date for grade in grades if grade.date]
     if not recorded_dates:
