@@ -8,14 +8,59 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
-<title>Connexion · Lycée Technique de Tibati</title>
+<title>Accueil · Lycée Technique de Tibati</title>
 <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/bootstrap.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/icons/bootstrap-icons.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  .public-home-nav { width:min(1380px, calc(100% - 32px)); margin:0 auto 18px; position:relative; z-index:30; }
+  .public-home-nav-inner { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 14px; border:1px solid rgba(255,255,255,.18); border-radius:16px; background:rgba(8,32,61,.88); box-shadow:0 12px 32px rgba(2,16,35,.18); }
+  .public-home-nav-brand { display:inline-flex; align-items:center; gap:8px; color:#fff; font-weight:800; font-size:13px; white-space:nowrap; text-decoration:none; }
+  .public-home-nav-brand img { width:30px; height:30px; object-fit:contain; }
+  .public-home-nav-links { display:flex; align-items:center; justify-content:flex-end; gap:3px; flex-wrap:wrap; }
+  .public-home-nav-links > a, .public-home-nav-links > details > summary { color:rgba(255,255,255,.9); text-decoration:none; list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:8px 9px; border-radius:9px; font-size:12px; font-weight:700; white-space:nowrap; transition:background .16s ease, color .16s ease; }
+  .public-home-nav-links > details > summary::-webkit-details-marker { display:none; }
+  .public-home-nav-links > a:hover, .public-home-nav-links > details[open] > summary, .public-home-nav-links > details > summary:hover { color:#fff; background:rgba(255,255,255,.14); }
+  .public-home-nav-links .bi-chevron-down { font-size:9px; transition:transform .16s ease; }
+  .public-home-nav-links details[open] .bi-chevron-down { transform:rotate(180deg); }
+  .public-nav-dropdown { position:absolute; left:0; top:calc(100% + 5px); min-width:220px; max-width:370px; padding:7px; border:1px solid #dce6ef; border-radius:12px; background:#fff; box-shadow:0 14px 35px rgba(2,16,35,.22); }
+  .public-nav-dropdown.public-nav-wide { width:360px; }
+  .public-nav-dropdown a { display:block; padding:8px 10px; border-radius:8px; color:#243b53; text-decoration:none; font-size:12px; line-height:1.25; }
+  .public-nav-dropdown a:hover { color:#0b315d; background:#edf5ff; }
+  .public-home-login-link { color:#0b315d !important; background:#e8bc45 !important; }
+  .public-home-login-link:hover { background:#f2ce66 !important; }
+  .public-home-info { width:min(1380px, calc(100% - 32px)); margin:0 auto 22px; padding:22px; border:1px solid rgba(255,255,255,.16); border-radius:18px; background:rgba(255,255,255,.96); color:#243b53; box-shadow:0 12px 30px rgba(2,16,35,.12); }
+  .public-home-info h2 { margin:0 0 5px; color:#0b315d; font-size:21px; }
+  .public-home-info > p { margin:0 0 15px; color:#64748b; font-size:13px; }
+  .public-home-info-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+  .public-home-info-card { padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fbff; }
+  .public-home-info-card h3 { margin:0 0 8px; color:#0b315d; font-size:13px; }
+  .public-home-info-card a { color:#49657f; display:block; font-size:12px; line-height:1.55; text-decoration:none; }
+  .public-home-info-card a:hover { color:#0b67b2; text-decoration:underline; }
+  .public-home-departments { display:flex; flex-wrap:wrap; gap:5px 8px; }
+  .public-home-departments a { display:inline-block; padding:3px 7px; border-radius:999px; background:#eaf3ff; font-size:11px; }
+  @media (max-width: 1100px) { .public-home-nav-inner { align-items:flex-start; flex-direction:column; } .public-home-nav-links { justify-content:flex-start; width:100%; } }
+  @media (max-width: 700px) { .public-home-nav { width:calc(100% - 20px); } .public-home-nav-inner { padding:9px; } .public-home-nav-links > a, .public-home-nav-links > details > summary { font-size:11px; padding:7px 6px; } .public-nav-dropdown { position:fixed; left:10px; right:10px; top:120px; max-width:none; width:auto !important; } .public-home-info { width:calc(100% - 20px); padding:16px; } .public-home-info-grid { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 <div class="login-shell">
+  <nav class="public-home-nav" id="public-accueil" aria-label="Navigation publique de l’établissement">
+    <div class="public-home-nav-inner">
+      <a class="public-home-nav-brand" href="#public-accueil"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""> <span>Lycée Technique de Tibati</span></a>
+      <div class="public-home-nav-links">
+        <a href="#public-accueil">Accueil</a>
+        <details><summary>La Cité Scolaire <i class="bi bi-chevron-down"></i></summary><div class="public-nav-dropdown"><a href="#public-mot-chef">Le Mot du Chef d’Établissement</a><a href="#public-resultats">Résultats</a></div></details>
+        <details><summary>Informations <i class="bi bi-chevron-down"></i></summary><div class="public-nav-dropdown"><a href="#public-fournitures">Liste des Fournitures</a><a href="#public-inscriptions">Inscriptions</a></div></details>
+        <details><summary>Services <i class="bi bi-chevron-down"></i></summary><div class="public-nav-dropdown"><a href="#public-bibliotheque">Bibliothèque</a><a href="#public-censorat">Censorat</a><a href="#public-chef-travaux">Chef des Travaux</a><a href="#public-orientation">Orientation Scolaire et Professionnelle</a><a href="#public-surveillance">Surveillance Générale</a><a href="#public-crm">CRM</a></div></details>
+        <details><summary>Départements <i class="bi bi-chevron-down"></i></summary><div class="public-nav-dropdown public-nav-wide"><a href="#public-departements">Français · Anglais · Histoire-Géographie-ECM · Hygiène · Sciences Physiques · Philosophie · Mathématiques · Informatique · Génie Electrique · Génie Civil · Génie Bois · Industrie de l’Habillement · Comptabilité et Gestion · FIG · ACA · ESF · Economie</a></div></details>
+        <details><summary>APPS <i class="bi bi-chevron-down"></i></summary><div class="public-nav-dropdown"><a href="#public-apps">Club Informatique</a><a href="#public-apps">Club Scout</a><a href="#public-apps">Club Génie Electrique</a><a href="#public-apps">Club Majorette</a><a href="#public-apps">Club Tourisme</a></div></details>
+        <a href="#public-contact">Contact</a>
+        <a class="public-home-login-link" href="#connexion">Se connecter</a>
+      </div>
+    </div>
+  </nav>
   <div class="login-wrap">
   <div class="login-card">
     <div class="login-side">
@@ -59,7 +104,7 @@
       {% endif %}
     </div>
 
-    <div class="login-form-side">
+    <div class="login-form-side" id="connexion">
       <div class="mb-4">
         <h3 class="brand-font" style="color:var(--navy-900); font-size:24px;">Connexion</h3>
         <p class="text-muted" style="font-size:13.5px;">Accédez à votre espace personnel.</p>
@@ -121,6 +166,18 @@
     <div><i class="bi bi-envelope-fill"></i> lttibati@gmail.com</div>
     <div class="login-footer-copy">© {{ now.year }} Lycée Technique de Tibati — Plateforme numérique de gestion</div>
   </div>
+  <section class="public-home-info" aria-labelledby="public-home-info-title">
+    <h2 id="public-home-info-title">La vie du Lycée Technique de Tibati</h2>
+    <p>Accédez rapidement aux informations de la cité scolaire, aux services et aux départements de formation.</p>
+    <div class="public-home-info-grid">
+      <article class="public-home-info-card" id="public-mot-chef"><h3>La Cité Scolaire</h3><a href="#public-mot-chef">Le Mot du Chef d’Établissement</a><a id="public-resultats" href="#public-resultats">Résultats</a></article>
+      <article class="public-home-info-card" id="public-fournitures"><h3>Informations</h3><a href="#public-fournitures">Liste des Fournitures</a><a id="public-inscriptions" href="#public-inscriptions">Inscriptions</a></article>
+      <article class="public-home-info-card"><h3>Services</h3><a id="public-bibliotheque" href="#public-bibliotheque">Bibliothèque</a><a id="public-censorat" href="#public-censorat">Censorat</a><a id="public-chef-travaux" href="#public-chef-travaux">Chef des Travaux</a><a id="public-orientation" href="#public-orientation">Orientation Scolaire et Professionnelle</a><a id="public-surveillance" href="#public-surveillance">Surveillance Générale</a><a id="public-crm" href="#public-crm">CRM</a></article>
+      <article class="public-home-info-card" id="public-departements"><h3>Départements</h3><div class="public-home-departments"><a href="#public-departements">Français</a><a href="#public-departements">Anglais</a><a href="#public-departements">Histoire-Géographie-ECM</a><a href="#public-departements">Hygiène</a><a href="#public-departements">Sciences Physiques</a><a href="#public-departements">Philosophie</a><a href="#public-departements">Mathématiques</a><a href="#public-departements">Informatique</a><a href="#public-departements">Génie Electrique</a><a href="#public-departements">Génie Civil</a><a href="#public-departements">Génie Bois</a><a href="#public-departements">Industrie de l’Habillement</a><a href="#public-departements">Comptabilité et Gestion</a><a href="#public-departements">FIG</a><a href="#public-departements">ACA</a><a href="#public-departements">ESF</a><a href="#public-departements">Economie</a></div></article>
+      <article class="public-home-info-card" id="public-apps"><h3>APPS</h3><a href="#public-apps">Club Informatique</a><a href="#public-apps">Club Scout</a><a href="#public-apps">Club Génie Electrique</a><a href="#public-apps">Club Majorette</a><a href="#public-apps">Club Tourisme</a></article>
+      <article class="public-home-info-card" id="public-contact"><h3>Contact</h3><a href="mailto:lttibati@gmail.com">lttibati@gmail.com</a><a href="#connexion">Accéder à l’espace personnel</a></article>
+    </div>
+  </section>
 </div>
 <script>
 function togglePassword(inputId, btn) {
