@@ -24,11 +24,24 @@ with app.app_context():
     student = Student(user_id=student_user.id, matricule="CERT-001", first_name="Amina", last_name="Test")
     db.session.add(student)
     db.session.commit()
+    student_id = student.id
 
 with app.test_client() as client:
     login = client.post("/login", data={"username": "eleve.cert", "password": "Eleve#2026"})
     assert login.status_code in (302, 303)
     response = client.get("/eleve/certificat-scolarite")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF")
+    assert client.get(f"/eleves/{student_id}/certificat-scolarite").status_code == 403
+
+with app.test_client() as principal_client:
+    login = principal_client.post("/login", data={"username": "proviseur.cert", "password": "Proviseur#2026"})
+    assert login.status_code in (302, 303)
+    listing = principal_client.get("/eleves")
+    assert listing.status_code == 200
+    assert b"Certificat" in listing.data
+    response = principal_client.get(f"/eleves/{student_id}/certificat-scolarite")
     assert response.status_code == 200
     assert response.mimetype == "application/pdf"
     assert response.data.startswith(b"%PDF")

@@ -926,6 +926,24 @@ def student_detail(student_id):
                            subj_avgs=subj_avgs, return_class_id=return_class_id)
 
 
+@app.route("/eleves/<int:student_id>/certificat-scolarite")
+@roles_required("directeur")
+def director_student_schooling_certificate(student_id):
+    """Télécharge le certificat officiel personnalisé depuis le dossier Proviseur."""
+    from flask import send_file
+    from certificate_utils import render_schooling_certificate
+
+    student = Student.query.get_or_404(student_id)
+    principal = User.query.get(session["user_id"])
+    pdf = render_schooling_certificate(
+        student,
+        get_current_school_year(),
+        principal_name=principal.full_name if principal else "",
+    )
+    filename = f"Certificat_de_scolarite_{student.matricule or student.id}.pdf".replace(" ", "_")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
 @app.route("/eleves/<int:student_id>/carte")
 @roles_required("directeur", "censeur", "surveillant_general", "conseiller_orientation", "enseignant")
 def student_card_preview(student_id):

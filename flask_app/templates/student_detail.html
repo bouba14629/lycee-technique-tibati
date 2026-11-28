@@ -9,6 +9,7 @@
   <a href="{{ url_for('student_delete', student_id=student.id, return_class_id=return_class_id) }}" class="btn-ltt-outline text-danger" style="border-color:var(--danger);" onclick="return confirm('Supprimer définitivement {{ student.full_name }} et toutes ses données (notes, absences, sanctions) ? Cette action est irréversible.'"><i class="bi bi-trash"></i> Supprimer</a>
   {% endif %}
   <a href="{{ url_for('student_card_preview', student_id=student.id) }}" class="btn-ltt-gold"><i class="bi bi-person-vcard-fill"></i> Carte scolaire</a>
+  {% if current_user.role == 'directeur' %}<a href="{{ url_for('director_student_schooling_certificate', student_id=student.id) }}" class="btn-ltt-outline"><i class="bi bi-file-earmark-pdf-fill"></i> Certificat de scolarité</a>{% endif %}
   <button class="btn-ltt-outline" onclick="window.print()"><i class="bi bi-printer-fill"></i> Aperçu &amp; imprimer le dossier</button>
 </div>
 
