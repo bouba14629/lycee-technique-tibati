@@ -47,15 +47,16 @@ def _parents_text(student) -> tuple[str, str]:
 def _render_docx(student, school_year: str, principal_name: str, certificate_number: str = "") -> bytes:
     if not TEMPLATE_PATH.is_file():
         raise FileNotFoundError(f"Modèle absent : {TEMPLATE_PATH}")
-    year_start, _, year_end = (school_year or "").partition("-")
+    school_year_text = str(school_year or "")
+    year_start, _, year_end = school_year_text.partition("-")
     year_label = f"{year_start}/{year_end}" if year_start and year_end else school_year or "202___/202__"
     father_or_mother, second_parent = _parents_text(student)
     class_name = getattr(getattr(student, "school_class", None), "name", None) or "________________"
     first_name = (getattr(student, "first_name", "") or "").strip()
     last_name = (getattr(student, "last_name", "") or "").strip()
     full_name = " ".join(part for part in (first_name, last_name) if part) or "________________"
-    principal = (principal_name or "").strip() or "_____________________________"
-    reference = certificate_number.strip() or "______"
+    principal = str(principal_name or "").strip() or "_____________________________"
+    reference = str(certificate_number or "").strip() or "______"
     replacements = [
         (lambda text: text.startswith("N°") and "/CS/" in text,
          f"N°{reference}/CS/H48.02/LT-TIB."),
@@ -83,13 +84,17 @@ def _render_docx(student, school_year: str, principal_name: str, certificate_num
         with tempfile.TemporaryDirectory(prefix="ltt-cert-docx-") as workdir:
             docx_path = Path(workdir) / "certificat.docx"
             pdf_dir = Path(workdir) / "pdf"
+            libreoffice_profile = Path(workdir) / "libreoffice-profile"
             pdf_dir.mkdir()
+            libreoffice_profile.mkdir()
             with ZipFile(docx_path, "w", ZIP_DEFLATED) as target:
                 for info in source.infolist():
                     target.writestr(info, updated_xml if info.filename == "word/document.xml" else source.read(info.filename))
             result = subprocess.run(
-                ["libreoffice", "--headless", "--convert-to", "pdf:writer_pdf_Export", "--outdir", str(pdf_dir), str(docx_path)],
-                check=False, capture_output=True, text=True, timeout=30,
+                ["libreoffice", f"-env:UserInstallation={libreoffice_profile.as_uri()}",
+                 "--headless", "--norestore", "--nofirststartwizard", "--convert-to",
+                 "pdf:writer_pdf_Export", "--outdir", str(pdf_dir), str(docx_path)],
+                check=False, capture_output=True, text=True, timeout=45,
             )
             pdf_path = pdf_dir / "certificat.pdf"
             if result.returncode != 0 or not pdf_path.is_file():
