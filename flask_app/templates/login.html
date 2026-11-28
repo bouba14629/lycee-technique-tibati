@@ -173,6 +173,13 @@ document.querySelectorAll('.public-home-nav-links .public-nav-dropdown a').forEa
     if (detail) detail.removeAttribute('open');
   });
 });
+document.querySelectorAll('.public-home-nav-links > a').forEach(function (link) {
+  link.addEventListener('click', function () {
+    document.querySelectorAll('.public-home-nav-links details[open]').forEach(function (detail) {
+      detail.removeAttribute('open');
+    });
+  });
+});
 
 function togglePassword(inputId, btn) {
   const input = document.getElementById(inputId);

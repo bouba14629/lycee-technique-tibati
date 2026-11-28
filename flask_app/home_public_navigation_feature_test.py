@@ -56,5 +56,7 @@ assert 'name="username"' in template and 'name="password"' in template
 assert template.count("<details>") == 5
 assert 'role="button" aria-haspopup="menu"' in template
 assert "other.removeAttribute('open')" in template
+assert "'.public-home-nav-links > a'" in template
+assert "'.public-home-nav-links details[open]'" in template
 assert "public-home-info" not in template
 print("HOME_PUBLIC_NAVIGATION_FEATURE_TEST_OK")
