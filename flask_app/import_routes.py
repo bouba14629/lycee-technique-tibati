@@ -12,7 +12,6 @@ from flask import abort, flash, redirect, render_template, request, send_file, s
 from werkzeug.datastructures import FileStorage
 
 from app import app, db
-from directeur_routes import gen_username, save_student_photo
 from import_utils import get_value, import_template, normalized_key, parse_date, read_tabular_rows
 from import_report_utils import import_report_workbook
 from models import Department, SchoolClass, Student, Teacher, User
@@ -226,6 +225,8 @@ def _preview_student_rows(rows, chosen_class, classes_by_identifier=None, depart
 
 
 def teachers_import_v2():
+    from directeur_routes import gen_username
+
     file = request.files.get("import_file")
     if not file or not file.filename:
         _store_report("enseignants", 0, 0, [_teacher_import_error("—", "Fichier", "Aucun fichier n’a été sélectionné.", "Sélectionnez un fichier CSV ou XLSX avant de lancer l’import.")])
@@ -284,6 +285,8 @@ def teachers_import_v2():
 
 
 def students_import_v2(rows=None, photo_files=None, chosen_class_id=None, chosen_department_id=None):
+    from directeur_routes import gen_username, save_student_photo
+
     if rows is None:
         file = request.files.get("import_file")
         if not file or not file.filename:

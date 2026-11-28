@@ -2,6 +2,7 @@ import os
 import json
 import random
 import secrets
+import sys
 from datetime import datetime, date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, abort, jsonify, send_file
@@ -23,6 +24,10 @@ import seed as seed_module
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
+# Les routes importent historiquement « app ». Lors d’un lancement direct de
+# ce fichier, réutiliser le même module évite de charger Flask deux fois.
+if __name__ == "__main__":
+    sys.modules.setdefault("app", sys.modules[__name__])
 app.config["ENVIRONMENT"] = os.getenv("LTT_ENV", "development")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.jinja_env.auto_reload = True
