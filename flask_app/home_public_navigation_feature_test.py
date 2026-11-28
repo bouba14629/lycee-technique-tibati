@@ -48,25 +48,13 @@ required_labels = [
 for label in required_labels:
     assert label in template, label
 
-for anchor in [
-    "public-accueil",
-    "public-mot-chef",
-    "public-resultats",
-    "public-fournitures",
-    "public-inscriptions",
-    "public-bibliotheque",
-    "public-censorat",
-    "public-chef-travaux",
-    "public-orientation",
-    "public-surveillance",
-    "public-crm",
-    "public-departements",
-    "public-apps",
-    "public-contact",
-    "connexion",
-]:
+for anchor in ["public-accueil", "connexion"]:
     assert f'id="{anchor}"' in template, anchor
 
 assert '<form method="POST" class="form-ltt">' in template
 assert 'name="username"' in template and 'name="password"' in template
+assert template.count("<details>") == 5
+assert 'role="button" aria-haspopup="menu"' in template
+assert "other.removeAttribute('open')" in template
+assert "public-home-info" not in template
 print("HOME_PUBLIC_NAVIGATION_FEATURE_TEST_OK")

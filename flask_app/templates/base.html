@@ -167,6 +167,7 @@
       <a class="sidebar-link {{ 'active' if request.endpoint=='student_bulletin_self' }}" href="{{ url_for('student_bulletin_self') }}"><i class="bi bi-file-earmark-medical-fill"></i> Mon bulletin</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='student_schedule' }}" href="{{ url_for('student_schedule') }}"><i class="bi bi-calendar2-week-fill"></i> Emploi du temps</a>
       <a class="sidebar-link {{ 'active' if request.endpoint=='student_absences_self' }}" href="{{ url_for('student_absences_self') }}"><i class="bi bi-exclamation-triangle-fill"></i> Absences &amp; retards</a>
+      <a class="sidebar-link {{ 'active' if request.endpoint=='student_schooling_certificate' }}" href="{{ url_for('student_schooling_certificate') }}"><i class="bi bi-file-earmark-text-fill"></i> Certificat de scolarité</a>
       {% endif %}
 
       {% if current_user and current_user.role == 'parent' %}

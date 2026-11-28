@@ -44,6 +44,23 @@ def student_absences_self():
     return render_template("student_absences.html", student=student, records=records)
 
 
+@app.route("/eleve/certificat-scolarite")
+@roles_required("eleve")
+def student_schooling_certificate():
+    student = current_student()
+    if not student:
+        abort(403)
+    from certificate_utils import render_schooling_certificate
+    principal = User.query.filter_by(role="directeur", active=True).order_by(User.id).first()
+    pdf = render_schooling_certificate(
+        student,
+        get_current_school_year(),
+        principal_name=principal.full_name if principal else "",
+    )
+    filename = f"Certificat_de_scolarite_{student.matricule or student.id}.pdf".replace(" ", "_")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
 @app.route("/eleve/bulletin")
 @roles_required("eleve")
 def student_bulletin_self():

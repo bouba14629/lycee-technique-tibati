@@ -13,6 +13,17 @@ GRADE_EDIT_WINDOW_DAYS = 5
 GRADE_ENTRY_WINDOW_DAYS = 5
 
 
+def _parse_grade_value(raw_value):
+    """Parse une note avec point ou virgule, sans perdre les quarts de point."""
+    normalized = (raw_value or "").strip().replace("\u00a0", "").replace(" ", "").replace(",", ".")
+    if not normalized:
+        return None
+    try:
+        return float(normalized)
+    except (TypeError, ValueError):
+        return None
+
+
 def _teacher_grade_locked(grade):
     """Une note existante est verrouillée cinq jours après sa première saisie.
 
@@ -295,9 +306,8 @@ def teacher_grades(course_id):
             val = request.form.get(key, "").strip()
             if not val:
                 continue
-            try:
-                fval = float(val)
-            except ValueError:
+            fval = _parse_grade_value(val)
+            if fval is None:
                 continue
             if eval_type != "Devoir" and not 0 <= fval <= 20:
                 rejected_evaluation_notes += 1
